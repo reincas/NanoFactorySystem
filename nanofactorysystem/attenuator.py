@@ -7,7 +7,7 @@
 import struct
 import numpy
 from scipy.interpolate import interp1d
-from scidatacontainer import Container, register
+from scidatacontainer import Container, register, load_config
 
 from .parameter import Parameter
 
@@ -40,6 +40,9 @@ class Attenuator(Parameter):
         super().__init__(logger, **kwargs)
         self.log.info("Initializing attenuator.")
 
+        # SciData author configuration
+        self.dc_config = kwargs.pop("config", None) or load_config()
+        
         # Read content of the binary calibration file
         if fn is None:
             self.fn = CALIBRATION
@@ -130,4 +133,8 @@ class Attenuator(Parameter):
             }
 
         # Return container object
+        config = self.dc_config
+        if "config" in kwargs:
+            config = dict(config).update(kwargs["config"])
+        kwargs["config"] = config
         return Container(items=items, **kwargs)

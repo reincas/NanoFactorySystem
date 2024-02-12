@@ -32,7 +32,7 @@ class Parameter(object):
         # Store parameters
         for key, value in self._defaults.items():
             if key in kwargs:
-                value = kwargs[key]
+                value = kwargs.pop(key)
             self[key] = value
 
 

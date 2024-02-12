@@ -7,8 +7,9 @@
 import os
 import socket
 import time
-from scidatacontainer import Container
+from scidatacontainer import Container, load_config
 
+from .attenuator import Attenuator
 from .parameter import Parameter
 
 # Task states
@@ -90,12 +91,15 @@ class A3200(Parameter):
         "cmdFaultChar": 35,       # CommandFaultCharacter
         }
         
-    def __init__(self, attenuator, logger=None, **kwargs):
+    def __init__(self, attenuator=None, logger=None, **kwargs):
 
         # Initialize parameter class
         super().__init__(logger, **kwargs)
         self.log.info("Initializing Aerotech A3200 system.")
 
+        # SciData author configuration
+        self.dc_config = kwargs.pop("config", None) or load_config()
+        
         # Safety net: maximum z position
         if self["zMax"] is None:
             raise RuntimeError("Maximum z position is missing!")
@@ -132,7 +136,10 @@ class A3200(Parameter):
         self.task_pgms = {}
 
         # Laser calibration
-        self.attenuator = attenuator
+        if attenuator is not None
+            self.attenuator = attenuator
+        else:
+            self.attenuator = Attenuator(logger=self.log, config=self.dc_config)
 
         # Done
         self.log.info(str(self))
@@ -555,4 +562,8 @@ class A3200(Parameter):
             items[item] = self.task_pgms[name]
 
         # Return container object
+        config = self.dc_config
+        if "config" in kwargs:
+            config = dict(config).update(kwargs["config"])
+        kwargs["config"] = config
         return Container(items=items, **kwargs)

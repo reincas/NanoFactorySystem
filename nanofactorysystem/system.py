@@ -11,7 +11,7 @@
 
 import math
 import random
-from scidatacontainer import Container
+from scidatacontainer import Container, load_config
 
 from .parameter import Parameter
 from .camera import Camera
@@ -50,6 +50,9 @@ class System(Parameter):
         super().__init__(logger, **kwargs)
         self.log.info("Initializing system.")
 
+        # SciData author configuration
+        self.dc_config = kwargs.pop("config", None) or load_config()
+        
         # Store optional sample data dictionary. Applications using the
         # system should include this item into their data container.
         self.sample = sample
@@ -58,21 +61,21 @@ class System(Parameter):
         self.back = None
 
         # Initialize the MatrixVision camera
-        self.camera = Camera(logger=self.log)
+        self.camera = Camera(logger=self.log, config=self.dc_config)
         if not self.camera.opened:
             self.log.error("Can't connect to camera!")
             raise RuntimeError("Can't connect to camera!")
         self["camera"] = self.camera.info()
 
         # Initialize attenuator
-        self.attenuator = Attenuator(logger=self.log)
+        self.attenuator = Attenuator(logger=self.log, config=self.dc_config)
         self["attenuator"] = self.attenuator.info()
         
         # Initialize the Aerotech A3200 controller
         if self["zMax"] is None:
             raise RuntimeError("Maximum z value is missing!")
         self.controller = A3200(self.attenuator, logger=self.log,
-                                      zMax=self["zMax"])
+                                config=self.dc_config, zMax=self["zMax"])
         self.controller.init_zline()
         self["controller"] = self.controller.info()
 
@@ -171,8 +174,7 @@ class System(Parameter):
 
         """ Get a camera image and return an image container. """
 
-        img = self.camera.getimage()
-        return self.camera.container(img)
+        return self.camera.container(config=self.dc_config)
     
 
     def polyline(self, line, power, speed, dia):
@@ -249,8 +251,7 @@ class System(Parameter):
         self.controller.wait("XYZ", self["delay"])
 
         # Take pre exposure camera image
-        img0 = self.camera.getimage()
-        img0 = self.camera.container(img0)
+        img0 = self.getimage()
 
         # Correct for forced axial jitter if requested
         if jitter:
@@ -277,8 +278,7 @@ class System(Parameter):
             yc = random.gauss(y, jitter)
             self.controller.moveabs(self["speed"], x=xc, y=yc, z=z)
             self.controller.wait("XYZ", self["delay"])
-        img1 = self.camera.getimage()
-        img1 = self.camera.container(img1)
+        img1 = self.getimage()
 
         # Done
         return img0, img1, v, dt
@@ -314,11 +314,10 @@ class System(Parameter):
             self.controller.wait("Z", self["delay"])
 
         # Set exposure time for normalized image
-        self.camera.optexpose(127)
+        self.camera.optExpose(127)
             
         # Take background image
-        self.back = self.camera.getimage()
-        self.back = self.camera.container(self.back)
+        self.back = self.getimage()
 
         # Move back to initial z position
         if home:
@@ -351,4 +350,8 @@ class System(Parameter):
             }
 
         # Return container object
+        config = self.dc_config
+        if "config" in kwargs:
+            config = dict(config).update(kwargs["config"])
+        kwargs["config"] = config
         return Container(items=items, **kwargs)

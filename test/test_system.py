@@ -4,10 +4,14 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
+from scidatacontainer import load_config
 from nanofactorysystem import System, getLogger
 
-author = "Reinhard Caspary"
-email = "reinhard.caspary@phoenixd.uni-hannover.de"
+config = load_config(
+    author = "Reinhard Caspary",
+    email = "reinhard.caspary@phoenixd.uni-hannover.de",
+    organization = "Leibniz Universität Hannover",
+    orcid = "0000-0003-0460-6088")
 
 params = {
     "name": "Laser Nanofactory",
@@ -27,9 +31,9 @@ sample = {
     }
 
 logger = getLogger()
-with System(sample, logger=logger, **params) as mysystem:
-    log = mysystem.log
-    dc = mysystem.container()
+with System(sample, logger=logger, config=config, **params) as dlw:
+    log = dlw.log
+    dc = dlw.container()
     dc.write("system.zdc")
     print(dc)
     log.info("Done.")

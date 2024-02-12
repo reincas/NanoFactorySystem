@@ -6,20 +6,24 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scidatacontainer import load_config
 from nanofactorysystem import Attenuator, getLogger
 
-author = "Reinhard Caspary"
-email = "reinhard.caspary@phoenixd.uni-hannover.de"
+config = load_config(
+    author = "Reinhard Caspary",
+    email = "reinhard.caspary@phoenixd.uni-hannover.de",
+    organization = "Leibniz Universität Hannover",
+    orcid = "0000-0003-0460-6088")
 
 logger = getLogger()
-att = Attenuator(logger=logger, fitKind="quadratic")
+att = Attenuator(logger=logger, config=config, fitKind="quadratic")
 log = att.log
 
 log.info("Calibration data:")
 for value, power in att.data:
     log.info("    %4.1f -> %6.2f mW" % (value, power))
 
-dc = att.container(author=author, email=email)
+dc = att.container()
 dc.write("attenuator.zdc")
 print(dc)
 

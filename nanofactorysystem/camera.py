@@ -35,7 +35,7 @@ try:
 except:
     acquire = None
     
-from scidatacontainer import Container
+from scidatacontainer import Container, load_config
 
 ##########################################################################
 class Property(object):
@@ -185,6 +185,9 @@ class Camera(object):
             self.log = logger
         self.log.info("Initializing camera.")
 
+        # SciData author configuration
+        self.dc_config = kwargs.pop("config", None) or load_config()
+        
         # Check for driver
         if acquire is None:
             self.log.error("Camera driver is missig!")
@@ -210,7 +213,7 @@ class Camera(object):
         # Single frame mode
         for key, value in self._defaults.items():
             if key in kwargs:
-                self[key] = kwargs[key]
+                self[key] = kwargs.pop(key)
             else:
                 self[key] = value
         
@@ -530,12 +533,13 @@ class Camera(object):
         return result
     
 
-    def container(self, **kwargs):
+    def container(self, img=None, **kwargs):
 
-        """ Return current camera image as SciDataContainer. """
+        """ Return given or current camera image as SciDataContainer. """
 
         # Grab camera image
-        img = self.getImage()
+        if img is None:
+            img = self.getImage()
 
         # General metadata
         content = {
@@ -555,4 +559,8 @@ class Camera(object):
             }
         
         # Return container object
+        config = self.dc_config
+        if "config" in kwargs:
+            config = dict(config).update(kwargs["config"])
+        kwargs["config"] = config
         return Container(items=items, **kwargs)
