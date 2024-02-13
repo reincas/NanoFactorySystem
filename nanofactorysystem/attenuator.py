@@ -133,8 +133,5 @@ class Attenuator(Parameter):
             }
 
         # Return container object
-        config = self.dc_config
-        if "config" in kwargs:
-            config = dict(config).update(kwargs["config"])
-        kwargs["config"] = config
+        kwargs["config"] = kwargs.get("config", self.dc_config)
         return Container(items=items, **kwargs)
