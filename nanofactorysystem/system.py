@@ -10,7 +10,6 @@
 ##########################################################################
 
 import math
-import random
 from scidatacontainer import Container, load_config
 
 from .parameter import Parameter
@@ -232,54 +231,6 @@ class System(Parameter):
                     self.pulse(power, dt)
         self.controller.moveabs(self["speed"], x=x0, y=y0)
         
-
-    def zline(self, x, y, z, dz, power, speed, duration, jitter=None):
-
-        """ Exposed an axial line or point (dz=0) at given position.
-        Return camera images from before and after exposure. """
-
-        # Move to center position
-        if jitter:
-            xc = random.gauss(x, jitter)
-            yc = random.gauss(y, jitter)
-        else:
-            xc, yc = x, y
-        self.controller.moveabs(self["speed"], x=xc, y=yc, z=z)
-        self.controller.wait("XYZ", self["delay"])
-
-        # Take pre exposure camera image
-        img0 = self.getimage()
-
-        # Correct for forced axial jitter if requested
-        if jitter:
-            self.controller.moveabs(self["speed"], x=x, y=y, z=z)
-            self.controller.wait("XYZ", self["delay"])
-
-        # Expose axial line
-        if dz != 0.0:
-            v = min(speed, dz/duration)
-            dt = dz/v
-            self.controller.zline(power, self["speed"], v, dz)
-            self.controller.wait("XYZ", self["delay"])
-
-        # Expose a dot
-        else:
-            v = 0.0
-            dz = 0.0
-            dt = duration
-            self.controller.pulse(power, dt)
-            
-        # Take post exposure camera image
-        if jitter:
-            xc = random.gauss(x, jitter)
-            yc = random.gauss(y, jitter)
-            self.controller.moveabs(self["speed"], x=xc, y=yc, z=z)
-            self.controller.wait("XYZ", self["delay"])
-        img1 = self.getimage()
-
-        # Done
-        return img0, img1, v, dt
-            
 
     def background(self, z=None, dz=None, force=False, home=True):
 

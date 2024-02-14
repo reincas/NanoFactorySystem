@@ -47,15 +47,16 @@ def getLogger(logfile=None):
     return logger
 
 
-def mkdir(path):
+def mkdir(path, clean=True):
 
     """ Make sure that the given folder exists and is empty. """
 
     p = Path(path)
     p.mkdir(parents=True, exist_ok=True)
-    for sub in p.iterdir():
-        if sub.is_file():
-            sub.unlink()
-        elif sub.is_dir():
-            rmtree(sub)
+    if clean:
+        for sub in p.iterdir():
+            if sub.is_file():
+                sub.unlink()
+            elif sub.is_dir():
+                rmtree(sub)
     return path
