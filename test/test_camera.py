@@ -15,12 +15,11 @@ config = load_config(
 
 logger = getLogger()
 with Camera(logger=logger, config=config) as camera:
-    log = camera.log
-    log.info("Exposure time %.4f ms" % (0.001*camera["ExposureTime"]))
-    log.info("Optimizing exposure time...")
+    logger.info("Exposure time %.4f ms" % (0.001*camera["ExposureTime"]))
+    logger.info("Optimizing exposure time...")
     camera.optExpose()
-    log.info("Exposure time %.4f ms" % (0.001*camera["ExposureTime"]))
+    logger.info("Exposure time %.4f ms" % (0.001*camera["ExposureTime"]))
     dc = camera.container()
     dc.write("image.zdc")
     print(dc)
-    log.info("Done.")
+    logger.info("Done.")

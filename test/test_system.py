@@ -31,9 +31,8 @@ sample = {
     }
 
 logger = getLogger()
-with System(sample, logger=logger, config=config, **params) as dlw:
-    log = dlw.log
-    dc = dlw.container()
+with System(sample, logger=logger, config=config, **params) as system:
+    dc = system.container()
     dc.write("system.zdc")
     print(dc)
-    log.info("Done.")
+    logger.info("Done.")

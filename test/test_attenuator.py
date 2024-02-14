@@ -17,11 +17,10 @@ config = load_config(
 
 logger = getLogger()
 att = Attenuator(logger=logger, config=config, fitKind="quadratic")
-log = att.log
 
 log.info("Calibration data:")
 for value, power in att.data:
-    log.info("    %4.1f -> %6.2f mW" % (value, power))
+    logger.info("    %4.1f -> %6.2f mW" % (value, power))
 
 dc = att.container()
 dc.write("attenuator.zdc")
@@ -36,4 +35,4 @@ fig, ax = plt.subplots(figsize=(12,9))
 plt.plot(cx, cy, "r+")
 plt.plot(x, y, "b")
 plt.show()
-log.info("Done.")
+logger.info("Done.")

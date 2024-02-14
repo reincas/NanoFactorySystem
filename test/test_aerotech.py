@@ -19,12 +19,11 @@ params = {
 
 logger = getLogger()
 with A3200(logger=logger, config=config, **params) as controller:
-    log = controller.log
     x0, y0, z0 = controller.position("XYZ")
-    log.info("Stage x position: %.3f µm" % x0)
-    log.info("Stage y position: %.3f µm" % y0)
-    log.info("Stage z position: %.3f µm" % z0)
+    logger.info("Stage x position: %.3f µm" % x0)
+    logger.info("Stage y position: %.3f µm" % y0)
+    logger.info("Stage z position: %.3f µm" % z0)
     dc = controller.container()
     dc.write("controller.zdc")
     print(dc)
-    log.info("Done.")
+    logger.info("Done.")
