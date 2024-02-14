@@ -8,6 +8,7 @@ import logging
 from pathlib import Path
 from shutil import rmtree
 
+from .parameter import Parameter
 from .system import System
 from .camera import Camera
 from .attenuator import Attenuator
