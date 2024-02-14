@@ -22,17 +22,28 @@ from .aerotech import A3200
 LOGFMT = logging.Formatter(fmt="%(asctime)s / %(levelname)s / %(message)s",
                            datefmt="%Y-%m-%d %H:%M:%S")
 
-def getLogger():
+def getLogger(logfile=None):
 
-    """ Return a basic console logger object. """
+    """ Configure and return a logger object. """
     
+    # Initialize logger object
     logger = logging.getLogger('dummy')
     logger.setLevel(logging.DEBUG)
 
+    # Console output
     consolehandler = logging.StreamHandler()
     consolehandler.setLevel(logging.DEBUG)
     consolehandler.setFormatter(LOGFMT)
     logger.addHandler(consolehandler)
+
+    # Optional file output
+    if logfile:
+        filehandler = logging.FileHandler(logfile)
+        filehandler.setLevel(logging.DEBUG)
+        filehandler.setFormatter(LOGFMT)
+        logger.addHandler(filehandler)
+    
+    # Return logger object
     return logger
 
 
