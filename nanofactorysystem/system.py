@@ -39,7 +39,7 @@ class System(Parameter):
         "controller": None,
         }
 
-    def __init__(self, sample=None, logger=None, **kwargs):
+    def __init__(self, sample=None, logger=None, config=None, **kwargs):
 
         """ Initialize the scanner algorithm. """
 
@@ -47,12 +47,9 @@ class System(Parameter):
         self.opened = False
 
         # Initialize parameter class
-        super().__init__(logger, **kwargs)
+        super().__init__(logger, config, **kwargs)
         self.log.info("Initializing system.")
 
-        # SciData author configuration
-        self.dc_config = kwargs.pop("config", None) or load_config()
-        
         # Store optional sample data dictionary. Applications using the
         # system should include this item into their data container.
         self.sample = sample
@@ -329,7 +326,7 @@ class System(Parameter):
         return self.back
 
 
-    def container(self, **kwargs):
+    def container(self, config=None, **kwargs):
 
         """ Return system configuration as SciDataContainer. """
 
@@ -350,5 +347,5 @@ class System(Parameter):
             }
 
         # Return container object
-        kwargs["config"] = kwargs.get("config", self.dc_config)
-        return Container(items=items, **kwargs)
+        config = config or self.config
+        return Container(items=items, config=config, **kwargs)

@@ -91,15 +91,12 @@ class A3200(Parameter):
         "cmdFaultChar": 35,       # CommandFaultCharacter
         }
         
-    def __init__(self, attenuator=None, logger=None, **kwargs):
+    def __init__(self, attenuator=None, logger=None, config=None, **kwargs):
 
         # Initialize parameter class
-        super().__init__(logger, **kwargs)
+        super().__init__(logger, config, **kwargs)
         self.log.info("Initializing Aerotech A3200 system.")
 
-        # SciData author configuration
-        self.dc_config = kwargs.pop("config", None) or load_config()
-        
         # Safety net: maximum z position
         if self["zMax"] is None:
             raise RuntimeError("Maximum z position is missing!")
@@ -536,7 +533,7 @@ class A3200(Parameter):
         return {k: self[k] for k in keys}
     
 
-    def container(self, **kwargs):
+    def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """
 
@@ -562,5 +559,5 @@ class A3200(Parameter):
             items[item] = self.task_pgms[name]
 
         # Return container object
-        kwargs["config"] = kwargs.get("config", self.dc_config)
-        return Container(items=items, **kwargs)
+        config = config or self.config
+        return Container(items=items, config=config, **kwargs)

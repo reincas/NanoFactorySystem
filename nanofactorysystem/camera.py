@@ -170,7 +170,7 @@ class Camera(object):
         "GainAuto": 0,
         }
 
-    def __init__(self, size=None, logger=None, **kwargs):
+    def __init__(self, size=None, logger=None, config=None, **kwargs):
 
         """ Initialize the camera. """
 
@@ -186,7 +186,7 @@ class Camera(object):
         self.log.info("Initializing camera.")
 
         # SciData author configuration
-        self.dc_config = kwargs.pop("config", None) or load_config()
+        self.config = config or load_config()
         
         # Check for driver
         if acquire is None:
@@ -533,7 +533,7 @@ class Camera(object):
         return result
     
 
-    def container(self, img=None, **kwargs):
+    def container(self, img=None, config=None, **kwargs):
 
         """ Return given or current camera image as SciDataContainer. """
 
@@ -559,5 +559,5 @@ class Camera(object):
             }
         
         # Return container object
-        kwargs["config"] = kwargs.get("config", self.dc_config)
-        return Container(items=items, **kwargs)
+        config = config or self.config
+        return Container(items=items, config=config, **kwargs)

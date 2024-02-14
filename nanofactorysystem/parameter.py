@@ -4,30 +4,33 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
+from abc import ABC, abstractproperty
 import logging
+from scidatacontainer import load_config
 
 
 ##########################################################################
-# Parameter prototype class
+# Abstract parameter class
 
-class Parameter(object):
+class Parameter(ABC):
 
     """ Prototype class providing a standardized interface to export
     parameters and results of an application class to a data packege
     object. """
 
-    _defaults = {"a": None}
+    @abstractproperty
+    _defaults = {"dummy": None}
 
-    def __init__(self, logger=None, **kwargs):
+    def __init__(self, logger=None, config=None, **kwargs):
 
         # Initialize properties
         self._params = {}
         
         # Store logger
-        if logger is None:
-            self.log = logging
-        else:
-            self.log = logger
+        self.log = logger or logging
+
+        # SciData author configuration
+        self.config = config or load_config()
         
         # Store parameters
         for key, value in self._defaults.items():

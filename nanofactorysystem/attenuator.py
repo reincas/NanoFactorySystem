@@ -34,15 +34,12 @@ class Attenuator(Parameter):
         "powerMax": None,
         }
     
-    def __init__(self, fn=None, logger=None, **kwargs):
+    def __init__(self, fn=None, logger=None, config=None, **kwargs):
 
         # Initialize parameter class
-        super().__init__(logger, **kwargs)
+        super().__init__(logger, config, **kwargs)
         self.log.info("Initializing attenuator.")
 
-        # SciData author configuration
-        self.dc_config = kwargs.pop("config", None) or load_config()
-        
         # Read content of the binary calibration file
         if fn is None:
             self.fn = CALIBRATION
@@ -107,7 +104,7 @@ class Attenuator(Parameter):
         return result
     
 
-    def container(self, **kwargs):
+    def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """
 
@@ -133,5 +130,5 @@ class Attenuator(Parameter):
             }
 
         # Return container object
-        kwargs["config"] = kwargs.get("config", self.dc_config)
-        return Container(items=items, **kwargs)
+        config = config or self.config
+        return Container(items=items, config=config, **kwargs)
