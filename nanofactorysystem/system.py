@@ -58,21 +58,21 @@ class System(Parameter):
         self.back = None
 
         # Initialize the MatrixVision camera
-        self.camera = Camera(logger=self.log, config=self.dc_config)
+        self.camera = Camera(logger=self.log, config=self.config)
         if not self.camera.opened:
             self.log.error("Can't connect to camera!")
             raise RuntimeError("Can't connect to camera!")
         self["camera"] = self.camera.info()
 
         # Initialize attenuator
-        self.attenuator = Attenuator(logger=self.log, config=self.dc_config)
+        self.attenuator = Attenuator(logger=self.log, config=self.config)
         self["attenuator"] = self.attenuator.info()
         
         # Initialize the Aerotech A3200 controller
         if self["zMax"] is None:
             raise RuntimeError("Maximum z value is missing!")
         self.controller = A3200(self.attenuator, logger=self.log,
-                                config=self.dc_config, zMax=self["zMax"])
+                                config=self.config, zMax=self["zMax"])
         self.controller.init_zline()
         self["controller"] = self.controller.info()
 
@@ -171,7 +171,7 @@ class System(Parameter):
 
         """ Get a camera image and return an image container. """
 
-        return self.camera.container(config=self.dc_config)
+        return self.camera.container()
     
 
     def polyline(self, line, power, speed, dia):

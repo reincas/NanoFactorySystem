@@ -136,7 +136,7 @@ class A3200(Parameter):
         if attenuator is not None
             self.attenuator = attenuator
         else:
-            self.attenuator = Attenuator(logger=self.log, config=self.dc_config)
+            self.attenuator = Attenuator(logger=self.log, config=self.config)
 
         # Done
         self.log.info(str(self))
