@@ -179,6 +179,14 @@ class System(Parameter):
         return self.camera.container()
     
 
+    def optexpose(self, level=127):
+
+        """ Set exposure time for given mean value of the image content.
+        """
+
+        return self.camera.optexpose(level)
+    
+
     def polyline(self, line, power, speed, dia):
 
         """ Exposed a single 2D polyline with given laser power and

@@ -89,7 +89,7 @@ class Attenuator(Parameter):
         self.log.info("Initialized attenuator.")
 
 
-    def __self__(self):
+    def __str__(self):
 
         return "Attenuator: %.2f - %.2f mW (%d steps)." % \
                (self["powerMin"], self["powerMax"], self.num)

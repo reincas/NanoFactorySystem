@@ -217,7 +217,7 @@ class Camera(object):
                 self[key] = value
         
         # Set area of interest
-        self.setAoi(size)
+        self.setaoi(size)
 
         # Done
         self.log.info("Initialized camera.")
@@ -267,7 +267,7 @@ class Camera(object):
         #self.open()
         #
         ## Maximize the area of interest
-        #self.setAoi()
+        #self.setaoi()
 
         # Close the device
         self.device.close()
@@ -337,7 +337,7 @@ class Camera(object):
         raise KeyError("Unknown item %s!" % key)
 
         
-    def setAoi(self, size=None):
+    def setaoi(self, size=None):
 
         """ Set area of interest to given quadratic field centered on
         the sensor. Set to full sensor size if no size is given. """
@@ -379,12 +379,12 @@ class Camera(object):
         quadratic deviation of mean value from the given value. """
         
         self["ExposureTime"] = t
-        img = self.getImage()
+        img = self.getimage()
         result = img.mean()-level
         return result
     
         
-    def optExpose(self, level=127):
+    def optexpose(self, level=127):
 
         """ Set exposure time for given mean value of the image content.
         """
@@ -436,12 +436,12 @@ class Camera(object):
 
         # Set and return the optimum exposure time
         self["ExposureTime"] = t
-        avg = self.getImage().mean()
+        avg = self.getimage().mean()
         self.log.info("Optimized exposure time: %.3f ms, mean image value: %.1f (goal: %d)" % (0.001*t, avg, level))
         return t
 
 
-    def getImage(self):
+    def getimage(self):
 
         """ Grab and return a camera image. """
 
@@ -537,7 +537,7 @@ class Camera(object):
 
         # Grab camera image
         if img is None:
-            img = self.getImage()
+            img = self.getimage()
 
         # General metadata
         content = {

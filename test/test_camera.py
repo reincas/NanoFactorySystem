@@ -17,7 +17,7 @@ logger = getLogger()
 with Camera(logger=logger, config=config) as camera:
     logger.info("Exposure time %.4f ms" % (0.001*camera["ExposureTime"]))
     logger.info("Optimizing exposure time...")
-    camera.optExpose()
+    camera.optexpose()
     logger.info("Exposure time %.4f ms" % (0.001*camera["ExposureTime"]))
     dc = camera.container()
     dc.write("image.zdc")

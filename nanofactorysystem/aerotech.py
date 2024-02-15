@@ -283,7 +283,6 @@ class A3200(Parameter):
             dest.append("%s%f" % (axis, 0.001*pos))
         dest = " ".join(sorted(dest))
         self.run("ABSOLUTE")
-        print("LINEAR %s F%g" % (dest, 0.001*speed))
         self.run("LINEAR %s F%f" % (dest, 0.001*speed))
 
 
