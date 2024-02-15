@@ -18,7 +18,6 @@ class Parameter(ABC):
     parameters and results of an application class to a data packege
     object. """
 
-    @abstractproperty
     _defaults = {"dummy": None}
 
     def __init__(self, logger=None, config=None, **kwargs):

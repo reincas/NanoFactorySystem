@@ -259,7 +259,7 @@ class A3200(Parameter):
                 if self.z > self["zMax"]:
                     self.close()
                     raise RuntimeError("Maximum z position exceeded!")
-            dest.append("%s%g" % (axis, 0.001*pos))
+            dest.append("%s%f" % (axis, 0.001*pos))
         dest = " ".join(sorted(dest))
         self.run("INCREMENTAL")
         self.run("LINEAR %s F%f" % (dest, 0.001*speed))
@@ -271,6 +271,7 @@ class A3200(Parameter):
         per second. The absolute positions are given in micrometers as
         named parameters. Example: moveabs(100, x=10327.7, z=2456.5)"""
 
+
         dest = []
         for axis, pos in axes.items():
             axis = self.normaxes(axis, "XYZAB")
@@ -279,41 +280,11 @@ class A3200(Parameter):
                 if self.z > self["zMax"]:
                     self.close()
                     raise RuntimeError("Maximum z position exceeded!")
-            dest.append("%s%g" % (axis, 0.001*pos))
+            dest.append("%s%f" % (axis, 0.001*pos))
         dest = " ".join(sorted(dest))
         self.run("ABSOLUTE")
-        self.run("LINEAR %s F%g" % (dest, 0.001*speed))
-
-
-##    def moveinc(self, speed, **axes):
-##
-##        """ Move on one or more axes with the given speed in micrometers
-##        per second. The relative movement distances are given in
-##        micrometers as named parameters. Example: moveinc(100, x=10.7,
-##        z=-2.0)"""
-##
-##        for axis, pos in axes.items():
-##            axis = self.normaxes(axis, "XYZAB")
-##            if axis == "Z":
-##                self.z += pos
-##                if self.z > self["zMax"]:
-##                    raise RuntimeError("Maximum z position exceeded!")
-##            self.run("MOVEINC %s %f %f" % (axis, 0.001*pos, 0.001*speed))
-##
-##
-##    def moveabs(self, speed, **axes):
-##
-##        """ Move on one or more axes with the given speed in micrometers
-##        per second. The absolute positions are given in micrometers as
-##        named parameters. Example: moveinc(100, x=10327.7, z=2456.5)"""
-##
-##        for axis, pos in axes.items():
-##            axis = self.normaxes(axis, "XYZAB")
-##            if axis == "Z":
-##                self.z = pos
-##                if self.z > self["zMax"]:
-##                    raise RuntimeError("Maximum z position exceeded!")
-##            self.run("MOVEABS %s %f %f" % (axis, 0.001*pos, 0.001*speed))
+        print("LINEAR %s F%g" % (dest, 0.001*speed))
+        self.run("LINEAR %s F%f" % (dest, 0.001*speed))
 
 
     def position(self, axes):

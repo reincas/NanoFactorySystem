@@ -20,7 +20,7 @@ att = Attenuator(logger=logger, config=config, fitKind="quadratic")
 
 logger.info("Calibration data:")
 for value, power in att.data:
-    logger.info("    %4.1f -> %6.2f mW" % (value, power))
+    logger.info("    %4.1f V -> %6.2f mW" % (value, power))
 
 dc = att.container()
 dc.write("attenuator.zdc")

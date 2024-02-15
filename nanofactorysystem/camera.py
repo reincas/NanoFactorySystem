@@ -379,7 +379,7 @@ class Camera(object):
         quadratic deviation of mean value from the given value. """
         
         self["ExposureTime"] = t
-        img = self.getimage()
+        img = self.getImage()
         result = img.mean()-level
         return result
     
@@ -436,7 +436,7 @@ class Camera(object):
 
         # Set and return the optimum exposure time
         self["ExposureTime"] = t
-        avg = self.getimage().mean()
+        avg = self.getImage().mean()
         self.log.info("Optimized exposure time: %.3f ms, mean image value: %.1f (goal: %d)" % (0.001*t, avg, level))
         return t
 
