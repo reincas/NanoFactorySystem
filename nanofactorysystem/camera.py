@@ -128,7 +128,7 @@ class PropertySelect(Property):
                 raise ValueError("Selection value not integer!")
             size = self.obj.dictSize()
             if v < 0 or v >= size:
-                raise ValueError("Selection value %d not in range 0-d!" % (v, size-1))
+                raise ValueError("Selection value %d not in range 0-%d!" % (v, size-1))
             v = self.obj.getTranslationDictString(v)
         self.obj.writeS(v)
 
@@ -152,7 +152,6 @@ class Camera(object):
         "ExposureMode": PropertySelect,
         "ExposureTime": PropertyFloat,
         "ExposureAuto": PropertySelect,
-        "ExposureMode": PropertySelect,
         "mvGainMode": PropertySelect,
         "GainSelector": PropertySelect,
         "Gain": PropertyFloat,
@@ -523,7 +522,6 @@ class Camera(object):
                 "exposureMode": self["ExposureMode"],
                 "exposureTime": self["ExposureTime"],
                 "exposureAuto": self["ExposureAuto"],
-                "exposureMode": self["ExposureMode"],
                 "gainMode": self["mvGainMode"],
                 "gainSelector": self["GainSelector"],
                 "gain": self["Gain"],

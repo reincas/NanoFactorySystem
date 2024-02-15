@@ -7,7 +7,7 @@
 import struct
 import numpy
 from scipy.interpolate import interp1d
-from scidatacontainer import Container, register, load_config
+from scidatacontainer import Container, register
 
 from .parameter import Parameter
 

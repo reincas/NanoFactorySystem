@@ -18,7 +18,7 @@ config = load_config(
 logger = getLogger()
 att = Attenuator(logger=logger, config=config, fitKind="quadratic")
 
-log.info("Calibration data:")
+logger.info("Calibration data:")
 for value, power in att.data:
     logger.info("    %4.1f -> %6.2f mW" % (value, power))
 

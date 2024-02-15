@@ -133,7 +133,7 @@ class A3200(Parameter):
         self.task_pgms = {}
 
         # Laser calibration
-        if attenuator is not None
+        if attenuator is not None:
             self.attenuator = attenuator
         else:
             self.attenuator = Attenuator(logger=self.log, config=self.config)
@@ -262,7 +262,7 @@ class A3200(Parameter):
             dest.append("%s%g" % (axis, 0.001*pos))
         dest = " ".join(sorted(dest))
         self.run("INCREMENTAL")
-        self.run("LINEAR %s%f F%f" % (dest, 0.001*speed))
+        self.run("LINEAR %s F%f" % (dest, 0.001*speed))
 
 
     def moveabs(self, speed, **axes):

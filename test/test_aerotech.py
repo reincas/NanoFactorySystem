@@ -5,7 +5,7 @@
 ##########################################################################
 
 from scidatacontainer import load_config
-from nanofactorysystem import Attenuator, A3200, getLogger
+from nanofactorysystem import A3200, getLogger
 
 config = load_config(
     author = "Reinhard Caspary",
