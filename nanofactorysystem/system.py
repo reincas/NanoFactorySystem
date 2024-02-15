@@ -53,9 +53,6 @@ class System(Parameter):
         # system should include this item into their data container.
         self.sample = sample
 
-        # No background image so far
-        self.back = None
-
         # Initialize the MatrixVision camera
         self.camera = Camera(logger=self.log, config=self.config)
         if not self.camera.opened:
@@ -144,6 +141,14 @@ class System(Parameter):
         return self.controller.position(axes)
 
 
+    def wait(self, axes, pause=None):
+
+        """ Wait until all given axes are in position after pause
+        milliseconds. """
+
+        self.controller.wait(axes, pause)
+
+
     def moveabs(self, speed=None, wait=None, **axes):
 
         """ Move on one or more axes with the given speed in micrometers
@@ -155,7 +160,8 @@ class System(Parameter):
             speed = self["speed"]
         self.controller.moveabs(speed, **axes)
         if wait is not None:
-            self.controller.wait(wait)
+            wait_axes = "".join(axes.keys())
+            self.controller.wait(wait_axes, wait)
 
 
     def pulse(self, power, duration):
@@ -232,49 +238,13 @@ class System(Parameter):
         self.controller.moveabs(self["speed"], x=x0, y=y0)
         
 
-    def background(self, z=None, dz=None, force=False, home=True):
+    def zline(self, power, fast, slow, dz):
 
-        """ Eventually move to given z position and take a background
-        camera image. Find the exposure time to get camera images with
-        an average pixel value of 127. Return image as image container
-        object. """
+        """ Run zline program with fast and slow speed in µm/s as well
+        as axial distance in µm. Return when the program finished
+        successfully and raise a RuntimeError otherwise. """
 
-        # Return existing background image, if available
-        if not force and self.back is not None:
-            self.log.info("Keeping existing background image.")
-            return self.back
-
-        self.log.info("Take background image.")
-
-        # Current z position        
-        z0 = self.controller.position("Z")
-
-        # Requested z position
-        if dz is not None:
-            if z is None:
-                z = z0 + dz
-            else:
-                z += dz
-        
-        # Move to given z position
-        if z is not None:
-            self.controller.moveabs(self["speed"], z=z)
-            self.controller.wait("Z", self["delay"])
-
-        # Set exposure time for normalized image
-        self.camera.optExpose(127)
-            
-        # Take background image
-        self.back = self.getimage()
-
-        # Move back to initial z position
-        if home:
-            self.controller.moveabs(self["speed"], z=z0)
-            self.controller.wait("Z", self["delay"])
-
-        # Return images
-        self.log.info("Got background image.")
-        return self.back
+        self.controller.zline(power, fast, slow, dz)
 
 
     def container(self, config=None, **kwargs):
