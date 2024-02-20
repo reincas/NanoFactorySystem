@@ -477,7 +477,7 @@ class Camera(object):
                 # Copy image data to numpy array
                 cbuf = (ctypes.c_char * size).from_address(addr)
                 dtype = np.uint16 if depth > 8 else np.uint8
-                img = np.frombuffer(cbuf, dtype=dtype)
+                img = np.copy(np.frombuffer(cbuf, dtype=dtype))
                 img.shape = (height, width)
 
             # Unlock the request object
