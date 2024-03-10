@@ -120,7 +120,7 @@ class Attenuator(Parameter):
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/parameter.json": self.parameters(),
+            "data/attenuator.json": self.parameters(),
             "meas/calibration.json": data,
             "meas/calibration.dat": self.raw,
             }

@@ -243,6 +243,19 @@ class System(Parameter):
         self.controller.zline(power, fast, slow, dz)
 
 
+    def items(self):
+        
+        items = {
+            "data/objective.json": self.objective,
+            "data/camera.json": self.camera.info(),
+            "data/controller.json": self.controller.info(),
+            "data/system.json": self.parameters(),
+            }
+        if self.sample:
+            items["data/sample.json"] = self.sample
+        return items
+    
+        
     def container(self, config=None, **kwargs):
 
         """ Return system configuration as SciDataContainer. """
@@ -260,13 +273,7 @@ class System(Parameter):
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/objective.json": self.objective,
-            "data/camera.json": self.camera.info(),
-            "data/controller.json": self.controller.info(),
-            "data/parameter.json": self.parameters(),
-            }
-        if self.sample:
-            items["data/sample.json"] = self.sample
+            } | self.items()
 
         # Return container object
         config = config or self.config

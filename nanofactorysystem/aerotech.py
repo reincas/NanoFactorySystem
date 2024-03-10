@@ -514,7 +514,7 @@ class A3200(Parameter):
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/parameter.json": self.parameters(),
+            "data/controller.json": self.parameters(),
             }
 
         # Add program files

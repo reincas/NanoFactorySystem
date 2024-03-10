@@ -60,7 +60,7 @@ class ImageContainer(Container):
         # Update items dictionary
         items["content.json"] = content
         items["meta.json"] = meta
-        items["data/parameter.json"] = params
+        items["data/camera.json"] = params
         items["meas/image.png"] = img
         self.kwargs["items"] = items
 
