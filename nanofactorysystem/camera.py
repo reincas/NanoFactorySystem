@@ -310,7 +310,7 @@ class Camera(Parameter):
 
     """ Camera class. """
 
-    _defaults = {
+    _defaults = sysConfig.camera | {
         "AcquisitionMode": "SingleFrame",
         "ExposureMode": "Timed",
         "ExposureTime": 20000,
@@ -328,13 +328,10 @@ class Camera(Parameter):
         # Not open now
         self.opened = False
 
-        # Store camera data dictionary
+        # Initialize parameter class
         args = popargs(kwargs, "camera")
         product = args.pop("product", None)
         deviceID = args.pop("deviceID", None)
-        self.camera = sysConfig.camera
-        
-        # Initialize parameter class
         super().__init__(user, logger, **args)
         self.log.info("Initializing camera.")
 
@@ -514,7 +511,7 @@ class Camera(Parameter):
             img = self.getimage()
 
         # Camera parameters
-        params = self.parameters(self.camera)
+        params = self.parameters()
         
         # Return container object
         config = config or self.config

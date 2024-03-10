@@ -77,7 +77,7 @@ class A3200(Parameter):
     
     """ Class for controlling an Aerotech A3200 system."""
     
-    _defaults = {
+    _defaults = sysConfig.controller | {
         "xInit": None,
         "yInit": None,
         "zInit": None,
@@ -92,9 +92,6 @@ class A3200(Parameter):
         args = popargs(kwargs, "controller")        
         super().__init__(user, logger, **args)
         self.log.info("Initializing Aerotech A3200 system.")
-
-        # Store controller data dictionary
-        self.controller = sysConfig.controller
 
         # Safety net: maximum z position
         if self["zMax"] is None:
@@ -517,7 +514,7 @@ class A3200(Parameter):
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/parameter.json": self.parameters(self.controller),
+            "data/parameter.json": self.parameters(),
             }
 
         # Add program files

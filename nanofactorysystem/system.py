@@ -23,7 +23,7 @@ class System(Parameter):
 
     """ Main class for the Femtika Nanofactory system. """
 
-    _defaults = {
+    _defaults = sysConfig.system | {
         "backOffset": -3000.0,
         "speed": 2000.0,
         "delay": 10.0,
@@ -40,9 +40,6 @@ class System(Parameter):
         args = popargs(kwargs, "system")
         super().__init__(user, logger, **args)
         self.log.info("Initializing system.")
-
-        # Store system data dictionary
-        self.system = sysConfig.system
 
         # Store objective data dictionary
         self.objective = sysConfig.objective(objective)
@@ -266,7 +263,7 @@ class System(Parameter):
             "data/objective.json": self.objective,
             "data/camera.json": self.camera.info(),
             "data/controller.json": self.controller.info(),
-            "data/parameter.json": self.parameters(self.system),
+            "data/parameter.json": self.parameters(),
             }
         if self.sample:
             items["data/sample.json"] = self.sample

@@ -23,7 +23,7 @@ class Attenuator(Parameter):
     It loads a calibration file and provides translation between
     attenuator value and laser power in both directions. """
 
-    _defaults = {
+    _defaults = sysConfig.attenuator | {
         "calibrationFile": sysConfig.attenuator["calibrationFile"],
         "fitKind": "cubic",
         "polynomialOrder": None,
@@ -40,9 +40,6 @@ class Attenuator(Parameter):
         super().__init__(user, logger, **args)
         self.log.info("Initializing attenuator.")
 
-        # Store attenuator data dictionary
-        self.attenuator = sysConfig.attenuator
-        
         # Read content of the binary calibration file
         with open(self["calibrationFile"], "rb") as fp:
             self.raw = fp.read()
@@ -123,7 +120,7 @@ class Attenuator(Parameter):
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/parameter.json": self.parameters(self.attenuator),
+            "data/parameter.json": self.parameters(),
             "meas/calibration.json": data,
             "meas/calibration.dat": self.raw,
             }

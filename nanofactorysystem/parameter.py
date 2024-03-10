@@ -78,20 +78,13 @@ class Parameter(object):
         return value
 
 
-    def parameters(self, default=None):
+    def parameters(self):
 
         """ Return a copy of the parameter dictionary of this object updating
         the content of the optional dictionary default. """
 
-        # Prepare default dictionary
-        if default is None:
-            params = {}
-        else:
-            assert isinstance(default, dict)
-            params = dict(default)
-        
-        # Update with current parameters
-        params.update(self._params)
+        # New dictionary with current parameters
+        params = dict(self._params)
         
         # Update optional device parameters
         if hasattr(self, "device"):
