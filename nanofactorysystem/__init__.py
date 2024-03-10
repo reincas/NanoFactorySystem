@@ -16,6 +16,7 @@ from .system import System
 from .camera import Camera
 from .attenuator import Attenuator
 from .aerotech import A3200
+from .image import ImageContainer
 
 
 ##########################################################################

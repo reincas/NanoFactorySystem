@@ -34,10 +34,9 @@ try:
 except:
     acquire = None
     
-from scidatacontainer import Container
-
 from . import sysConfig
 from .parameter import Parameter
+from .image import ImageContainer
 
 
 ##########################################################################
@@ -507,29 +506,15 @@ class Camera(Parameter):
 
     def container(self, img=None, config=None, **kwargs):
 
-        """ Return given or current camera image as SciDataContainer. """
+        """ Return given or current camera image as ImageContainer. """
 
         # Grab camera image
         if img is None:
             img = self.getimage()
 
-        # General metadata
-        content = {
-            "containerType": {"name": "CameraImage", "version": 1.1},
-            }
-        meta = {
-            "title": "Microscope Camera Image",
-            "description": "Camera image from Matrix Vision camera",
-            }
-
-        # Create container dictionary
-        items = {
-            "content.json": content,
-            "meta.json": meta,
-            "meas/image.json": self.parameters(self.camera),
-            "meas/image.png": img,
-            }
+        # Camera parameters
+        params = self.parameters(self.camera)
         
         # Return container object
         config = config or self.config
-        return Container(items=items, config=config, **kwargs)
+        return ImageContainer(img, params, None, config, **kwargs)
