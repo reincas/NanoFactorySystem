@@ -28,14 +28,17 @@
 ##########################################################################
 
 import ctypes
-import logging
 import numpy as np
 try:
     from mvIMPACT import acquire
 except:
     acquire = None
     
-from scidatacontainer import Container, load_config
+from scidatacontainer import Container
+
+from . import sysConfig
+from .parameter import Parameter
+
 
 ##########################################################################
 class Property(object):
@@ -134,12 +137,13 @@ class PropertySelect(Property):
 
 
 ##########################################################################
-class Camera(object):
+class CameraDevice(object):
 
-    """ MatrixVision camera class. """
+    """ MatrixVision camera device class. This is a conveniance wrapper to the
+    MatrixVision library. """
 
     # Property classes
-    _templates = {
+    _properties = {
         "family": None,
         "product": None,
         "serial": None,
@@ -158,123 +162,38 @@ class Camera(object):
         "GainAuto": PropertySelect,
         }
 
-    _defaults = {
-        "AcquisitionMode": "SingleFrame",
-        "ExposureMode": "Timed",
-        "ExposureTime": 20000,
-        "ExposureAuto": 0,
-        "mvGainMode": "Default",
-        "GainSelector": "AnalogAll",
-        "Gain": 0,
-        "GainAuto": 0,
-        }
-
-    def __init__(self, size=None, logger=None, config=None, **kwargs):
+    def __init__(self, product=None, deviceID=None):
 
         """ Initialize the camera. """
 
         # Initialize attributes
         self._property = {}
-        self.opened = False
-        
-        # Store logger
-        if logger is None:
-            self.log = logging
-        else:
-            self.log = logger
-        self.log.info("Initializing camera.")
-
-        # SciData author configuration
-        self.config = config or load_config()
-        
-        # Check for driver
-        if acquire is None:
-            self.log.error("Camera driver is missig!")
-            return
         
         # Get camera device
         self.manager = acquire.DeviceManager()
-        if "product" not in kwargs:
+        if product is None:
             self.device = self.manager.getDevice(0)
         else:
-            if "deviceID" not in kwargs:
-                self.device = self.manager.getDeviceByProductAndID(kwargs["product"])
+            if deviceID is None:
+                assert isinstance(product, str)
+                self.device = self.manager.getDeviceByProductAndID(product)
             else:
-                self.device = self.manager.getDeviceByProductAndID(kwargs["product"], kwargs["deviceID"])
-
-        # Initialize the camera device
-        try:
-            self.open()
-        except acquire.EDeviceManager:
-            self.log.error("No camera access!")
-            return
-
-        # Single frame mode
-        for key, value in self._defaults.items():
-            if key in kwargs:
-                self[key] = kwargs.pop(key)
-            else:
-                self[key] = value
-        
-        # Set area of interest
-        self.setaoi(size)
-
-        # Done
-        self.log.info("Initialized camera.")
-        
-
-    def __enter__(self):
-
-        """ Context manager entry method. """
-
-        return self
-
-
-    def __exit__(self, errtype, value, tb):
-
-        """ Context manager exit method. """
-
-        #print("".join(traceback.format_exception(errtype, value, tb)))
-        self.close()
-
-
-    def open(self):
-
-        """ Open and initialize the camera device. """
+                assert isinstance(deviceID, str)
+                self.device = self.manager.getDeviceByProductAndID(product, deviceID)
 
         # Initialize the camera device
         self.device.open()
-        self.opened = True
-        self.log.info(str(self))
 
         # Store a function interface and clear the request and the
         # result queue
         self.fi = acquire.FunctionInterface(self.device)
-
+        
 
     def close(self):
 
         """ Close camera device. """
 
-        # Closed already
-        if not self.opened:
-            return
-        
-        self["AcquisitionMode"] = "Continuous"
-
-        ## Reopen to gain write access to settings
-        #self.device.close()
-        #self.open()
-        #
-        ## Maximize the area of interest
-        #self.setaoi()
-
-        # Close the device
         self.device.close()
-        self.opened = False
-        self.log.info("Camera closed.")
-
-        # Release property objects
         self._property = {}
 
 
@@ -291,14 +210,19 @@ class Camera(object):
         return result
 
 
+    def keys(self):
+        
+        return list(self._properties.keys())
+    
+    
     def __setitem__(self, key, value):
 
         if key in self._property:
             self._property[key].value = value
             return
 
-        if key in self._templates:
-            cls = self._templates[key]
+        if key in self._properties:
+            cls = self._properties[key]
             if cls is None:
                 raise RuntimeError("Item %s is read-only!" % key)
             self._property[key] = cls(self.device, key)
@@ -313,8 +237,8 @@ class Camera(object):
         if key in self._property:
             return self._property[key].value
 
-        if key in self._templates:
-            cls = self._templates[key]
+        if key in self._properties:
+            cls = self._properties[key]
             if cls is None:
                 value = getattr(self.device, key).read(0)
             else:
@@ -330,123 +254,16 @@ class Camera(object):
         if key in self._property:
             return self._property[key]
 
-        if key in self._templates:
-            self._property[key] = self._templates[key](self.device, key)
+        if key in self._properties:
+            self._property[key] = self._properties[key](self.device, key)
             return self._property[key]
 
         raise KeyError("Unknown item %s!" % key)
 
         
-    def setaoi(self, size=None):
-
-        """ Set area of interest to given quadratic field centered on
-        the sensor. Set to full sensor size if no size is given. """
-
-        if not self.opened:
-            raise RuntimeError("Camera device closed!")
-
-        # Determine minimum and maximum values
-        self["OffsetX"] = 0
-        self["OffsetY"] = 0
-        wmin = self.property("Width").minValue
-        wmax = self.property("Width").maxValue
-        hmin = self.property("Height").minValue
-        hmax = self.property("Height").maxValue
-        
-        # Maximize area of interest
-        if size is None:
-            self["Width"] = wmax
-            self["Height"] = hmax
-            self.w, self.h = wmax, hmax
-
-        # Set area of interest to center of the camera sensor
-        else:
-            size = max(size, wmin, hmin)
-            size = min(size, wmax, hmax)
-            x = (wmax - size) // 2
-            y = (hmax - size) // 2
-            self["Width"] = size
-            self["Height"] = size
-            self["OffsetX"] = x
-            self["OffsetY"] = y
-            self.w = size
-            self.h = size
-
-
-    def _funcexpose(self, t, level):
-
-        """ Get camera image with given eposure time and return
-        quadratic deviation of mean value from the given value. """
-        
-        self["ExposureTime"] = t
-        img = self.getimage()
-        result = img.mean()-level
-        return result
-    
-        
-    def optexpose(self, level=127):
-
-        """ Set exposure time for given mean value of the image content.
-        """
-
-        self.log.info("Start exposure time optimization.")
-        
-        # Initialize exposure mode
-        self["ExposureMode"] = "Timed"
-        self["ExposureAuto"] = 0
-        self["ExposureTime"] = 20000
-
-        f = self._funcexpose
-
-        tmin = self.property("ExposureTime").minValue
-        t0 = 20000
-        y0 = f(t0, level)
-        while t0 > tmin + 100:
-            if y0 < 0.0:
-                break
-            t0 = tmin + 0.9 * (t0 - tmin)
-            y0 = f(t0, level)
-        else:
-            raise RuntimeError("Optimization failed!")
-
-        tmax = min(100000.0, self.property("ExposureTime").maxValue)
-        t1 = 30000
-        y1 = f(t1, level)
-        while t1 < tmax - 100:
-            if y1 > 0.0:
-                break
-            t1 = tmax - 0.1 * (tmax - t1)
-            y1 = f(t1, level)
-        else:
-            raise RuntimeError("Optimization failed!")
-        
-        while (t1-t0) > 10.0:
-            t = t0 - y0*(t1-t0)/(y1-y0)
-            y = f(t, level)
-            if y < 0.0:
-                t0 = t
-                y0 = y
-            elif y > 0.0:
-                t1 = t
-                y1 = y
-            else:
-                break
-        else:
-            t = 0.5 * (t0 + t1)            
-
-        # Set and return the optimum exposure time
-        self["ExposureTime"] = t
-        avg = self.getimage().mean()
-        self.log.info("Optimized exposure time: %.3f ms, mean image value: %.1f (goal: %d)" % (0.001*t, avg, level))
-        return t
-
-
     def getimage(self):
 
         """ Grab and return a camera image. """
-
-        if not self.opened:
-            raise RuntimeError("Camera device closed!")
 
         img = None
 
@@ -487,6 +304,193 @@ class Camera(object):
         if img is None:
             raise RuntimeError("Image grabbing failed!")
         return img
+ 
+
+##########################################################################
+class Camera(Parameter):
+
+    """ Camera class. """
+
+    _defaults = {
+        "AcquisitionMode": "SingleFrame",
+        "ExposureMode": "Timed",
+        "ExposureTime": 20000,
+        "ExposureAuto": 0,
+        "mvGainMode": "Default",
+        "GainSelector": "AnalogAll",
+        "Gain": 0,
+        "GainAuto": 0,
+        }
+
+    def __init__(self, user, logger=None, **kwargs):
+
+        """ Initialize the camera. """
+
+        # Not open now
+        self.opened = False
+
+        # Store camera data dictionary
+        product = kwargs.pop("product", None)
+        deviceID = kwargs.pop("deviceID", None)
+        self.camera = sysConfig.camera
+        
+        # Initialize parameter class
+        super().__init__(user, logger, **kwargs)
+        self.log.info("Initializing camera.")
+
+        # Open camaera device
+        self.device = CameraDevice(product, deviceID)
+        self.log.info("Camera: %s" % self.device)
+        self.setaoi(None)
+        
+        # Done
+        self.log.info("Initialized camera.")
+        
+
+    def __enter__(self):
+
+        """ Context manager entry method. """
+
+        return self
+
+
+    def __exit__(self, errtype, value, tb):
+
+        """ Context manager exit method. """
+
+        self.device.close()
+
+
+    def close(self):
+
+        """ Close camera device. """
+
+        # Closed already
+        if not self.opened:
+            return
+        
+        self.device["AcquisitionMode"] = "Continuous"
+
+        # Close the device
+        self.device.close()
+        self.opened = False
+        self.log.info("Camera closed.")
+
+
+    def setaoi(self, size=None):
+
+        """ Set area of interest to given quadratic field centered on
+        the sensor. Set to full sensor size if no size is given. """
+
+        if not self.opened:
+            raise RuntimeError("Camera device closed!")
+
+        # Determine minimum and maximum values
+        self.device["OffsetX"] = 0
+        self.device["OffsetY"] = 0
+        wmin = self.device.property("Width").minValue
+        wmax = self.device.property("Width").maxValue
+        hmin = self.device.property("Height").minValue
+        hmax = self.device.property("Height").maxValue
+        
+        # Maximize area of interest
+        if size is None:
+            self.device["Width"] = wmax
+            self.device["Height"] = hmax
+            self.w, self.h = wmax, hmax
+
+        # Set area of interest to center of the camera sensor
+        else:
+            size = max(size, wmin, hmin)
+            size = min(size, wmax, hmax)
+            x = (wmax - size) // 2
+            y = (hmax - size) // 2
+            self.device["Width"] = size
+            self.device["Height"] = size
+            self.device["OffsetX"] = x
+            self.device["OffsetY"] = y
+            self.w = size
+            self.h = size
+
+
+    def _funcexpose(self, t, level):
+
+        """ Get camera image with given eposure time and return
+        deviation of mean value from the given value. """
+        
+        self.device["ExposureTime"] = t
+        img = self.device.getimage()
+        result = img.mean()-level
+        return result
+    
+        
+    def optexpose(self, level=127):
+
+        """ Set exposure time for given mean value of the image content.
+        """
+
+        if not self.opened:
+            raise RuntimeError("Camera device closed!")
+        self.log.info("Start exposure time optimization.")
+        
+       # Initialize exposure mode
+        self.device["ExposureMode"] = "Timed"
+        self.device["ExposureAuto"] = 0
+        self.device["ExposureTime"] = 20000
+
+        f = self._funcexpose
+
+        tmin = self.device.property("ExposureTime").minValue
+        t0 = 20000
+        y0 = f(t0, level)
+        while t0 > tmin + 100:
+            if y0 < 0.0:
+                break
+            t0 = tmin + 0.9 * (t0 - tmin)
+            y0 = f(t0, level)
+        else:
+            raise RuntimeError("Optimization failed!")
+
+        tmax = min(100000.0, self.device.property("ExposureTime").maxValue)
+        t1 = 30000
+        y1 = f(t1, level)
+        while t1 < tmax - 100:
+            if y1 > 0.0:
+                break
+            t1 = tmax - 0.1 * (tmax - t1)
+            y1 = f(t1, level)
+        else:
+            raise RuntimeError("Optimization failed!")
+        
+        while (t1-t0) > 10.0:
+            t = t0 - y0*(t1-t0)/(y1-y0)
+            y = f(t, level)
+            if y < 0.0:
+                t0 = t
+                y0 = y
+            elif y > 0.0:
+                t1 = t
+                y1 = y
+            else:
+                break
+        else:
+            t = 0.5 * (t0 + t1)            
+
+        # Set and return the optimum exposure time
+        self.device["ExposureTime"] = t
+        avg = self.device.getimage().mean()
+        self.log.info("Optimized exposure time: %.3f ms, mean image value: %.1f (goal: %d)" % (0.001*t, avg, level))
+        return t
+
+
+    def getimage(self):
+
+        """ Grab and return a camera image. """
+
+        if not self.opened:
+            raise RuntimeError("Camera device closed!")
+
+        return self.device.getimage()
 
 
     def info(self):
@@ -494,41 +498,11 @@ class Camera(object):
         """ Return a dictionary containing the camera device info. """
 
         return {
-            "family": self["family"],
-            "product": self["product"],
-            "serial": self["serial"],
-            "id": self["deviceID"],
+            "family": self.device["family"],
+            "product": self.device["product"],
+            "serial": self.device["serial"],
+            "id": self.device["deviceID"],
             }
-
-
-    def parameters(self):
-
-        """ Return a dictionary containing the current camera
-        parameters. """
-
-        if not self.opened:
-            return
-        
-        result = {
-            "device": self.info(),
-            "format": {
-                "width": self["Width"],
-                "height": self["Height"],
-                "offsetX": self["OffsetX"],
-                "offsetY": self["OffsetY"],
-                },
-            "acquisition": {
-                "acquisitionMode": self["AcquisitionMode"],
-                "exposureMode": self["ExposureMode"],
-                "exposureTime": self["ExposureTime"],
-                "exposureAuto": self["ExposureAuto"],
-                "gainMode": self["mvGainMode"],
-                "gainSelector": self["GainSelector"],
-                "gain": self["Gain"],
-                "gainAuto": self["GainAuto"],
-                },
-            }
-        return result
     
 
     def container(self, img=None, config=None, **kwargs):
@@ -541,10 +515,10 @@ class Camera(object):
 
         # General metadata
         content = {
-            "containerType": {"name": "DcCameraImage", "version": 1.0},
+            "containerType": {"name": "CameraImage", "version": 1.1},
             }
         meta = {
-            "title": "TPP Camera Image",
+            "title": "Microscope Camera Image",
             "description": "Camera image from Matrix Vision camera",
             }
 
@@ -552,7 +526,7 @@ class Camera(object):
         items = {
             "content.json": content,
             "meta.json": meta,
-            "meas/image.json": self.parameters(),
+            "meas/image.json": self.parameters(self.camera),
             "meas/image.png": img,
             }
         

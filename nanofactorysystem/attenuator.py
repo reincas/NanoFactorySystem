@@ -9,13 +9,11 @@ import numpy
 from scipy.interpolate import interp1d
 from scidatacontainer import Container, register
 
+from . import sysConfig
 from .parameter import Parameter
 
 # Register binary data calibration format
 register("dat", "bin")
-
-# Default location of laser calibration file
-CALIBRATION = "C:\\Software\\3DPoli Fabrication\\Calibration\\Calibration.dat"
 
 
 ##########################################################################
@@ -26,6 +24,7 @@ class Attenuator(Parameter):
     attenuator value and laser power in both directions. """
 
     _defaults = {
+        "calibrationFile": sysConfig.attenuator["calibrationFile"],
         "fitKind": "cubic",
         "polynomialOrder": None,
         "valueMin": 0.0,
@@ -34,18 +33,17 @@ class Attenuator(Parameter):
         "powerMax": None,
         }
     
-    def __init__(self, fn=None, logger=None, config=None, **kwargs):
+    def __init__(self, user, logger=None, **kwargs):
 
         # Initialize parameter class
-        super().__init__(logger, config, **kwargs)
+        super().__init__(user, logger, **kwargs)
         self.log.info("Initializing attenuator.")
 
+        # Store attenuator data dictionary
+        self.attenuator = sysConfig.attenuator
+        
         # Read content of the binary calibration file
-        if fn is None:
-            self.fn = CALIBRATION
-        else:
-            self.fn = fn
-        with open(self.fn, "rb") as fp:
+        with open(self["calibrationFile"], "rb") as fp:
             self.raw = fp.read()
         if len(self.raw) % 16:
             raise RuntimeError("File size must be a multiple of 16!")
@@ -110,21 +108,21 @@ class Attenuator(Parameter):
 
         # General metadata
         content = {
-            "containerType": {"name": "DcPowerAttenuator", "version": 1.0},
+            "containerType": {"name": "PowerAttenuator", "version": 1.1},
             }
         meta = {
-            "title": "TPP laser power calibration data",
-            "description": "TPP laser power calibration.",
+            "title": "Laser power calibration data",
+            "description": "Calibration data for laser attenuator.",
             }
 
         # Calibration data in JSON format
-        data = {"data": self.data.tolist()}
+        data = {"calibration": self.data.tolist()}
         
         # Create container dictionary
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/parameter.json": self.parameters(),
+            "data/parameter.json": self.parameters(self.attenuator),
             "meas/calibration.json": data,
             "meas/calibration.dat": self.raw,
             }

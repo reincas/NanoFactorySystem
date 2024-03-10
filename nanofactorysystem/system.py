@@ -10,35 +10,26 @@
 ##########################################################################
 
 import math
-from scidatacontainer import Container, load_config
+from scidatacontainer import Container
 
+from . import sysConfig
 from .parameter import Parameter
 from .camera import Camera
-from .attenuator import Attenuator
 from .aerotech import A3200
 
 
 ##########################################################################
 class System(Parameter):
 
-    """ Class for the detection of the xy interfaces of a resin layer on
-    the Femtika Nanofactory system. """
+    """ Main class for the Femtika Nanofactory system. """
 
     _defaults = {
-        "name": None,
-        "manufacturer": None,
-        "wavelength": None,
-        "objective": None,
-        "zMax": None,
         "backOffset": -3000.0,
         "speed": 2000.0,
         "delay": 10.0,
-        "attenuator": None,
-        "camera": None,
-        "controller": None,
         }
 
-    def __init__(self, sample=None, logger=None, config=None, **kwargs):
+    def __init__(self, user, objective, logger=None, **kwargs):
 
         """ Initialize the scanner algorithm. """
 
@@ -46,31 +37,31 @@ class System(Parameter):
         self.opened = False
 
         # Initialize parameter class
-        super().__init__(logger, config, **kwargs)
+        args = kwargs.get("system", {})        
+        super().__init__(user, logger, **args)
         self.log.info("Initializing system.")
 
+        # Store system data dictionary
+        self.system = sysConfig.system
+        
+        # Store objective data dictionary
+        self.objective = sysConfig.objective(objective)
+        
         # Store optional sample data dictionary. Applications using the
         # system should include this item into their data container.
-        self.sample = sample
+        self.sample = kwargs.get("sample", {})
 
         # Initialize the MatrixVision camera
-        self.camera = Camera(logger=self.log, config=self.config)
+        args = kwargs.get("camera", {})
+        self.camera = Camera(user, logger=self.log, **args)
         if not self.camera.opened:
             self.log.error("Can't connect to camera!")
             raise RuntimeError("Can't connect to camera!")
-        self["camera"] = self.camera.info()
 
-        # Initialize attenuator
-        self.attenuator = Attenuator(logger=self.log, config=self.config)
-        self["attenuator"] = self.attenuator.info()
-        
         # Initialize the Aerotech A3200 controller
-        if self["zMax"] is None:
-            raise RuntimeError("Maximum z value is missing!")
-        self.controller = A3200(self.attenuator, logger=self.log,
-                                config=self.config, zMax=self["zMax"])
+        args = {k: kwargs.get(k, {}) for k in ("attenuator", "controller")}
+        self.controller = A3200(user, self.log, **args)
         self.controller.init_zline()
-        self["controller"] = self.controller.info()
 
         # Center the galvo scanner
         self.controller.moveabs(100, a=0, b=0)
@@ -261,19 +252,24 @@ class System(Parameter):
 
         # General metadata
         content = {
-            "containerType": {"name": "DcSystem", "version": 1.0},
+            "containerType": {"name": "NanoFactory", "version": 1.1},
             } 
         meta = {
-            "title": "TPP System Configuration Data",
-            "description": "Parameters of the TPP system.",
+            "title": "System Configuration Data",
+            "description": "Parameters of the Laser Nanofactory system.",
             }
 
         # Create container dictionary
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/parameter.json": self.parameters(),
+            "data/objective.json": self.objective,
+            "data/camera.json": self.camera.info(),
+            "data/controller.json": self.controller.info(),
+            "data/parameter.json": self.parameters(self.system),
             }
+        if self.sample:
+            items["data/sample.json"] = self.sample
 
         # Return container object
         config = config or self.config

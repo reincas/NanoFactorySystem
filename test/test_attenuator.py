@@ -6,24 +6,23 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scidatacontainer import load_config
-from nanofactorysystem import Attenuator, getLogger
+from nanofactorysystem import Attenuator, getLogger, mkdir
 
-config = load_config(
-    author = "Reinhard Caspary",
-    email = "reinhard.caspary@phoenixd.uni-hannover.de",
-    organization = "Leibniz Universität Hannover",
-    orcid = "0000-0003-0460-6088")
+args = {
+    "fitKind": "quadratic",
+    }
 
-logger = getLogger()
-att = Attenuator(logger=logger, config=config, fitKind="quadratic")
+user = "Reinhard"
+path = mkdir("test/attenuator")
+logger = getLogger(logfile="%s/console.log" % path)
+att = Attenuator(user, logger, **args)
 
 logger.info("Calibration data:")
 for value, power in att.data:
     logger.info("    %4.1f V -> %6.2f mW" % (value, power))
 
 dc = att.container()
-dc.write("attenuator.zdc")
+dc.write("%s/attenuator.zdc" % path)
 print(dc)
 
 cx = att.data[:,0]
@@ -34,5 +33,9 @@ y = att.atop(x)
 fig, ax = plt.subplots(figsize=(12,9))
 plt.plot(cx, cy, "r+")
 plt.plot(x, y, "b")
+plt.xlabel("Set Value [V]")
+plt.ylabel("Laser Power [mW]")
+plt.savefig("%s/calibration.png" % path)
 plt.show()
+
 logger.info("Done.")

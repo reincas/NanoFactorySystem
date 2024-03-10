@@ -4,26 +4,26 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
-from scidatacontainer import load_config
-from nanofactorysystem import A3200, getLogger
+from nanofactorysystem import A3200, getLogger, mkdir
 
-config = load_config(
-    author = "Reinhard Caspary",
-    email = "reinhard.caspary@phoenixd.uni-hannover.de",
-    organization = "Leibniz Universität Hannover",
-    orcid = "0000-0003-0460-6088")
-
-params = {
-    "zMax": 26000.0,
+args = {
+    "attenuator": {
+        "fitKind": "quadratic",
+        },
+    "controller": {
+        "zMax": 25700.0,
+        },
     }
 
-logger = getLogger()
-with A3200(logger=logger, config=config, **params) as controller:
+user = "Reinhard"
+path = mkdir("test/aerotech")
+logger = getLogger(logfile="%s/console.log" % path)
+with A3200(user, logger, **args) as controller:
     x0, y0, z0 = controller.position("XYZ")
     logger.info("Stage x position: %.3f µm" % x0)
     logger.info("Stage y position: %.3f µm" % y0)
     logger.info("Stage z position: %.3f µm" % z0)
     dc = controller.container()
-    dc.write("controller.zdc")
+    dc.write("%s/controller.zdc" % path)
     print(dc)
     logger.info("Done.")

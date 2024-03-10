@@ -7,8 +7,9 @@
 import os
 import socket
 import time
-from scidatacontainer import Container, load_config
+from scidatacontainer import Container
 
+from . import sysConfig
 from .attenuator import Attenuator
 from .parameter import Parameter
 
@@ -91,11 +92,15 @@ class A3200(Parameter):
         "cmdFaultChar": 35,       # CommandFaultCharacter
         }
         
-    def __init__(self, attenuator=None, logger=None, config=None, **kwargs):
+    def __init__(self, user, logger=None, **kwargs):
 
         # Initialize parameter class
-        super().__init__(logger, config, **kwargs)
+        args = kwargs.get("controller", {})        
+        super().__init__(user, logger, **args)
         self.log.info("Initializing Aerotech A3200 system.")
+
+        # Store controller data dictionary
+        self.controller = sysConfig.controller
 
         # Safety net: maximum z position
         if self["zMax"] is None:
@@ -133,10 +138,8 @@ class A3200(Parameter):
         self.task_pgms = {}
 
         # Laser calibration
-        if attenuator is not None:
-            self.attenuator = attenuator
-        else:
-            self.attenuator = Attenuator(logger=self.log, config=self.config)
+        args = kwargs.get("attenuator", {})        
+        self.attenuator = Attenuator(user, self.log, *args)
 
         # Done
         self.log.info(str(self))
@@ -509,10 +512,10 @@ class A3200(Parameter):
 
         # General metadata
         content = {
-            "containerType": {"name": "DcMotionControl", "version": 1.0},
+            "containerType": {"name": "MotionControl", "version": 1.1},
             }
         meta = {
-            "title": "TPP motion control system parameters",
+            "title": "Motion control system parameters",
             "description": "Parameters of the Aerotech A3200 system.",
             }
         
@@ -520,7 +523,7 @@ class A3200(Parameter):
         items = {
             "content.json": content,
             "meta.json": meta,
-            "data/parameter.json": self.parameters(),
+            "data/parameter.json": self.parameters(self.controller),
             }
 
         # Add program files

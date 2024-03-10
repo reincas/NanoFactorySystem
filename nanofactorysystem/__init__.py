@@ -8,6 +8,9 @@ import logging
 from pathlib import Path
 from shutil import rmtree
 
+from .config import Config
+sysConfig = Config()
+
 from .parameter import Parameter
 from .system import System
 from .camera import Camera
@@ -60,3 +63,5 @@ def mkdir(path, clean=True):
             elif sub.is_dir():
                 rmtree(sub)
     return path
+
+
