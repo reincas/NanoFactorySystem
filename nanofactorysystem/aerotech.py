@@ -3,13 +3,21 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# Python interface for the ASCII command interface defined in the A3200
+# Configuration Manager:
+# Computer - Open Files - * - System - Communication - ASCII
+# Note: You must reset the controller for changes to have an
+# effect
+#
+##########################################################################
 
 import os
 import socket
 import time
 from scidatacontainer import Container
 
-from . import sysConfig
+from . import sysConfig, popargs
 from .attenuator import Attenuator
 from .parameter import Parameter
 
@@ -75,27 +83,13 @@ class A3200(Parameter):
         "zInit": None,
         "zMax": None,
         "tasks": {},
-        "systemDescription": "Multi-axis motion controller system",
-        "model": "A3200",
-        "manufacturer": "Aerotech",
         "softwareVersion": None,
-        # ASCII command interface defined in the A3200 Configuration
-        # Manager:
-        # Computer - Open Files - * - System - Communication - ASCII
-        # Note: You must reset the controller for changes to have an
-        # effect
-        "host": "127.0.0.1",
-        "port": 8000,
-        "cmdTerminatingChar": 10, # CommandTerminatingCharacter
-        "cmdSuccessChar": 37,     # CommandSuccessCharacter
-        "cmdInvalidChar": 33,     # CommandInvalidCharacter
-        "cmdFaultChar": 35,       # CommandFaultCharacter
         }
         
     def __init__(self, user, logger=None, **kwargs):
 
         # Initialize parameter class
-        args = kwargs.get("controller", {})        
+        args = popargs(kwargs, "controller")        
         super().__init__(user, logger, **args)
         self.log.info("Initializing Aerotech A3200 system.")
 
@@ -138,7 +132,7 @@ class A3200(Parameter):
         self.task_pgms = {}
 
         # Laser calibration
-        args = kwargs.get("attenuator", {})        
+        args = popargs(kwargs, "attenuator")        
         self.attenuator = Attenuator(user, self.log, *args)
 
         # Done

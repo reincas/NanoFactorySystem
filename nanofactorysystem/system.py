@@ -12,7 +12,7 @@
 import math
 from scidatacontainer import Container
 
-from . import sysConfig
+from . import sysConfig, popargs
 from .parameter import Parameter
 from .camera import Camera
 from .aerotech import A3200
@@ -37,29 +37,29 @@ class System(Parameter):
         self.opened = False
 
         # Initialize parameter class
-        args = kwargs.get("system", {})        
+        args = popargs(kwargs, "system")
         super().__init__(user, logger, **args)
         self.log.info("Initializing system.")
 
         # Store system data dictionary
         self.system = sysConfig.system
-        
+
         # Store objective data dictionary
         self.objective = sysConfig.objective(objective)
-        
+
         # Store optional sample data dictionary. Applications using the
         # system should include this item into their data container.
-        self.sample = kwargs.get("sample", {})
+        self.sample = popargs(kwargs, "sample")
 
         # Initialize the MatrixVision camera
-        args = kwargs.get("camera", {})
+        args = popargs(kwargs, "camera")
         self.camera = Camera(user, logger=self.log, **args)
         if not self.camera.opened:
             self.log.error("Can't connect to camera!")
             raise RuntimeError("Can't connect to camera!")
 
         # Initialize the Aerotech A3200 controller
-        args = {k: kwargs.get(k, {}) for k in ("attenuator", "controller")}
+        args = popargs(kwargs, ("attenuator", "controller"))
         self.controller = A3200(user, self.log, **args)
         self.controller.init_zline()
 
@@ -95,8 +95,8 @@ class System(Parameter):
 
         self.opened = False
         self.log.info("System closed.")
-        
-        
+
+
     def __enter__(self):
 
         """ Context manager entry method. """
@@ -121,7 +121,7 @@ class System(Parameter):
         if wait:
             self.controller.wait("XYZ")
         self.log.debug("Moved to home position %.0f, %.0f, %.0f" % (self.x0, self.y0, self.z0))
-        
+
 
     def position(self, axes):
 
@@ -168,7 +168,7 @@ class System(Parameter):
         """ Get a camera image and return an image container. """
 
         return self.camera.container()
-    
+
 
     def optexpose(self, level=127):
 
@@ -176,7 +176,7 @@ class System(Parameter):
         """
 
         return self.camera.optexpose(level)
-    
+
 
     def polyline(self, line, power, speed, dia):
 
@@ -204,8 +204,8 @@ class System(Parameter):
             for x, y in line[1:]:
                 self.controller.moveabs(speed, x=x, y=y)
             self.controller.laseroff()
-            
-        
+
+
     def polylines(self, z, lines, power, speed, dia):
 
         """ Exposed a couple of 2D polylines with given laser power and
@@ -215,7 +215,7 @@ class System(Parameter):
         self.controller.moveabs(self["speed"], z=z)
         for line in lines:
             self.polyline(line, power, speed, dia)
-            
+
 
     def dots(self, z, img, pitch, power, dt):
 
@@ -235,7 +235,7 @@ class System(Parameter):
                     self.controller.moveabs(self["speed"], x=x, y=y)
                     self.pulse(power, dt)
         self.controller.moveabs(self["speed"], x=x0, y=y0)
-        
+
 
     def zline(self, power, fast, slow, dz):
 
@@ -253,7 +253,7 @@ class System(Parameter):
         # General metadata
         content = {
             "containerType": {"name": "NanoFactory", "version": 1.1},
-            } 
+            }
         meta = {
             "title": "System Configuration Data",
             "description": "Parameters of the Laser Nanofactory system.",

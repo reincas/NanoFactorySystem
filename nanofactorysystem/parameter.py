@@ -26,6 +26,7 @@ class Parameter(object):
         self._params = {}
 
         # Store user data dictionary
+        self.username = user
         self.user = sysConfig.user(user)
         self.config = load_config(
             author = self.user.get("name", None),
@@ -37,6 +38,9 @@ class Parameter(object):
         self.log = logger or logging
         
         # Store parameters
+        if len(kwargs) != 1:
+            raise RuntimeError("Unknown arguments section!")
+        kwargs = kwargs.values[0]
         for key, value in self._defaults.items():
             if key in kwargs:
                 value = kwargs.pop(key)

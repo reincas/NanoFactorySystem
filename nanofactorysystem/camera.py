@@ -34,7 +34,7 @@ try:
 except:
     acquire = None
     
-from . import sysConfig
+from . import sysConfig, popargs
 from .parameter import Parameter
 from .image import ImageContainer
 
@@ -329,12 +329,13 @@ class Camera(Parameter):
         self.opened = False
 
         # Store camera data dictionary
-        product = kwargs.pop("product", None)
-        deviceID = kwargs.pop("deviceID", None)
+        args = popargs(kwargs, "camera")
+        product = args.pop("product", None)
+        deviceID = args.pop("deviceID", None)
         self.camera = sysConfig.camera
         
         # Initialize parameter class
-        super().__init__(user, logger, **kwargs)
+        super().__init__(user, logger, **args)
         self.log.info("Initializing camera.")
 
         # Open camaera device

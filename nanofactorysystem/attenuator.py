@@ -9,7 +9,7 @@ import numpy
 from scipy.interpolate import interp1d
 from scidatacontainer import Container, register
 
-from . import sysConfig
+from . import sysConfig, popargs
 from .parameter import Parameter
 
 # Register binary data calibration format
@@ -36,7 +36,8 @@ class Attenuator(Parameter):
     def __init__(self, user, logger=None, **kwargs):
 
         # Initialize parameter class
-        super().__init__(user, logger, **kwargs)
+        args = popargs(kwargs, "attenuator")
+        super().__init__(user, logger, **args)
         self.log.info("Initializing attenuator.")
 
         # Store attenuator data dictionary

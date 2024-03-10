@@ -66,3 +66,11 @@ def mkdir(path, clean=True):
     return path
 
 
+def popargs(args, sections):
+    
+    """ Pop given sections from an arguments dictionary. """
+
+    if isinstance(sections, str):
+        sections = (sections,)
+        
+    return {k: args.pop(k, {}) for k in sections}

@@ -9,7 +9,9 @@ import matplotlib.pyplot as plt
 from nanofactorysystem import Attenuator, getLogger, mkdir
 
 args = {
-    "fitKind": "quadratic",
+    "attenuator": {
+        "fitKind": "quadratic",
+        },
     }
 
 user = "Reinhard"
