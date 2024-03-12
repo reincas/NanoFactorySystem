@@ -86,14 +86,14 @@ class Config(object):
         
         if key not in self.users():
             raise RuntimeError("Unknown user '%s'!" % key)
-        return self["user:%s" % key]
+        return self.config["user:%s" % key]
     
     
     def objective(self, key):
         
         if key not in self.objectives():
             raise RuntimeError("Unknown objective '%s'!" % key)
-        return self["objective:%s" % key]
+        return self.config["objective:%s" % key]
     
     
     def __getattr__(self, key):

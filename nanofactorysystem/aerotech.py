@@ -130,7 +130,7 @@ class A3200(Parameter):
 
         # Laser calibration
         args = popargs(kwargs, "attenuator")        
-        self.attenuator = Attenuator(user, self.log, *args)
+        self.attenuator = Attenuator(user, self.log, **args)
 
         # Done
         self.log.info(str(self))
@@ -492,7 +492,7 @@ class A3200(Parameter):
 
         """ Return information dictionary. """
 
-        keys = ("zMax", "systemDescription", "model", "manufacturer",
+        keys = ("zMax", "description", "model", "manufacturer",
                 "softwareVersion", "host", "port")
         return {k: self[k] for k in keys}
     

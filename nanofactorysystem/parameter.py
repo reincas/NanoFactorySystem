@@ -40,7 +40,7 @@ class Parameter(object):
         # Store parameters
         if len(kwargs) != 1:
             raise RuntimeError("Unknown arguments section!")
-        kwargs = kwargs.values[0]
+        kwargs = list(kwargs.values())[0]
         for key, value in self._defaults.items():
             if key in kwargs:
                 value = kwargs.pop(key)

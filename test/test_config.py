@@ -4,7 +4,6 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
-from nanofactorysystem import sys_config
+from nanofactorysystem import sysConfig
 
-
-print(sys_config)
+print(sysConfig)

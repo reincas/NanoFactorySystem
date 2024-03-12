@@ -8,7 +8,7 @@ from nanofactorysystem import Camera, getLogger, mkdir
 
 args = {
     "camera": {
-        "ExposureTime": 15000,
+        "ExposureTime": 10000,
         },
     }
 

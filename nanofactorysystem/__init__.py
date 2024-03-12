@@ -11,13 +11,6 @@ from shutil import rmtree
 from .config import Config
 sysConfig = Config()
 
-from .parameter import Parameter
-from .system import System
-from .camera import Camera
-from .attenuator import Attenuator
-from .aerotech import A3200
-from .image import ImageContainer
-
 
 ##########################################################################
 # Useful tools and definitions
@@ -74,3 +67,15 @@ def popargs(args, sections):
         sections = (sections,)
         
     return {k: args.pop(k, {}) for k in sections}
+
+
+##########################################################################
+# Expose module contents
+##########################################################################
+
+from .parameter import Parameter
+from .system import System
+from .camera import Camera
+from .attenuator import Attenuator
+from .aerotech import A3200
+from .image import ImageContainer

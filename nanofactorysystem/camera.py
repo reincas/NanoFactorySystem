@@ -38,7 +38,6 @@ from . import sysConfig, popargs
 from .parameter import Parameter
 from .image import ImageContainer
 
-
 ##########################################################################
 class Property(object):
 
@@ -169,6 +168,7 @@ class CameraDevice(object):
         self._property = {}
         
         # Get camera device
+        self.opened = False
         self.manager = acquire.DeviceManager()
         if product is None:
             self.device = self.manager.getDevice(0)
@@ -182,6 +182,7 @@ class CameraDevice(object):
 
         # Initialize the camera device
         self.device.open()
+        self.opened = True
 
         # Store a function interface and clear the request and the
         # result queue
@@ -337,7 +338,12 @@ class Camera(Parameter):
 
         # Open camaera device
         self.device = CameraDevice(product, deviceID)
+        self.opened = self.device.opened
         self.log.info("Camera: %s" % self.device)
+
+        # Apply initial parameters
+        for key, value in self._params.items():
+            self.device[key] = value
         self.setaoi(None)
         
         # Done
@@ -515,4 +521,4 @@ class Camera(Parameter):
         
         # Return container object
         config = config or self.config
-        return ImageContainer(img, params, None, config, **kwargs)
+        return ImageContainer(img=img, params=params, items=None, config=config, **kwargs)
