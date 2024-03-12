@@ -88,6 +88,6 @@ class ImageContainer(Container):
 
         """ Shortcut to the parameter data dictionary. """
         
-        return self["meas/image.json"]
+        return self["data/camera.json"]
 
 
