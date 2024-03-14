@@ -29,10 +29,7 @@
 
 import ctypes
 import numpy as np
-try:
-    from mvIMPACT import acquire
-except:
-    acquire = None
+from mvIMPACT import acquire
     
 from . import sysConfig, popargs
 from .parameter import Parameter
@@ -181,7 +178,10 @@ class CameraDevice(object):
                 self.device = self.manager.getDeviceByProductAndID(product, deviceID)
 
         # Initialize the camera device
-        self.device.open()
+        try:
+            self.device.open()
+        except acquire.EDeviceManager:
+            return
         self.opened = True
 
         # Store a function interface and clear the request and the
@@ -339,6 +339,9 @@ class Camera(Parameter):
         # Open camaera device
         self.device = CameraDevice(product, deviceID)
         self.opened = self.device.opened
+        if not self.opened:
+            self.log.error("Initializing of camera device failed!")
+            return
         self.log.info("Camera: %s" % self.device)
 
         # Apply initial parameters

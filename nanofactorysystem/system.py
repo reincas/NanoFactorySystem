@@ -14,6 +14,7 @@ from scidatacontainer import Container
 
 from . import sysConfig, popargs
 from .parameter import Parameter
+from .transform import Transform
 from .camera import Camera
 from .aerotech import A3200
 
@@ -44,10 +45,13 @@ class System(Parameter):
         # Store objective data dictionary
         self.objective = sysConfig.objective(objective)
 
+        # Initialize coordination system transformation object
+        self.transform = Transform(self.objective)
+
         # Store optional sample data dictionary. Applications using the
         # system should include this item into their data container.
         self.sample = popargs(kwargs, "sample")
-
+        
         # Initialize the MatrixVision camera
         args = popargs(kwargs, "camera")
         self.camera = Camera(user, logger=self.log, **args)
@@ -107,6 +111,50 @@ class System(Parameter):
 
         #print("".join(traceback.format_exception(errtype, value, tb)))
         self.close()
+
+
+    def update_pos(self, level, *args):
+        
+        """ Update camera calibration data. """
+        
+        self.transform.update(level, *args)
+        
+
+    def object_pos(self, v_px, vs=None):
+        
+        """ Return object coordinates from given camera image coordinates
+        based on the given or current stage coordinates. Object and stage
+        coordinates are absolute x,y,z coordinates in micrometres, image
+        coordinates are x,y coordinates in pixels relative to the image
+        centre. """
+        
+        if vs is None:
+            vs = self.system.controller.position("XYZ")
+        return self.transform.object_pos(v_px, vs)
+    
+
+    def camera_pos(self, v_um, vs=None):
+        
+        """ Return camera image coordinates from given object coordinates
+        based on the given or current stage coordinates. Object and stage
+        coordinates are absolute x,y,z coordinates in micrometres, image
+        coordinates are x,y coordinates in pixels relative to the image
+        centre. """
+        
+        if vs is None:
+            vs = self.system.controller.position("XY")
+        return self.transform.camera_pos(v_um, vs)
+
+
+    def stage_pos(self, v_um, v_px):
+        
+        """ Return stage coordinates required to match the given object
+        coordinates to the given image coordinates. Object and stage
+        coordinates are absolute x,y,z coordinates in micrometres, image
+        coordinates are x,y coordinates in pixels relative to the image
+        centre. """
+        
+        return self.transform.stage_pos(v_um, v_px)
 
 
     def home(self, wait=False):

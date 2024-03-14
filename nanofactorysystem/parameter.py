@@ -26,7 +26,6 @@ class Parameter(object):
         self._params = {}
 
         # Store user data dictionary
-        self.username = user
         self.user = sysConfig.user(user)
         self.config = load_config(
             author = self.user.get("name", None),
