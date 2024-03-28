@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
-from nanofactorysystem import Camera, getLogger, mkdir
+from nanofactorysystem import Camera, sysConfig, getLogger, mkdir
 
 args = {
     "camera": {
@@ -13,9 +13,11 @@ args = {
     }
 
 user = "Reinhard"
-path = mkdir("test/camera")
+objective = "Zeiss 20x"
+objective = sysConfig.objective(objective)
+path = mkdir(".test/camera")
 logger = getLogger(logfile="%s/console.log" % path)
-with Camera(user, logger, **args) as camera:
+with Camera(user, objective, logger, **args) as camera:
     logger.info("Exposure time %.4f ms" % (0.001*camera["ExposureTime"]))
     logger.info("Optimizing exposure time...")
     camera.optexpose()

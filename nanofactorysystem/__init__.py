@@ -3,79 +3,27 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
-
-import logging
-from pathlib import Path
-from shutil import rmtree
-
-from .config import Config
-sysConfig = Config()
-
-
-##########################################################################
-# Useful tools and definitions
+#
+# This is the Python package NanoFactorySystem. It allows to control the
+# Laser Nanofactory sytem from Femtika via the class System.
+#
 ##########################################################################
 
-LOGFMT = logging.Formatter(fmt="%(asctime)s / %(levelname)s / %(message)s",
-                           datefmt="%Y-%m-%d %H:%M:%S")
+# Access to the configuration file and to runtime configuration dictionaries
+from .config import sysConfig, popargs
 
-def getLogger(logfile=None):
+# Runtime helper functions
+from .runtime import getLogger, mkdir
 
-    """ Configure and return a logger object. """
-    
-    # Initialize logger object
-    logger = logging.getLogger('dummy')
-    logger.setLevel(logging.DEBUG)
-
-    # Console output
-    consolehandler = logging.StreamHandler()
-    consolehandler.setLevel(logging.DEBUG)
-    consolehandler.setFormatter(LOGFMT)
-    logger.addHandler(consolehandler)
-
-    # Optional file output
-    if logfile:
-        filehandler = logging.FileHandler(logfile)
-        filehandler.setLevel(logging.DEBUG)
-        filehandler.setFormatter(LOGFMT)
-        logger.addHandler(filehandler)
-    
-    # Return logger object
-    return logger
-
-
-def mkdir(path, clean=True):
-
-    """ Make sure that the given folder exists and is empty. """
-
-    p = Path(path)
-    p.mkdir(parents=True, exist_ok=True)
-    if clean:
-        for sub in p.iterdir():
-            if sub.is_file():
-                sub.unlink()
-            elif sub.is_dir():
-                rmtree(sub)
-    return path
-
-
-def popargs(args, sections):
-    
-    """ Pop given sections from an arguments dictionary. """
-
-    if isinstance(sections, str):
-        sections = (sections,)
-        
-    return {k: args.pop(k, {}) for k in sections}
-
-
-##########################################################################
-# Expose module contents
-##########################################################################
-
-from .parameter import Parameter
+# Main control class for the Laser Nanofactory system
 from .system import System
-from .camera import Camera
-from .attenuator import Attenuator
-from .aerotech import A3200
+
+# Individual components
+from .devices import A3200, Attenuator, Camera, Dhm
+
+# Tools for the Laser Nanofactory
+from .tools import Focus, Layer, Plane, Grid
+
+# Specialized containers
 from .image import ImageContainer
+from .hologram import HoloContainer

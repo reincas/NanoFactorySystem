@@ -12,11 +12,10 @@
 import math
 from scidatacontainer import Container
 
-from . import sysConfig, popargs
+from .config import sysConfig, popargs
 from .parameter import Parameter
-from .transform import Transform
-from .camera import Camera
-from .aerotech import A3200
+from .devices import Camera, Dhm, A3200
+from .tools import Transform
 
 
 ##########################################################################
@@ -54,10 +53,17 @@ class System(Parameter):
         
         # Initialize the MatrixVision camera
         args = popargs(kwargs, "camera")
-        self.camera = Camera(user, logger=self.log, **args)
+        self.camera = Camera(user, self.objective, logger=self.log, **args)
         if not self.camera.opened:
             self.log.error("Can't connect to camera!")
             raise RuntimeError("Can't connect to camera!")
+
+        # Initialize the LyncéeTec DHM
+        args = popargs(kwargs, "dhm")
+        self.dhm = Dhm(user, self.objective, logger=self.log, **args)
+        if not self.dhm.opened:
+            self.log.error("Can't connect to holographic microscope!")
+            raise RuntimeError("Can't connect to holographic microscope!")
 
         # Initialize the Aerotech A3200 controller
         args = popargs(kwargs, ("attenuator", "controller"))
@@ -86,6 +92,7 @@ class System(Parameter):
         if home and self.opened:
             self.home(wait=False)
 
+        self.dhm.close()
         self.camera["AcquisitionMode"] = "Continuous"
         self.camera.close()
 
@@ -170,11 +177,19 @@ class System(Parameter):
 
     def position(self, axes):
 
-        """ Return current measured positions in micrometers on the
+        """ Return current measured positions in micrometres on the
         given axes as a list of floating point numbers. Return a single
         number if a single axis is requested. """
 
         return self.controller.position(axes)
+
+
+    def current_pos(self):
+        
+        """ Return a dictionary containing the current position of all axes
+        in micrometres. """
+
+        return dict(zip("xyzab", self.position("XYZAB")))
 
 
     def wait(self, axes, pause=None):
@@ -295,8 +310,9 @@ class System(Parameter):
         
         items = {
             "data/objective.json": self.objective,
-            "data/camera.json": self.camera.info(),
-            "data/controller.json": self.controller.info(),
+            "data/controller.json": self.controller.parameters(),
+            "data/camera.json": self.camera.parameters(),
+            "data/dhm.json": self.dhm.parameters(),
             "data/system.json": self.parameters(),
             }
         if self.sample:

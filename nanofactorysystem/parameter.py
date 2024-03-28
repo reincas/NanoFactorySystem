@@ -3,14 +3,17 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# This modules provides the class Parameter, which is used as base class for
+# device or tool classes of the package NanoFactorySystem.
+#
+##########################################################################
 
 import logging
 from scidatacontainer import load_config
 
-from . import sysConfig
+from .config import sysConfig
 
-##########################################################################
-# Abstract parameter class
 
 class Parameter(object):
 
@@ -77,6 +80,13 @@ class Parameter(object):
         return value
 
 
+    def keys(self):
+        
+        """ Return all parameter keys. """
+        
+        return list(sorted(self._params.keys()))
+    
+
     def parameters(self):
 
         """ Return a copy of the parameter dictionary of this object updating
@@ -87,8 +97,11 @@ class Parameter(object):
         
         # Update optional device parameters
         if hasattr(self, "device"):
-            for key in self.device.keys():
-                params[key] = self.device[key]
+            if hasattr(self.device, "parameters"):
+                params["device"] = self.device.parameters()
+            elif hasattr(self.device, "keys"):
+                for key in self.device.keys():
+                    params[key] = self.device[key]
         
         # Done.
         return params

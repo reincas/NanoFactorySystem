@@ -4,9 +4,10 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides the class Config as configuration wrapper for the
-# SQLite configuration database of the Laser Nanofactory System from
-# Femtika for the NanoFactorySytem library.
+# This module reads the configuration file of the NanoFactorySystem package
+# as object sysConfig, which is an instance of the class Config. It also
+# provides the helper function popargs, which takes one or more sections from
+# a runtime configuration dictionary.
 #
 ##########################################################################
 
@@ -46,6 +47,16 @@ from pathlib import Path
     
 #     # Return pretty formatted ORCiD string
 #     return orcid[:4] + "-" + orcid[4:8] + "-" + orcid[8:12] + "-" + orcid[12:]
+
+
+def popargs(args, sections):
+    
+    """ Pop given sections from an arguments dictionary. """
+
+    if isinstance(sections, str):
+        sections = (sections,)
+        
+    return {k: args.pop(k, {}) for k in sections}
 
 
 class Config(object):
@@ -119,3 +130,6 @@ class Config(object):
                 lines.append(("    %s = %s" % (key, section[key])))
         
         return "\n".join(lines)
+
+# Read the current config file
+sysConfig = Config()

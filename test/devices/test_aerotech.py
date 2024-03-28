@@ -16,7 +16,7 @@ args = {
     }
 
 user = "Reinhard"
-path = mkdir("test/aerotech")
+path = mkdir(".test/aerotech")
 logger = getLogger(logfile="%s/console.log" % path)
 with A3200(user, logger, **args) as controller:
     x0, y0, z0 = controller.position("XYZ")

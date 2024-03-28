@@ -4,10 +4,10 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides the ImageContainer class.
+# This module provides the ImageContainer class containing a camera
+# image.
 #
 ##########################################################################
-
 
 import numpy as np
 from scidatacontainer import Container
@@ -15,36 +15,25 @@ from scidatacontainer import Container
 
 class ImageContainer(Container):
 
-    """ SciDataContainer for the storage of digital holograms. """
+    """ SciDataContainer for the storage of a camera image. """
 
     containerType = "CameraImage"
     containerVersion = 1.1
 
     def __pre_init__(self):
 
-        """ Initialize all items absorbing the constructor parameters
-        img and params. """
+        """ Build items dictionary if in cration mode. """
 
         # Not in creation mode
         if (self.kwargs["file"] is not None) or \
            (self.kwargs["uuid"] is not None):
             return
         
-        # Create or update container items
+        # Initialize items dictionary
         if self.kwargs["items"] is None:
             items = {}
         else:
-            items = self.kwargs["items"]
-
-        # Parameter img:np.ndarray
-        img = self.kwargs.pop("img")
-        if not isinstance(img, np.ndarray) or len(img.shape) != 2:
-            raise RuntimeError("Hologram image expected!")
-
-        # Parameter params:dict
-        params = self.kwargs.pop("params")
-        if not isinstance(params, dict):
-            raise RuntimeError("Parameter dictionary expected!")
+            items = dict(self.kwargs["items"])
 
         # Container type
         content = items.get("content.json", {})
@@ -54,14 +43,39 @@ class ImageContainer(Container):
 
         # Basic meta data
         meta = items.get("meta.json", {})
-        meta["title"] = "Microscope Camera Image"
+        meta["title"] = "Camera Image"
         meta["description"] = "Camera image from Matrix Vision camera."
 
         # Update items dictionary
         items["content.json"] = content
         items["meta.json"] = meta
-        items["data/camera.json"] = params
+
+        # Camera image
+        img = self.kwargs.pop("img")
+        if not isinstance(img, np.ndarray) or len(img.shape) != 2:
+            raise RuntimeError("Hologram image expected!")
         items["meas/image.png"] = img
+        
+        # Camera parameters
+        params = self.kwargs.pop("params")
+        if not isinstance(params, dict):
+            raise RuntimeError("Parameter dictionary expected!")
+        items["data/camera.json"] = params
+
+        # Objective parameters
+        objective = self.kwargs.pop("objective")
+        if not isinstance(objective, dict):
+            raise RuntimeError("Objective dictionary expected!")
+        items["data/objective.json"] = objective
+
+        # Optional location coordinates
+        loc = self.kwargs.pop("loc", None)
+        if loc:
+            if not isinstance(loc, dict):
+                raise RuntimeError("Location dictionary expected!")
+            items["data/location.json"] = loc
+
+        # Replace container items dictionary
         self.kwargs["items"] = items
 
 
@@ -91,3 +105,11 @@ class ImageContainer(Container):
         return self["data/camera.json"]
 
 
+    @property
+    def location(self):
+        
+        """ Return xyz position of the image or None. """
+        
+        if "data/location.json" not in self:
+            return None
+        return self["data/location.json"]

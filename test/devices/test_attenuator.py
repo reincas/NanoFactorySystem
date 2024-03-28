@@ -15,7 +15,7 @@ args = {
     }
 
 user = "Reinhard"
-path = mkdir("test/attenuator")
+path = mkdir(".test/attenuator")
 logger = getLogger(logfile="%s/console.log" % path)
 att = Attenuator(user, logger, **args)
 

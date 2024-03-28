@@ -4,11 +4,13 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# Python interface for the ASCII command interface defined in the A3200
-# Configuration Manager:
-# Computer - Open Files - * - System - Communication - ASCII
-# Note: You must reset the controller for changes to have an
-# effect
+# This module provides access to the the ASCII command interface of the
+# AeroTech A3200 system.
+#
+# Note:
+# Enable the ASCII command interface in the A3200 Configuration Manager:
+#     Computer - Open Files - * - System - Communication - ASCII
+# You must reset the controller for changes to become effective.
 #
 ##########################################################################
 
@@ -17,9 +19,9 @@ import socket
 import time
 from scidatacontainer import Container
 
-from . import sysConfig, popargs
+from ..parameter import Parameter
+from ..config import sysConfig, popargs
 from .attenuator import Attenuator
-from .parameter import Parameter
 
 # Task states
 TASKSTATE_Unavailable = 0

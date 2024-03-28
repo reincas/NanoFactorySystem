@@ -3,14 +3,18 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+#
+# This module provides access to the attenuator calibration file.
+#
+##########################################################################
 
 import struct
 import numpy
 from scipy.interpolate import interp1d
 from scidatacontainer import Container, register
 
-from . import sysConfig, popargs
-from .parameter import Parameter
+from ..parameter import Parameter
+from ..config import sysConfig, popargs
 
 # Register binary data calibration format
 register("dat", "bin")
