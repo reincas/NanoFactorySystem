@@ -14,9 +14,7 @@
 import bisect
 import logging
 import numpy as np
-
-from ..hologram import reconstruct
-locateOrder = reconstruct.locateOrder
+from offaxisholo.reconstruct import locateOrder
 
 
 class Contrast(object):
