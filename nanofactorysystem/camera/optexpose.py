@@ -41,7 +41,7 @@ def optExpose(camera, level=127):
     else:
         raise RuntimeError("Optimization failed!")
 
-    tmax = min(100000.0, camera.property("ExposureTime").maxValue)
+    tmax = min(500000.0, camera.property("ExposureTime").maxValue)
     t1 = 30000
     y1 = expose(camera, t1, level)
     while t1 < tmax - 100:

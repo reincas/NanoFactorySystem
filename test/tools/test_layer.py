@@ -27,8 +27,6 @@ args = {
         },
     }
 
-zlo = zup = 25200.0
-
 user = "Reinhard"
 objective = "Zeiss 20x"
 path = mkdir(".test/layer")
@@ -46,6 +44,7 @@ with System(user, objective, logger, **args) as system:
     logger.info("Run layer detection...")
     x = system.x0
     y = system.y0
+    zlo = zup = system.z0
     layer.run(x, y, zlo, zup, path=path)
 
     logger.info("Run pitch detection...")

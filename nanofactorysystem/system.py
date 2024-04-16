@@ -24,7 +24,7 @@ class System(Parameter):
     """ Main class for the Femtika Nanofactory system. """
 
     _defaults = sysConfig.system | {
-        "backOffset": -3000.0,
+        "backOffset": -300.0,
         "speed": 2000.0,
         "delay": 10.0,
         }
