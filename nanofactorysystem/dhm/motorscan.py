@@ -150,7 +150,7 @@ def addMotor(dhm, data, m, opt=False, logger=None):
     logger = logger or logging
 
     value = data[m]
-    if value != None:
+    if value is not None:
         return
 
     w = moveMotor(dhm, m, opt)

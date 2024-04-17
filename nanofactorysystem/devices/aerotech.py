@@ -431,25 +431,25 @@ class A3200(Parameter):
         # First free task number
         tasks = self["tasks"].values()
         if len(tasks) == 0:
-            task = 1
+            task_id = 1
         else:
-            task = min(set(range(1, max(tasks)+2)) - set(tasks))
+            task_id = min(set(range(1, max(tasks)+2)) - set(tasks))
 
         # Store AeroBasic program as file
-        self["tasks"][name] = task
+        self["tasks"][name] = task_id
         self.task_pgms[name] = ZLINE_PGM
         with open(fn, "w") as fp:
             fp.write(self.task_pgms[name])
 
         # Stop any running program 1 
-        self.stop(task)
+        self.stop(task_id)
 
         # Load AeroBasic program 1 from file
         path = os.path.join(os.getcwd(), fn)
-        self.load(task, path)
+        self.load(task_id, path)
 
         # Done
-        return task
+        return task_id
 
         
     def zline(self, power, fast, slow, dz):

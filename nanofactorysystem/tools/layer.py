@@ -275,7 +275,7 @@ class LayerBisect(object):
 
         # Step 2: Increase scanned range until at least one positive and
         # one negative focus scan was encountered
-        if (np.all(value > 0.0) or np.all(value < 0.0)):
+        if np.all(value > 0.0) or np.all(value < 0.0):
 
             # Avoid an endless search if there is something wrong with
             # the laser beam position.
@@ -542,8 +542,6 @@ class Layer(Parameter):
         offsets = []
         while not finished:
             pos = len(steps)
-            if path:
-                subpath = mkdir("%s/focus-%02d" % (path, pos))
 
             # Next exposure coordinates
             x, y = self._spiral(pos)
@@ -553,9 +551,10 @@ class Layer(Parameter):
             self.focus.run(x, y, z, dz, power, speed, duration)
             f = self.focus.container()
             if path:
-                self.focus.imgPre.write("%s/image_pre.zdc" % subpath)
-                self.focus.imgPost.write("%s/image_post.zdc" % subpath)
-                f.write("%s/focus.zdc" % subpath)
+                subpath = mkdir(f"{path}/focus-{pos:02d}")
+                self.focus.imgPre.write(f"{subpath}/image_pre.zdc")
+                self.focus.imgPost.write(f"{subpath}/image_post.zdc")
+                f.write(f"{subpath}/focus.zdc")
 
             # Hit status
             status = self.focus.result["status"]

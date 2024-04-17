@@ -6,7 +6,9 @@
 
 import cv2 as cv
 import matplotlib.pyplot as plt
-from nanofactorytools import image, Shear, ShearCanvas
+
+from nanofactorysystem import image
+from nanofactorysystem.tools.stitch import Shear, ShearCanvas
 
 
 def plot1(img, cb=False):

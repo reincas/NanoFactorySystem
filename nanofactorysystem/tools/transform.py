@@ -83,7 +83,7 @@ class Transform(object):
         
         # Level test
         level = LEVELS.index(level.lower())
-        if level > 0 and level < self.level:
+        if 0 < level < self.level:
             return False
         
         # Run requested update method

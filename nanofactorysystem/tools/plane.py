@@ -91,13 +91,13 @@ class PlaneFit(object):
         return np.dot(self.params, [x, y, 1])
     
 
-    def getvec(self, x, y):
+    def getvec(self, x:float, y:float) -> np.ndarray:
 
         """ Return xyz vector with z value of the plane at the given
         lateral xy position. """
 
         z = self.getz(x, y)
-        return np.array([x, y, z], dtype=float)
+        return np.asarray([x, y, z], dtype=float)
 
 
 ##########################################################################
@@ -111,7 +111,7 @@ class zPlane(object):
         sx = params["xSlope"]
         sy = params["ySlope"]
         z0 = params["z0"]
-        self.params = np.array([sx, sy, z0], dtype=float)
+        self.params = np.asarray([sx, sy, z0], dtype=float)
 
 
     def getz(self, x, y):
@@ -211,8 +211,10 @@ class Plane(Parameter):
         upper = points[:,(0,1,3)]
 
         result = {}
-        for key, points, name in [("lower", lower, "Lower"),
-                                  ("upper", upper, "Upper")]:
+        for key, points, name in [
+            ("lower", lower, "Lower"),
+            ("upper", upper, "Upper")
+        ]:
             plane = PlaneFit(points)
             plane.log_results(self.log.info, name)
             result[key] = {

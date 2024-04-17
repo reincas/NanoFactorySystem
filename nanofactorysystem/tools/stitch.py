@@ -292,7 +292,7 @@ class Shear(object):
             fp.write(data)
 
 
-    def load(self, fn):
+    def load(self, fn:str) -> dict:
     
         """ Restore shear object from given JSON data file. """
     

@@ -8,7 +8,6 @@
 #
 ##########################################################################
 
-import bisect
 import numpy as np
 import cv2 as cv
 from scipy.ndimage import maximum_filter

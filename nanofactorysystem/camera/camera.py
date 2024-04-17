@@ -32,7 +32,7 @@ import ctypes
 import numpy as np
 try:
     from mvIMPACT import acquire
-except:
+except ImportError:
     acquire = None
 
 

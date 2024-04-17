@@ -57,7 +57,7 @@ def diff(img0, img1, r=None):
     return img
 
 
-def norm(img):
+def norm(img:np.ndarray) -> tuple[np.ndarray, float, float]:
 
     """ Spread image values to the fullrange of 0-255 and return it as an
     unsigned 8-bit integer image. Also return the minimum and maximum

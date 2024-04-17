@@ -33,10 +33,10 @@ class FocusStatus(object):
         ]
 
 
-    def status(self, value):
+    def status(self, value:int):
         
         assert isinstance(value, int)
-        assert value >= 0 and value < len(self._status)
+        assert 0 <= value < len(self._status)
         return self._status[value][1]
     
     

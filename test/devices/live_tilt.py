@@ -111,7 +111,7 @@ if __name__ == "__main__":
         print("Start Spectrum Display Loop...")
         run = True
         win = None
-        while (run):
+        while run:
             img = getImage(dhm)
             win = showImage(ax, img, win)
             #plt.pause(0.1)
