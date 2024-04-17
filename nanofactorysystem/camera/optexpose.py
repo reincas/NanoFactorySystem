@@ -11,7 +11,7 @@
 
 def expose(camera, t, level):
 
-    """ Get camera image with given eposure time and return
+    """ Get camera image with given exposure time and return
     deviation of mean value from the given value. """
     
     camera["ExposureTime"] = t

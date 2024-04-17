@@ -241,7 +241,7 @@ class System(Parameter):
     def polyline(self, line, power, speed, dia):
 
         """ Exposed a single 2D polyline with given laser power and
-        eposure speed at the current position. The given approximate
+        exposure speed at the current position. The given approximate
         focus diameter is used to handle very short polylines. """
 
         x = [x for x, y in line]

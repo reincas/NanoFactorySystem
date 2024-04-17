@@ -135,7 +135,7 @@ class PropertySelect(Property):
 ##########################################################################
 class CameraDevice(object):
 
-    """ MatrixVision camera device class. This is a conveniance wrapper to the
+    """ MatrixVision camera device class. This is a convenience wrapper to the
     MatrixVision library. """
 
     # Property classes

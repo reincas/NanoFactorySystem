@@ -152,7 +152,7 @@ class Transform(object):
 
     def update_grid(self, A, dr):
         
-        """ Update transformation matrix with given two dimensional affine
+        """ Update transformation matrix with given two-dimensional affine
         2x3 matrix in micrometres per pixel. """
 
         self.P[:2,:] = A

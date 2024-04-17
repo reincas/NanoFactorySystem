@@ -164,7 +164,7 @@ class Dhm(Parameter):
             "optCount": count,
             "minValue": int(np.min(holo)),
             "maxValue": int(np.max(holo)),
-            "avgerageValue": float(np.average(holo)),
+            "averageValue": float(np.average(holo)),
             "lowQuantileValue": int(imin),
             "medianValue": int(imedian),
             "highQuantileValue": int(imax),

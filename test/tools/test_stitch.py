@@ -32,7 +32,7 @@ def plot2(img1, img2, cb=False):
 # Camera background image
 fn_base = "focus-2/base.png"
 
-# Filanames of sub-images
+# Filenames of sub-images
 fn = "focus-2/plane-1/img-%02d-%02d.png"
 
 # Offset between adjacent images in micrometers in stage coordinate

@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides image stitiching classes and functions.
+# This module provides image stitching classes and functions.
 #
 ##########################################################################
 
@@ -285,7 +285,7 @@ class Shear(object):
 
     def save(self, fn):
 
-        """ Save coordinate transforamtion matrix to JSON file. """
+        """ Save coordinate transformation matrix to JSON file. """
 
         data = json.dumps((self.a11, self.a12, self.a21, self.a22))
         with open(fn, "w") as fp:
@@ -302,17 +302,17 @@ class Shear(object):
 
 
 ##########################################################################
-# Image stitching canvas with coodinate transformation
+# Image stitching canvas with coordinate transformation
 ##########################################################################
 
 class ShearCanvas(Canvas):
 
-    """ Image stitching canvas with coodinate transformation from stage
+    """ Image stitching canvas with coordinate transformation from stage
     coordinates to camera coordinates. """
 
     def __init__(self, pitch_x, pitch_y, nx, ny, w, h, shear):
 
-        """ Initialize a canvas covering nx times ny images of witdh w
+        """ Initialize a canvas covering nx times ny images of width w
         and height h with given horizontal and vertical pitches using
         the given coordinate transformation shear.  """
 

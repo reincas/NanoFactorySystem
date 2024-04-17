@@ -18,7 +18,7 @@ from .config import sysConfig
 class Parameter(object):
 
     """ Prototype class providing a standardized interface to export
-    parameters and results of an application class to a data packege
+    parameters and results of an application class to a data package
     object. """
 
     _defaults = {"dummy": None}

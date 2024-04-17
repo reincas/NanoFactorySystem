@@ -46,7 +46,7 @@ class Camera(Parameter):
         super().__init__(user, logger, **args)
         self.log.info("Initializing camera.")
 
-        # Open camaera device
+        # Open camera device
         self.device = CameraDevice(product, deviceID)
         self.opened = self.device.opened
         if not self.opened:

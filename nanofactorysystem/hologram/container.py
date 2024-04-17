@@ -22,7 +22,7 @@ class HoloContainer(Container):
 
     def __pre_init__(self):
 
-        """ Build items dictionary if in cration mode. """
+        """ Build items dictionary if in creation mode. """
 
         # Not in creation mode
         if (self.kwargs["file"] is not None) or \

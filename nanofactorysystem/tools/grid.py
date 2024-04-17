@@ -24,7 +24,7 @@ def detectGrid(img, logger, **params):
     """ Point grid detector. The algorithm detects the focus spots in the given
     burred difference image. The algorithm estimates a rotated quadratic mesh
     grid on which the spots are located. The algorithm is designed to be
-    roubust against missing grid points and outliers, which are rejected.
+    robust against missing grid points and outliers, which are rejected.
 
     Return values: Nx2 array of valid spot locations, Nx2 array of
     integer grid positions of these spots, floating point edge length of

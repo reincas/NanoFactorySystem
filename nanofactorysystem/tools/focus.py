@@ -60,7 +60,7 @@ def markFocus(dc, lw=2, **args):
 
     * center:  draw center area circle
     * contour: draw contour of focus area
-    * focus:   mark focus center by cross hair lines
+    * focus:   mark focus center by cross-hair lines
     """
 
     # Radius of center area

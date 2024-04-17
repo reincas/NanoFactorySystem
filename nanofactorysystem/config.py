@@ -18,7 +18,7 @@ from pathlib import Path
 # def norm_orcid(orcid):
     
 #     """ Return normalized ORCiD string if the given string is a valid ORCiD
-#     and None otherwise. In fact it currently checks only if the string is a
+#     and None otherwise. In fact, it currently only checks if the string is a
 #     valid International Standard Name Identifier (ISNI). ORCiD uses a certain
 #     ISNI number space, which is not tested here. """
     
