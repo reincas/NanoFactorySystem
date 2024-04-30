@@ -262,7 +262,7 @@ class CameraDevice(object):
         raise KeyError(f"Unknown item {key}!")
 
         
-    def getimage(self):
+    def getimage(self) -> np.ndarray:
 
         """ Grab and return a camera image. """
 

@@ -316,8 +316,18 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
     return m
 
 
-def motorScan(dhm, mode="both", steps=11, dm=250.0, thresh=0.05,
-              init=None, minc=0.005, minm=5.0, opt=True, logger=None):
+def motorScan(
+    dhm,
+    mode="both",
+    steps=11,
+    dm=250.0,
+    thresh=0.05,
+    init=None,
+    minc=0.005,
+    minm=5.0,
+    opt=True,
+    logger=None
+):
 
     mode = mode.lower()
     if mode not in ("short", "long", "both"):

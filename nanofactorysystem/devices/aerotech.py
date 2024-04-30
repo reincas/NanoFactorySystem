@@ -17,6 +17,9 @@
 import os
 import socket
 import time
+from enum import Enum
+from typing import Any, Optional
+
 from scidatacontainer import Container
 
 from ..parameter import Parameter
@@ -37,6 +40,18 @@ TASKSTATE_Queue = 9
 TASKSTATE = ("unavailable", "inactive", "idle", "programReady",
              "programRunning", "programFeedheld", "programPaused",
              "programComplete", "error", "queue")
+
+class TaskState(Enum):
+    unavailable = 0
+    inactive = 1
+    idle = 2
+    program_ready = 3
+    program_running = 4
+    programmfeed_held = 5
+    program_paused = 6
+    program_complete = 7
+    error = 8
+    queue = 9
 
 # Drive status bit masks
 DRIVESTATUS_InPosition = 0x02000000
@@ -76,9 +91,9 @@ END PROGRAM
 
 ##########################################################################
 class A3200(Parameter):
-    
+
     """ Class for controlling an Aerotech A3200 system."""
-    
+
     _defaults = sysConfig.controller | {
         "xInit": None,
         "yInit": None,
@@ -87,11 +102,11 @@ class A3200(Parameter):
         "tasks": {},
         "softwareVersion": None,
         }
-        
+
     def __init__(self, user, logger=None, **kwargs):
 
         # Initialize parameter class
-        args = popargs(kwargs, "controller")        
+        args = popargs(kwargs, "controller")
         super().__init__(user, logger, **args)
         self.log.info("Initializing Aerotech A3200 system.")
 
@@ -131,7 +146,7 @@ class A3200(Parameter):
         self.task_pgms = {}
 
         # Laser calibration
-        args = popargs(kwargs, "attenuator")        
+        args = popargs(kwargs, "attenuator")
         self.attenuator = Attenuator(user, self.log, **args)
 
         # Done
@@ -147,21 +162,11 @@ class A3200(Parameter):
             result = "Aerotech A3200 disconnected."
         return result
 
-
-    def close(self):
-
-        """ Close connection to the A3200 system. """
-
-        self.socket.close()
-        self.opened = False
-
-
     def __enter__(self):
 
         """ Context manager entry method. """
 
         return self
-
 
     def __exit__(self, errtype, value, tb):
 
@@ -170,8 +175,14 @@ class A3200(Parameter):
         #print("".join(traceback.format_exception(errtype, value, tb)))
         self.close()
 
+    def close(self):
 
-    def run(self, cmd):
+        """ Close connection to the A3200 system. """
+
+        self.socket.close()
+        self.opened = False
+
+    def run(self, cmd: str) -> str:
 
         """ Run the given AeroBasic command on the A3200 controller. """
 
@@ -193,13 +204,13 @@ class A3200(Parameter):
         return response
 
 
-    def version(self):
+    def version(self) -> str:
 
         """ Return A3200 software version. """
 
         return self.run("~VERSION")
 
-    
+
     def reset(self):
 
         """ Acknowledge all warnings. """
@@ -208,10 +219,10 @@ class A3200(Parameter):
             raise RuntimeError("Not connected!")
 
         self.run("ACKNOWLEDGEALL")
-        
+
 
     def home(self, axes=None):
-        
+
         """ Run a home cycle on the given axes. """
 
         if axes in None:
@@ -327,7 +338,7 @@ class A3200(Parameter):
         return True
 
 
-    def wait(self, axes, pause=None):
+    def wait(self, axes, pause: Optional[float]=None):
 
         """ Wait until all given axes are in position after pause
         milliseconds. """
@@ -353,14 +364,14 @@ class A3200(Parameter):
         self.run(f"PROGRAM {task:d} START")
 
 
-    def stop(self, task):
+    def stop(self, task_id):
 
         """ Stop and remove the given task. """
 
         self.run(f"PROGRAM {task_id:d} STOP")
 
 
-    def state(self, task):
+    def state(self, task_id:int) -> TaskState:
 
         """ Return status of given task as integer value and as string.
         """
@@ -385,8 +396,8 @@ class A3200(Parameter):
 
         att = self.attenuator.ptoa(power)
         self.attenuate(att)
-        
-        
+
+
     def laseron(self, power):
 
         """ Switch laser on with given power. """
@@ -420,7 +431,7 @@ class A3200(Parameter):
         name = "zline"
         if name in self["tasks"]:
             return
-        
+
         # Default file name
         if fn is None:
             fn = "__zline__.pgm"
@@ -448,7 +459,7 @@ class A3200(Parameter):
         # Done
         return task_id
 
-        
+
     def zline(self, power, fast, slow, dz):
 
         """ Run zline program with fast and slow speed in µm/s as well
@@ -476,24 +487,31 @@ class A3200(Parameter):
 
         # Run zline program
         self.start(task)
-        state = TASKSTATE_ProgramRunning
-        while state == TASKSTATE_ProgramRunning:
-            state = int(self.run("TASKSTATUS(%d, DATAITEM_TaskState)" % task))
+        state = TaskState.program_running
+        while state == TaskState.program_running:
+            state = self.state(task)
 
         # Program failure
-        if state != TASKSTATE_ProgramComplete:
+        if state != TaskState.program_complete:
             self.close()
             raise RuntimeError(f"Task state '{state.name}' ({state.value})!")
 
 
-    def info(self):
+    def info(self) -> dict[str, Any]:
 
         """ Return information dictionary. """
 
-        keys = ("zMax", "description", "model", "manufacturer",
-                "softwareVersion", "host", "port")
+        keys = (
+            "zMax",
+            "description",
+            "model",
+            "manufacturer",
+            "softwareVersion",
+            "host",
+            "port"
+        )
         return {k: self[k] for k in keys}
-    
+
 
     def container(self, config=None, **kwargs):
 
@@ -507,7 +525,7 @@ class A3200(Parameter):
             "title": "Motion control system parameters",
             "description": "Parameters of the Aerotech A3200 system.",
             }
-        
+
         # Create container dictionary
         items = {
             "content.json": content,

@@ -61,7 +61,7 @@ class PlaneFit(object):
             self.phi += 360.0
 
 
-    def __str__(self):
+    def __str__(self) -> str:
 
         """ Return result string. """
 
@@ -72,7 +72,6 @@ class PlaneFit(object):
         ]
         return "\n".join(s)
 
-
     def log_results(self, func, name=None):
 
         """ Pass result string to given logger function line by line.
@@ -82,17 +81,17 @@ class PlaneFit(object):
             if name is not None:
                 line = f"{name} {line}"
             func(line)
-            
 
-    def getz(self, x, y):
+
+    def getz(self, x: float, y: float) -> float:
 
         """ Return z value of the plane at the given lateral xy
         position. """
 
         return np.dot(self.params, [x, y, 1])
-    
 
-    def getvec(self, x:float, y:float) -> np.ndarray:
+
+    def getvec(self, x: float, y: float) -> np.ndarray:
 
         """ Return xyz vector with z value of the plane at the given
         lateral xy position. """
@@ -121,8 +120,8 @@ class zPlane(object):
         position. """
 
         return np.dot(self.params, [x, y, 1])
-    
-            
+
+
 ##########################################################################
 class Plane(Parameter):
 
@@ -140,7 +139,7 @@ class Plane(Parameter):
         # Store system object
         self.system = system
         user = self.system.user["key"]
-        
+
         # Initialize parameter class
         args = popargs(kwargs, "plane")
         super().__init__(user, logger, **args)
@@ -196,7 +195,7 @@ class Plane(Parameter):
         # Store results as estimates for the next scan
         self.zlo = result["zLower"]
         self.zup = result["zUpper"]
-        
+
         # Move stages back to initial position
         if home:
             delay = self.system["delay"]
@@ -228,11 +227,11 @@ class Plane(Parameter):
                 "polarAngle": plane.theta,
                 "azimuthAngle": plane.phi,
                 }
-        
+
         self.steps = []
         return result, steps
-    
-    
+
+
     def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """
@@ -241,7 +240,7 @@ class Plane(Parameter):
         if len(self.steps) == 0:
             raise RuntimeError("No results!")
         result, steps = self._pop_results()
-        
+
         # Collect UUIDs of focus detections as references
         refs = {}
         for step in steps:

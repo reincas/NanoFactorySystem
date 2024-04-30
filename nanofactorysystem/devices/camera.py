@@ -167,7 +167,7 @@ class Camera(Parameter):
             }
     
 
-    def container(self, loc=None, config=None, **kwargs):
+    def container(self, loc=None, config=None, **kwargs) -> ImageContainer:
 
         """ Return current camera image as ImageContainer. """
 
