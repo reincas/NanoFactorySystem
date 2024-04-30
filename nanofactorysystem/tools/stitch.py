@@ -270,7 +270,7 @@ class Shear(object):
 
     def __repr__(self):
 
-        return "Shear(%.8f, %.8f, %.8f, %.8f)" % (self.a11, self.a12, self.a21, self.a22)
+        return f"Shear({self.a11:.8f}, {self.a12:.8f}, {self.a21:.8f}, {self.a22:.8f})"
 
 
     def pixel(self, dx, dy):

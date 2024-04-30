@@ -87,7 +87,7 @@ class Transform(object):
             return False
         
         # Run requested update method
-        update = getattr(self, "update_%s" % LEVELS[level])
+        update = getattr(self, f"update_{LEVELS[level]}")
         update(*args)
         self._pinv = None
         self.level = level

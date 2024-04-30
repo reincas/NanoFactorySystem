@@ -156,7 +156,7 @@ def addMotor(dhm, data, m, opt=False, logger=None):
     w = moveMotor(dhm, m, opt)
     data.add(m, w)
     
-    logger.debug("Motor scan %02d: %.1f µm - %.1f%%" % (len(data), m, 100*w))
+    logger.debug(f"Motor scan {len(data):02d}: {m:.1f} µm - {100 * w:.1f}%")
 
 
 def shortScan(dhm, steps=11, dm=250.0, thresh=0.05, m0=None, opt=True,
@@ -256,7 +256,7 @@ def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
         addMotor(dhm, data, m, logger=logger)
 
     # Return motor position with maximum contrast and its two neighbors
-    logger.debug("Scan result: %.1f µm - %.1f%%" % (data.triple[1], max(data)))
+    logger.debug(f"Scan result: {data.triple[1]:.1f} µm - {max(data):.1f}%")
     return data.triple
 
 
@@ -272,8 +272,7 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
     c0 = moveMotor(dhm, m0)
     c2 = moveMotor(dhm, m2)
     count = 0
-    logger.debug("Bisect %02d: %.1f µm - %.1f%%  ==  %.1f µm - %.1f%%  ==  %.1f µm %.1f%%" % \
-                (count, m0, 100*c0, m1, 100*c1, m2, 100*c2))
+    logger.debug(f"Bisect {count:02d}: {m0:.1f} µm - {100 * c0:.1f}%  ==  {m1:.1f} µm - {100 * c1:.1f}%  ==  {m2:.1f} µm {100 * c2:.1f}%")
 
     # Center point must have maximum contrast
     if c0 > c1 or c2 > c1:
@@ -289,7 +288,7 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
         if m1 - m0 > m2 - m1:
             m = (m0 + m1) / 2
             c = moveMotor(dhm, m)
-            #print("lo: %.1f %.2f" % (m, c))
+            # print(f"lo: {m:.1f} {c:.2f}")
             if (c1 - c) < 0:
                 m2, c2 = m1, c1
                 m1, c1 = m, c
@@ -298,19 +297,22 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
         else:
             m = (m1 + m2) / 2
             c = moveMotor(dhm, m)
-            #print("hi: %.1f %.2f" % (m, c))
+            # print(f"hi: {m:.1f} {c:.2f}")
             if (c - c1) > 0:
                 m0, c0 = m1, c1
                 m1, c1 = m, c
             else:
                 m2, c2 = m, c
 
-        logger.debug("Bisect %02d: %.1f µm - %.1f%%  ==  %.1f µm - %.1f%%  ==  %.1f µm %.1f%%" % \
-                     (count, m0, 100*c0, m1, 100*c1, m2, 100*c2))
+        logger.debug(
+            f"Bisect {count:02d}: {m0:.1f} µm - "
+            f"{100 * c0:.1f}%  ==  {m1:.1f} µm - "
+            f"{100 * c1:.1f}%  ==  {m2:.1f} µm {100 * c2:.1f}%"
+        )
 
     # Return the center of the final range
     m = (m0 + m2) / 2
-    logger.debug("Bisect result: %.1f µm" % m)
+    logger.debug(f"Bisect result: {m:.1f} µm")
     return m
 
 

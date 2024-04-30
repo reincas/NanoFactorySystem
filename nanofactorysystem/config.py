@@ -81,10 +81,10 @@ class Config(object):
     def sections(self):
         
         return [k for k,v in self.config.items() if isinstance(v, dict)]
-    
-    
-    def users(self):
-        
+
+
+    def users(self) -> list[str]:
+
         return [k[5:] for k in self.config.keys() if k[:5] == "user:"]
 
 
@@ -96,39 +96,39 @@ class Config(object):
     def user(self, key):
         
         if key not in self.users():
-            raise RuntimeError("Unknown user '%s'!" % key)
-        return self.config["user:%s" % key] | {"key": key}
-    
-    
-    def objective(self, key):
-        
+            raise RuntimeError(f"Unknown user '{key}'!")
+        return self.config[f"user:{key}"] | {"key": key}
+
+
+    def objective(self, key:str) -> dict[str, Any]:
+
         if key not in self.objectives():
-            raise RuntimeError("Unknown objective '%s'!" % key)
-        return self.config["objective:%s" % key] | {"key": key}
-    
-    
-    def __getattr__(self, key):
+            raise RuntimeError(f"Unknown objective '{key}'!")
+        return self.config[f"objective:{key}"] | {"key": key}
+
+
+    def __getattr__(self, key:str):
 
         if key in self.keys():
             return self.config[key]
         elif key in self.sections():
             return dict(self.config[key])
-        raise AttributeError("Unknown attribute '%s'!" % key)
-        
-    
-    def __str__(self):
-        
+        raise AttributeError(f"Unknown attribute '{key}'!")
+
+
+    def __str__(self) -> str:
+
         lines = []
         for key in sorted(self.keys()):
-            lines.append(("%s = %s" % (key, getattr(self, key))))
-            
+            lines.append(f"{key} = {getattr(self, key)}")
+
         for skey in sorted(self.sections()):
             section = getattr(self, skey)
-            
-            lines.append(("[%s]" % skey))
+
+            lines.append(f"[{skey}]")
             for key in sorted(section):
-                lines.append(("    %s = %s" % (key, section[key])))
-        
+                lines.append(f"    {key} = {section[key]}")
+
         return "\n".join(lines)
 
 # Read the current config file

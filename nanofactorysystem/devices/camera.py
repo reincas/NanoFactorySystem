@@ -52,7 +52,7 @@ class Camera(Parameter):
         if not self.opened:
             self.log.error("Initializing of camera device failed!")
             return
-        self.log.info("Camera: %s" % self.device)
+        self.log.info(f"Camera: {self.device}")
 
         # Apply initial parameters
         for key, value in self._params.items():
@@ -141,7 +141,7 @@ class Camera(Parameter):
         t = optExpose(self.device, level)        
         img = self.device.getimage()
         avg = img.mean()
-        self.log.info("Optimized exposure time: %.3f ms, mean image value: %.1f (goal: %d)" % (0.001*t, avg, level))
+        self.log.info(f"Optimized exposure time: {0.001 * t:.3f} ms, mean image value: {avg:.1f} (goal: {level:d})")
         return img, t
 
 

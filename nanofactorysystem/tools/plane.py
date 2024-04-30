@@ -65,21 +65,22 @@ class PlaneFit(object):
 
         """ Return result string. """
 
-        s = []
-        s.append("polar angle:    %.1f° (%.2f %%)" % (self.theta, 100*self.slope))
-        s.append("azimuth angle:  %.1f°" % self.phi)
-        s.append("mean deviation: %.3f µm (max. %.3f µm)" % (self.avg, self.maxdev))
+        s = [
+            f"polar angle:    {self.theta:.1f}° ({100 * self.slope:.2f} %)",
+            f"azimuth angle:  {self.phi:.1f}°",
+            f"mean deviation: {self.avg:.3f} µm (max. {self.max_dev:.3f} µm)"
+        ]
         return "\n".join(s)
 
 
     def log_results(self, func, name=None):
 
         """ Pass result string to given logger function line by line.
-        Each line eventually preceeded by an optional name string. """
+        Each line eventually preceded by an optional name string. """
 
         for line in str(self).split("\n"):
             if name is not None:
-                line = "%s %s" % (name, line)
+                line = f"{name} {line}"
             func(line)
             
 
@@ -161,8 +162,8 @@ class Plane(Parameter):
     def run(self, x, y, path=None, home=False):
 
         pos = len(self.steps)
-        path = mkdir("%s/layer" % path, clean=False)
-        path = mkdir("%s/layer-%02d" % (path, pos))
+        path = mkdir(f"{path}/layer", clean=False)
+        path = mkdir(f"{path}/layer-{pos:02d}")
 
         # Store current xyz position
         x0, y0, z0 = self.system.position("XYZ")
@@ -174,7 +175,7 @@ class Plane(Parameter):
             dz = self["dzFineDefault"]
         self.layer.run(x, y, self.zlo, self.zup, dz, path, home=False)
         l = self.layer.container()
-        l.write("%s/layer.zdc" % path)
+        l.write(f"{path}/layer.zdc")
         result = l["meas/result.json"]
 
         # Append results of this step
@@ -244,7 +245,7 @@ class Plane(Parameter):
         # Collect UUIDs of focus detections as references
         refs = {}
         for step in steps:
-            key = "scan-%02d" % step["scan"]
+            key = f"scan-{step['scan']:02d}"
             refs[key] = step["layerUuid"]
 
         # General metadata

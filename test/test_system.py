@@ -26,9 +26,9 @@ args = {
 user = "Reinhard"
 objective = "Zeiss 20x"
 path = mkdir(".test/system")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 with System(user, objective, logger, **args) as system:
     dc = system.container()
-    dc.write("%s/system.zdc" % path)
+    dc.write(f"{path}/system.zdc")
     print(dc)
     logger.info("Done.")

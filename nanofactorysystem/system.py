@@ -12,6 +12,7 @@
 import math
 from scidatacontainer import Container
 
+from . import ImageContainer
 from .config import sysConfig, popargs
 from .parameter import Parameter
 from .devices import Camera, Dhm, A3200
@@ -50,7 +51,7 @@ class System(Parameter):
         # Store optional sample data dictionary. Applications using the
         # system should include this item into their data container.
         self.sample = popargs(kwargs, "sample")
-        
+
         # Initialize the MatrixVision camera
         args = popargs(kwargs, "camera")
         self.camera = Camera(user, self.objective, logger=self.log, **args)
@@ -172,7 +173,7 @@ class System(Parameter):
         self.controller.moveabs(self["speed"], x=self.x0, y=self.y0, z=self.z0)
         if wait:
             self.controller.wait("XYZ")
-        self.log.debug("Moved to home position %.0f, %.0f, %.0f" % (self.x0, self.y0, self.z0))
+        self.log.debug(f"Moved to home position {self.x0:.0f}, {self.y0:.0f}, {self.z0:.0f}")
 
 
     def position(self, axes):

@@ -46,7 +46,7 @@ class FocusStatus(object):
         try:
             value = [v for v,n in self._status].index(key)
         except ValueError:
-            raise AttributeError("Unknown attribute '%s'!" % key)
+            raise AttributeError(f"Unknown attribute '{key}'!")
         return value
 
 focusStatus = FocusStatus()

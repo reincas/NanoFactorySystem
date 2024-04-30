@@ -16,7 +16,7 @@ def clean(globs=None):
         
     for pattern in globs:
         for path in glob.iglob(pattern):
-            print("Removing '%s'" % path)
+            print(f"Removing '{path}'")
             shutil.rmtree(path)
 
 

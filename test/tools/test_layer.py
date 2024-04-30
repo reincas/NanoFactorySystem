@@ -32,7 +32,7 @@ zlo = zup = 25200.0
 user = "Reinhard"
 objective = "Zeiss 20x"
 path = mkdir(".test/layer")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 
 logger.info("Initialize system object...")
 with System(user, objective, logger, **args) as system:
@@ -41,7 +41,7 @@ with System(user, objective, logger, **args) as system:
     layer = Layer(system, logger, **args)
 
     logger.info("Store background image...")
-    layer.focus.imgBack.write("%s/back.zdc" % path)
+    layer.focus.imgBack.write(f"{path}/back.zdc")
 
     logger.info("Run layer detection...")
     x = system.x0
@@ -50,12 +50,12 @@ with System(user, objective, logger, **args) as system:
 
     logger.info("Run pitch detection...")
     ((pxx, pxy), (pyx, pyy)) = layer.pitch()
-    logger.info("Camera pitch xx: %.3f µm/px" % pxx)
-    logger.info("Camera pitch xy: %.3f µm/px" % pxy)
-    logger.info("Camera pitch yx: %.3f µm/px" % pyx)
-    logger.info("Camera pitch yy: %.3f µm/px" % pyy)
+    logger.info(f"Camera pitch xx: {pxx:.3f} µm/px")
+    logger.info(f"Camera pitch xy: {pxy:.3f} µm/px")
+    logger.info(f"Camera pitch yx: {pyx:.3f} µm/px")
+    logger.info(f"Camera pitch yy: {pyy:.3f} µm/px")
     
     logger.info("Store results...")
     dc = layer.container()
-    dc.write("%s/layer.zdc" % path)
+    dc.write(f"{path}/layer.zdc")
     logger.info("Done.")

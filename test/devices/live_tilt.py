@@ -29,11 +29,11 @@ def getImage(dhm):
     holo, count = dhm.getimage()
     #return image.normcolor(holo)
     ref = refHolo(holo, 16, 2)
-    print("First order coordinates: %d, %d [%.1f%%]" % (ref.fx, ref.fy, 100*ref.weight))
+    print(f"First order coordinates: {ref.fx:d}, {ref.fy:d} [{100 * ref.weight:.1f}%]")
 
     maxpixel = 255
     numof = np.count_nonzero(holo >= maxpixel)
-    print("Overflow pixels: %d" % numof)
+    print(f"Overflow pixels: {numof:d}")
     
     spectrum = np.fft.fft2(holo.astype(np.float64))
     spectrum = np.fft.fftshift(spectrum)
@@ -50,7 +50,7 @@ def getImage(dhm):
     
     rmax = np.sqrt(ref.fx**2 + ref.fy**2) - r0
     rmax = min(rmax, abs(ref.fx), w//2-abs(ref.fx), abs(ref.fy), h//2-abs(ref.fy))
-    print("Maximum radius: %d pixels" % rmax)
+    print(f"Maximum radius: {rmax:d} pixels")
     if rmax > 0:
         img = image.drawCircle(img, ref.fx, ref.fy, rmax, image.CV_RED, 1)
         img = image.drawCircle(img, -ref.fx, -ref.fy, rmax, image.CV_RED, 1)
@@ -106,7 +106,7 @@ if __name__ == "__main__":
             #client.CameraShutter = client.CameraShutter-2
             shutter = dhm.device.CameraShutter
             shutterus = dhm.device.CameraShutterUs
-            print("Shutter: %.1f us [%d]" % (shutterus, shutter))
+            print(f"Shutter: {shutterus:.1f} us [{shutter:d}]")
         
         print("Start Spectrum Display Loop...")
         run = True

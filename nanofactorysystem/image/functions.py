@@ -137,8 +137,8 @@ def subshift(img, dx, dy, sigma):
     img = cv.filter2D(img, -1, kernel)
 
     #maxval = max(kernel[:,(0,-1)].max(), kernel[(0,-1),:].max())
-    #print("kernel size:    %d" % size)
-    #print("max edge value: %g" % maxval)
+    # print(f"kernel size:    {size:d}")
+    # print(f"max edge value: {maxval:g}")
     return img
 
 

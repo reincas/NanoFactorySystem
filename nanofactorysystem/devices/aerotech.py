@@ -142,9 +142,7 @@ class A3200(Parameter):
     def __str__(self):
 
         if self.opened:
-            result = "%s %s (driver %s) at %s:%s." % \
-                     (self["manufacturer"], self["model"],
-                      self["softwareVersion"], self["host"], self["port"])
+            result = f"{self['manufacturer']} {self['model']} (driver {self['softwareVersion']}) at {self['host']}:{self['port']}."
         else:
             result = "Aerotech A3200 disconnected."
         return result
@@ -220,7 +218,7 @@ class A3200(Parameter):
             axes = "XYZ"
         axes = self.normaxes(axes, "XYZ")
         for axis in axes:
-            self.run("HOME %s" % axis)
+            self.run(f"HOME {axis}")
 
 
     def normaxes(self, axes, limit=None):
@@ -236,7 +234,7 @@ class A3200(Parameter):
         false = tuple(c for c in axes if c.upper() not in limit)
         if len(false) > 0:
             false = ", ".join(false)
-            raise RuntimeError("Wrong axes: %s!" % false)
+            raise RuntimeError(f"Wrong axes: {false}!")
         return axes.upper()
 
 
@@ -255,10 +253,10 @@ class A3200(Parameter):
                 if self.z > self["zMax"]:
                     self.close()
                     raise RuntimeError("Maximum z position exceeded!")
-            dest.append("%s%f" % (axis, 0.001*pos))
+            dest.append(f"{axis}{0.001 * pos:f}")
         dest = " ".join(sorted(dest))
         self.run("INCREMENTAL")
-        self.run("LINEAR %s F%f" % (dest, 0.001*speed))
+        self.run(f"LINEAR {dest} F{0.001 * speed:f}")
 
 
     def moveabs(self, speed, **axes):
@@ -276,10 +274,10 @@ class A3200(Parameter):
                 if self.z > self["zMax"]:
                     self.close()
                     raise RuntimeError("Maximum z position exceeded!")
-            dest.append("%s%f" % (axis, 0.001*pos))
+            dest.append(f"{axis}{0.001 * pos:f}")
         dest = " ".join(sorted(dest))
         self.run("ABSOLUTE")
-        self.run("LINEAR %s F%f" % (dest, 0.001*speed))
+        self.run(f"LINEAR {dest} F{0.001 * speed:f}")
 
 
     def position(self, axes):
@@ -289,7 +287,7 @@ class A3200(Parameter):
         number if a single axis is requested. """
 
         axes = self.normaxes(axes, "XYZAB")
-        cmd = ["AXISSTATUS(%s, DATAITEM_PositionFeedback)" % a for a in axes]
+        cmd = [f"AXISSTATUS({a}, DATAITEM_PositionFeedback)" for a in axes]
         pos = [self.run(c) for c in cmd]
         pos = [1000 * float(p.replace(",", ".")) for p in pos]
         if len(pos) == 1:
@@ -304,7 +302,7 @@ class A3200(Parameter):
         single number if a single axis is requested. """
 
         axes = self.normaxes(axes, "XYZAB")
-        cmd = ["AXISSTATUS(%s, DATAITEM_VelocityFeedback)" % a for a in axes]
+        cmd = [f"AXISSTATUS({a}, DATAITEM_VelocityFeedback)" for a in axes]
         speed = [self.run(c) for c in cmd]
         speed = [1000 * float(p.replace(",", ".")) for p in speed]
         if len(speed) == 1:
@@ -319,7 +317,7 @@ class A3200(Parameter):
         """
 
         axes = self.normaxes(axes, "XYZAB")
-        cmd = ["AXISSTATUS(%s, DATAITEM_DriveStatus)" % a for a in axes]
+        cmd = [f"AXISSTATUS({a}, DATAITEM_DriveStatus)" for a in axes]
         bitmask = DRIVESTATUS_InPosition
         if not wait:
             return all((int(self.run(c)) & bitmask) != 0 for c in cmd)
@@ -344,22 +342,22 @@ class A3200(Parameter):
         """ Load AeroBasic program from given file and store it as task.
         Valid task numbers range from 1-32. """
 
-        #print('PROGRAM %d LOAD "%s"' % (task, fn))
-        self.run('PROGRAM %d LOAD "%s"' % (task, fn))
+        # print(f'PROGRAM {task:d} LOAD "{fn}"')
+        self.run(f'PROGRAM {task:d} LOAD "{fn}"')
 
 
     def start(self, task):
 
         """ Start execution of the given task. """
 
-        self.run("PROGRAM %d START" % task)
+        self.run(f"PROGRAM {task:d} START")
 
 
     def stop(self, task):
 
         """ Stop and remove the given task. """
 
-        self.run("PROGRAM %d STOP" % task)
+        self.run(f"PROGRAM {task_id:d} STOP")
 
 
     def state(self, task):
@@ -367,9 +365,8 @@ class A3200(Parameter):
         """ Return status of given task as integer value and as string.
         """
 
-        state = int(self.run("TASKSTATUS(%d, DATAITEM_TaskState)" % task))
-        return state, TASKSTATE[state]
-
+        state_id = int(self.run(f"TASKSTATUS({task_id:d}, DATAITEM_TaskState)"))
+        return TaskState(state_id)
 
     def attenuate(self, att):
 
@@ -378,8 +375,8 @@ class A3200(Parameter):
 
         att = float(att)
         if att < 0.0 or att > 10.0:
-            raise RuntimeError("Not a valid attenuator value: %g!" % att)
-        self.run("$AO[0].A=%f" % att)
+            raise RuntimeError(f"Not a valid attenuator value: {att:g}!")
+        self.run(f"$AO[0].A={att:f}")
 
 
     def power(self, power):
@@ -470,9 +467,9 @@ class A3200(Parameter):
         if self.z + 0.5*dz > self["zMax"]:
             self.close()
             raise RuntimeError("Maximum z position exceeded!")
-        self.run("$global[0] = %f" % (0.001*fast))
-        self.run("$global[1] = %f" % (0.001*slow))
-        self.run("$global[2] = %f" % (0.001*dz))
+        self.run(f"$global[0] = {0.001 * fast:f}")
+        self.run(f"$global[1] = {0.001 * slow:f}")
+        self.run(f"$global[2] = {0.001 * dz:f}")
 
         # Set laser power
         self.power(power)
@@ -486,8 +483,7 @@ class A3200(Parameter):
         # Program failure
         if state != TASKSTATE_ProgramComplete:
             self.close()
-            raise RuntimeError("Task state '%s' (%d)!" \
-                               % (TASKSTATE[state], state))
+            raise RuntimeError(f"Task state '{state.name}' ({state.value})!")
 
 
     def info(self):
@@ -521,7 +517,7 @@ class A3200(Parameter):
 
         # Add program files
         for name, task in self["tasks"]:
-            item = "data/%s.pgm" % name
+            item = f"data/{name}.pgm"
             items[item] = self.task_pgms[name]
 
         # Return container object

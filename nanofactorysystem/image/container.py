@@ -86,7 +86,7 @@ class ImageContainer(Container):
         # Type check of the container
         if (self.content["containerType"]["name"] != self.containerType) or \
            (self.content["containerType"]["version"] != self.containerVersion):
-            raise RuntimeError("Containertype must be '%s'!" % self.containerType)
+            raise RuntimeError(f"Containertype must be '{self.containerType}'!")
 
 
     @property

@@ -95,7 +95,7 @@ def detectGrid(img, logger, **params):
         logger.error("Detection of grid pitch failed!")
         raise RuntimeError("Detection of grid pitch failed!")
     pitch = d[jmin].mean()
-    logger.info("Grid pitch: %.1f px" % pitch)
+    logger.info(f"Grid pitch: {pitch:.1f} px")
 
     # Rotation angles of the point pairs in the range between -pi/4 to
     # +pi/4. Valid pair distance vectors may direct in four directions:
@@ -119,10 +119,10 @@ def detectGrid(img, logger, **params):
     if len(groups) > 1:
         num = len(angle) - len(groups[k])
         angle = groups[k]
-        logger.warn("%d outliers ignored (angle)!" % num)
+        logger.warn(f"{num:d} outliers ignored (angle)!")
     angle = angle.mean()
     alpha = angle * 180.0/np.pi
-    logger.info("Grid angle: %.3f°" % (alpha))
+    logger.info(f"Grid angle: {alpha:.3f}°")
 
     # Rotate points back to achieve horizontal and vertical grid
     # lines
@@ -144,7 +144,7 @@ def detectGrid(img, logger, **params):
             num = len(off) - len(groups[k])
             off = groups[k]
             axis = ("x", "y")[i]
-            logger.warn("%d outliers ignored (offset %s)!" % (num, axis))
+            logger.warn(f"{num:d} outliers ignored (offset {axis})!")
         offset.append(off.mean() * pitch)
     ox, oy = offset
 
@@ -163,7 +163,7 @@ def detectGrid(img, logger, **params):
         num = len(points) - len(i)
         points = points[i,:]
         idx = idx[i,:]
-        logger.warn("%d outliers removed (grid)!" % num)
+        logger.warn(f"{num:d} outliers removed (grid)!")
 
     # Determine grid size
     idx[:,0] -= idx[:,0].min()
@@ -206,7 +206,7 @@ def getTransform(src, w, h, dst, nx, ny, dx, dy):
     A, inliers = cv.estimateAffine2D(src, dst, True)
     if not all(inliers):
         num = len(src) - inliers.sum()
-        print("***** Estimation of transform failed for %d points!" % num)
+        print(f"***** Estimation of transform failed for {num:d} points!")
         #raise RuntimeError("Estimation of transform failed!")
 
     # Mean derivation of a single point
@@ -342,7 +342,7 @@ class Grid(Parameter):
 
         # Bisectioning algorithm: Find maximum focus value
         while max(zc-zlo, zhi-zc) > minstep:
-            self.log.info("%.1f, %.1f   %.1f, %.1f   %.1f, %.1f" % (zlo, vlo, zc, vc, zhi, vhi))
+            self.log.info(f"{zlo:.1f}, {vlo:.1f}   {zc:.1f}, {vc:.1f}   {zhi:.1f}, {vhi:.1f}")
 
             if zc-zlo > zhi-zc:
                 z = (zlo + zc) / 2
@@ -364,7 +364,7 @@ class Grid(Parameter):
         # Sort list of all determined focus quality factors
         i = np.argsort([z for z,v in values])
         values = np.array(values)[i]
-        self.log.info("%.1f, %.1f   %.1f, %.1f   %.1f, %.1f" % (zlo, vlo, zc, vc, zhi, vhi))
+        self.log.info(f"{zlo:.1f}, {vlo:.1f}   {zc:.1f}, {vc:.1f}   {zhi:.1f}, {vhi:.1f}")
         return zc, values
 
 
@@ -397,7 +397,7 @@ class Grid(Parameter):
         pitch_um = self["gridPitch"]
         power = self["laserPower"]
         dt = self["duration"]
-        self.log.info("Expose %d x %d points (pitch: %.1f µm)" % (nx, ny, pitch_um))
+        self.log.info(f"Expose {nx:d} x {ny:d} points (pitch: {pitch_um:.1f} µm)")
         for i in range(nx):
             for j in range(ny):
                 x = x0 + pitch_um*(i - (nx-1)/2)
@@ -416,9 +416,9 @@ class Grid(Parameter):
         blur = params["detectMinDist"]
         diff = image.diff(self.preImg, self.postImg, blur)
         src, dst, pitch_px, angle, nxd, nyd = detectGrid(diff, self.log, **params)
-        self.log.info("Detected grid size:  %d x %d" % (nxd, nyd))
-        self.log.info("Detected grid pitch: %.1f px" % pitch_px)
-        self.log.info("Detected grid angle: %.3f°" % angle)
+        self.log.info(f"Detected grid size:  {nxd:d} x {nyd:d}")
+        self.log.info(f"Detected grid pitch: {pitch_px:.1f} px")
+        self.log.info(f"Detected grid angle: {angle:.3f}°")
         if nxd != nx or nyd != ny:
             self.log.error("Wrong grid size!")
             raise RuntimeError("Wrong grid size!")
@@ -436,7 +436,7 @@ class Grid(Parameter):
         self.result["focusOffset"] = z_off
         self.result["offsetValues"] = values.tolist()
         self.log.info("Camera grid autofocus finished.")
-        self.log.info("Axial offset of camera focus: %.1f µm" % z_off)
+        self.log.info(f"Axial offset of camera focus: {z_off:.1f} µm")
 
         # Update current coordinate transformation matrix
         self.system.update_pos("auto", z_off, minstep)

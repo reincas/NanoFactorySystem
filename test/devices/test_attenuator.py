@@ -16,15 +16,15 @@ args = {
 
 user = "Reinhard"
 path = mkdir(".test/attenuator")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 att = Attenuator(user, logger, **args)
 
 logger.info("Calibration data:")
 for value, power in att.data:
-    logger.info("    %4.1f V -> %6.2f mW" % (value, power))
+    logger.info(f"    {value:4.1f} V -> {power:6.2f} mW")
 
 dc = att.container()
-dc.write("%s/attenuator.zdc" % path)
+dc.write(f"{path}/attenuator.zdc")
 print(dc)
 
 cx = att.data[:,0]
@@ -37,7 +37,7 @@ plt.plot(cx, cy, "r+")
 plt.plot(x, y, "b")
 plt.xlabel("Set Value [V]")
 plt.ylabel("Laser Power [mW]")
-plt.savefig("%s/calibration.png" % path)
+plt.savefig(f"{path}/calibration.png")
 plt.show()
 
 logger.info("Done.")

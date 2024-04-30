@@ -61,7 +61,7 @@ class Parameter(abc.ABC):
         elif key in self._defaults:
             self._params[key] = value
         else:
-            raise KeyError("Unknown item %s!" % key)
+            raise KeyError(f"Unknown item {key}!")
         
         
 
@@ -76,7 +76,7 @@ class Parameter(abc.ABC):
         elif key in self._defaults:
             value = self._params[key]
         else:
-            raise KeyError("Unknown item %s!" % key)
+            raise KeyError(f"Unknown item {key}!")
         #print("Value", value)
         return value
 

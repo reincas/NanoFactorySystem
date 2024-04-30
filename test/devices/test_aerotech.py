@@ -17,13 +17,13 @@ args = {
 
 user = "Reinhard"
 path = mkdir(".test/aerotech")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 with A3200(user, logger, **args) as controller:
     x0, y0, z0 = controller.position("XYZ")
-    logger.info("Stage x position: %.3f µm" % x0)
-    logger.info("Stage y position: %.3f µm" % y0)
-    logger.info("Stage z position: %.3f µm" % z0)
+    logger.info(f"Stage x position: {x0:.3f} µm")
+    logger.info(f"Stage y position: {y0:.3f} µm")
+    logger.info(f"Stage z position: {z0:.3f} µm")
     dc = controller.container()
-    dc.write("%s/controller.zdc" % path)
+    dc.write(f"{path}/controller.zdc")
     print(dc)
     logger.info("Done.")

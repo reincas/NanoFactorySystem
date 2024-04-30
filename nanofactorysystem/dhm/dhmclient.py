@@ -113,9 +113,8 @@ class DhmClient(object):
         self.sock.close()
 
 
-    def __str__(self):
-        
-        return "%s (S/N %s)" % (self.manufacturer, self.DhmSerial)
+    def __str__(self) -> str:
+        return f"{self.manufacturer} (S/N {self.DhmSerial})"
     
     
     def remoteCmd(self, cmd, outfmt, infmt, *inargs):
@@ -128,7 +127,7 @@ class DhmClient(object):
 
         # Sanity check
         if len(inargs) != len(infmt):
-            raise RuntimeError("%d arguments expected!" % len(infmt))
+            raise RuntimeError(f"{len(infmt):d} arguments expected!")
 
         # Prepare transmission data
         #print(cmd, outfmt, infmt, *inargs)
@@ -141,9 +140,9 @@ class DhmClient(object):
             elif code == "f":
                 values.append(float(inargs[i]))
             else:
-                raise RuntimeError("Unknown input format '%s'!" % code)
+                raise RuntimeError(f"Unknown input format '{code}'!")
         data = struct.pack(fmt, *values)
-        #print("".join(["%02x" % x for x in data]))
+        # print("".join([f"{x:02x}" for x in data]))
 
         # Send transmission data
         self.sock.sendall(data)
@@ -171,7 +170,7 @@ class DhmClient(object):
                 
             elif code == "s":
                 size = struct.unpack("i", self.sock.recv(4))[0]
-                value = struct.unpack("%ds" % size, self.sock.recv(size))[0]
+                value = struct.unpack(f"{size:d}s", self.sock.recv(size))[0]
                 value = value.decode("utf8")
                     
             elif code == "c":
@@ -179,7 +178,7 @@ class DhmClient(object):
                 value = []
                 for i in range(count):
                     cid, size = struct.unpack("ii", self.sock.recv(8))
-                    name = struct.unpack("%ds" % size, self.sock.recv(size))[0]
+                    name = struct.unpack(f"{size:d}s", self.sock.recv(size))[0]
                     name = name.decode("utf8")
                     value.append((cid, name))
                     
@@ -189,14 +188,14 @@ class DhmClient(object):
                 data = b""
                 while len(data) < size:
                     data += self.sock.recv(size - len(data))
-                data = struct.unpack("%ds" % size, data)[0]
+                data = struct.unpack(f"{size:d}s", data)[0]
                 if stride // width == 2:
                     value = np.frombuffer(data, np.uint16).reshape((height, width))
                 else:
                     value = np.frombuffer(data, np.uint8).reshape((height, width))
 
             else:
-                raise AttributeError("Unknown value type '%s'!" % code)
+                raise AttributeError(f"Unknown value type '{code}'!")
 
             result.append(value)
 
@@ -211,7 +210,7 @@ class DhmClient(object):
         if name in self._commands:
             cmd, _, infmt = self._commands[name]
             if cmd is None:
-                raise(AttributeError, "Attribute '%s' is not writeable!" % name)
+                raise(AttributeError, f"Attribute '{name}' is not writeable!")
 
             if isinstance(value, tuple):
                 self.remoteCmd(cmd, "", infmt, *value)
@@ -227,7 +226,7 @@ class DhmClient(object):
         if name in self._commands:
             _, cmd, outfmt = self._commands[name]
             if cmd is None:
-                raise(AttributeError, "Attribute '%s' is not readable!" % name)
+                raise(AttributeError, f"Attribute '{name}' is not readable!")
             return self.remoteCmd(cmd, outfmt, "")
 
         elif name in self._functions:
