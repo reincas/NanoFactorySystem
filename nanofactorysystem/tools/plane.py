@@ -8,6 +8,7 @@
 # Nanofactory system from Femtika.
 #
 ##########################################################################
+from functools import cached_property
 
 import numpy as np
 from scidatacontainer import Container
@@ -24,7 +25,7 @@ class PlaneFit(object):
     """ Fit a plane to the given list of x,y,z values by least squares
     fitting of the z values. """
 
-    def __init__(self, points):
+    def __init__(self, points, *, params=None):
 
         """ Run the fitting algorithm and store the results. """
 
@@ -32,12 +33,14 @@ class PlaneFit(object):
         A = np.array(points, dtype=float)
         b = np.array(A[:,-1])
         A[:,-1] = 1.0
-        self.params = np.linalg.lstsq(A, b, rcond=None)[0]
+        if params is None:
+            params = np.linalg.lstsq(A, b, rcond=None)[0]
+
+        self.params = params
 
         # Average z deviation
         self.dev = np.dot(A, self.params) - b
         self.avg = np.sqrt(sum(self.dev*self.dev))/len(self.dev)
-        self.maxdev = max(abs(self.dev))
 
         # Surface normal vector
         p0 = self.getvec(0, 0)
@@ -55,11 +58,16 @@ class PlaneFit(object):
 
         # Azimuthal angle
         self.phi = np.arctan2(y, x) * 180.0 / np.pi
-        while self.phi > 180.0:
-            self.phi -= 360.0
-        while self.phi <= -180.0:
-            self.phi += 360.0
+        self.phi = (self.phi % 360) - 180
+        # TODO: With modulo slightly different edge cases (-180 vs 180)
+        # while self.phi > 180.0:
+        #     self.phi -= 360.0
+        # while self.phi <= -180.0:
+        #     self.phi += 360.0
 
+    @cached_property
+    def max_dev(self) -> float:
+        return np.max(np.abs(self.dev))
 
     def __str__(self) -> str:
 
@@ -222,7 +230,7 @@ class Plane(Parameter):
                 "ySlope": plane.params[1],
                 "z0": plane.params[2],
                 "avgDeviation": plane.avg,
-                "maxDeviation": plane.maxdev,
+                "maxDeviation": plane.max_dev,
                 "gradient": plane.slope,
                 "polarAngle": plane.theta,
                 "azimuthAngle": plane.phi,
