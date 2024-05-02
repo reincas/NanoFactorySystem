@@ -243,6 +243,7 @@ def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
     a22 = np.mean(a22) / pitch_y
 
     # Return shear matrix
+    # TODO(dwoiwode): Invalid arguments? Maybe form to matrix?
     shear = Shear(a11, a12, a21, a22)
     print(shear)
     print("Done.")
