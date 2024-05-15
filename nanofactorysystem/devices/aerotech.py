@@ -468,7 +468,7 @@ class A3200(Parameter):
 
         # Initialize zline program
         name = "zline"
-        if not name in self["tasks"]:
+        if name not in self["tasks"]:
             self.init_zline()
 
         # Task number        
