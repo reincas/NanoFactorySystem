@@ -32,7 +32,6 @@ dx = 80.0
 dy = 80.0
 nx = 2
 ny = 2
-zlo = zup = 25200.0
 
 user = "Reinhard"
 objective = "Zeiss 20x"
@@ -43,6 +42,7 @@ logger.info("Initialize system object...")
 with System(user, objective, logger, **args) as system:
 
     logger.info("Initialize plane object...")
+    zlo = zup = system.z0
     plane = Plane(zlo, zup, system, logger, **args)
         
     #logger.info("Load steps...")

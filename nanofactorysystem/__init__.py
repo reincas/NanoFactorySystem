@@ -22,7 +22,7 @@ from .system import System
 from .devices import A3200, Attenuator, Camera, Dhm
 
 # Tools for the Laser Nanofactory
-from .tools import Focus, Layer, Plane, Grid
+from .tools import Focus, Layer, Plane, Grid, PlaneFit
 
 # Specialized containers
 from .image import ImageContainer

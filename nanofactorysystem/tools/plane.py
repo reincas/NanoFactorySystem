@@ -234,6 +234,7 @@ class Plane(Parameter):
                 "gradient": plane.slope,
                 "polarAngle": plane.theta,
                 "azimuthAngle": plane.phi,
+                "points": points.tolist(),
                 }
 
         self.steps = []

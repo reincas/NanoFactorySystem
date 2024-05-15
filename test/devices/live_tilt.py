@@ -4,11 +4,13 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
+from offaxisholo import reconstruct
+
 from nanofactorysystem import Dhm, sysConfig, getLogger
-from nanofactorysystem.hologram.reconstruct import refHolo
 import nanofactorysystem.image.functions as image
 
 run = False
@@ -28,18 +30,14 @@ def getImage(dhm):
 
     holo, count = dhm.getimage()
     #return image.normcolor(holo)
-    ref = refHolo(holo, 16, 2)
-    print(f"First order coordinates: {ref.fx:d}, {ref.fy:d} [{100 * ref.weight:.1f}%]")
+    spectrum, fx, fy, weight = reconstruct.locateOrder(holo, 16)
+    dhm.log.info(f"First order coordinates: {fx:d}, {fy:d} [{100 * weight:.1f}%]")
 
     maxpixel = 255
     numof = np.count_nonzero(holo >= maxpixel)
-    print(f"Overflow pixels: {numof:d}")
+    dhm.log.info(f"Overflow pixels: {numof:d}")
     
-    spectrum = np.fft.fft2(holo.astype(np.float64))
-    spectrum = np.fft.fftshift(spectrum)
-    spectrum = np.log(np.abs(spectrum))
-    
-    img = spectrum
+    img = np.log(np.abs(spectrum))
     h, w = img.shape
     vmax = 0.5*np.max(img)
     img = np.where(img > vmax, vmax, img) 
@@ -48,14 +46,14 @@ def getImage(dhm):
     r0 = dhm.objective["dcRadius"]
     img = image.drawCircle(img, 0, 0, r0, image.CV_RED, 1)
     
-    rmax = np.sqrt(ref.fx**2 + ref.fy**2) - r0
-    rmax = min(rmax, abs(ref.fx), w//2-abs(ref.fx), abs(ref.fy), h//2-abs(ref.fy))
-    print(f"Maximum radius: {rmax:d} pixels")
+    rmax = np.sqrt(fx**2 + fy**2) - r0
+    rmax = min(rmax, abs(fx), w//2-abs(fx), abs(fy), h//2-abs(fy))
+    dhm.log.info(f"Maximum radius: {rmax:d} pixels")
     if rmax > 0:
-        img = image.drawCircle(img, ref.fx, ref.fy, rmax, image.CV_RED, 1)
-        img = image.drawCircle(img, -ref.fx, -ref.fy, rmax, image.CV_RED, 1)
-    img = image.drawCross(img, ref.fx, ref.fy, 30, image.CV_RED, 1)
-    img = image.drawCross(img, -ref.fx, -ref.fy, 30, image.CV_RED, 1)
+        img = image.drawCircle(img, fx, fy, rmax, image.CV_RED, 1)
+        img = image.drawCircle(img, -fx, -fy, rmax, image.CV_RED, 1)
+    img = image.drawCross(img, fx, fy, 30, image.CV_RED, 1)
+    img = image.drawCross(img, -fx, -fy, 30, image.CV_RED, 1)
     return img
 
 
@@ -88,27 +86,28 @@ if __name__ == "__main__":
     objective = "Zeiss 20x"
     objective = sysConfig.objective(objective)
     #path = mkdir(".test/tilt")
-    opt = False
+    opt = True
     
     fig, ax = plt.subplots()
     fig.canvas.mpl_connect("close_event", on_close)
 
     logger = getLogger()
+    logger.setLevel(logging.INFO)
     with Dhm(user, objective, logger, **args) as dhm:
 
         if opt:
-            print("Run OPL Motor Scan...")
+            logger.info("Run OPL Motor Scan...")
             dhm.motorscan()
-            print("Motor pos:", dhm.device.MotorPos)
+            logger.info("Motor pos: %.1f µm" % dhm.device.MotorPos)
 
-            print("Optimize Camera Exposure Time...")
+            logger.info("Optimize Camera Exposure Time...")
             dhm.getimage(opt=True)
             #client.CameraShutter = client.CameraShutter-2
             shutter = dhm.device.CameraShutter
             shutterus = dhm.device.CameraShutterUs
-            print(f"Shutter: {shutterus:.1f} us [{shutter:d}]")
+            logger.info(f"Shutter: {shutterus:.1f} us [{shutter:d}]")
         
-        print("Start Spectrum Display Loop...")
+        logger.info("Start Spectrum Display Loop...")
         run = True
         win = None
         while run:
@@ -116,4 +115,4 @@ if __name__ == "__main__":
             win = showImage(ax, img, win)
             #plt.pause(0.1)
 
-        print("Done.")
+        logger.info("Done.")

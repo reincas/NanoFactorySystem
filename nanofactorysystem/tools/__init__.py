@@ -13,6 +13,6 @@
 from .transform import Transform
 from .focus import Focus, focusStatus, markFocus
 from .layer import Layer, flex_round
-from .plane import Plane
+from .plane import Plane, PlaneFit
 from .grid import Grid
 #from .stitch import get_shear, Canvas, Shear, ShearCanvas
