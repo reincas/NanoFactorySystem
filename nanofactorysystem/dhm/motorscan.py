@@ -228,8 +228,8 @@ def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
             addMotor(dhm, data, m+0.7*dm, logger=logger)
             
         # Stop if a increased diffraction peak indicates interference
-        if data.tripleThreshold(thresh):
-            break
+        #if data.tripleThreshold(thresh):
+        #    break
 
         if m == m2:
             break
