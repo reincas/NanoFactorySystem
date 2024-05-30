@@ -13,7 +13,7 @@ HOST = "192.168.22.2"
 PORT = 27182
 
 path = mkdir(".test/dhm")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 
 with DhmClient(host=HOST, port=PORT) as client:
     
@@ -22,25 +22,25 @@ with DhmClient(host=HOST, port=PORT) as client:
     configs = client.ConfigList
     name = dict(configs)[cid]
     client.Config = cid
-    logger.info("Objective: %s [%d]" % (name, cid))
+    logger.info(f"Objective: {name} [{cid:d}]")
 
-    logger.info("Motor pos: %.1f µm" % client.MotorPos)
+    logger.info(f"Motor pos: {client.MotorPos:.1f} µm")
 
     logger.info("Test camera shutter.")
     shutter = client.CameraShutter
     shutterus = client.CameraShutterUs
-    logger.info("Shutter: %.1f us [%d]" % (shutterus, shutter))
+    logger.info(f"Shutter: {shutterus:.1f} us [{shutter:d}]")
 
     logger.info("Get hologram image.")
     img = client.CameraImage
-    fn = "%s/hologram.png" % path
-    logger.info("Store hologram image file '%s'" % fn)
+    fn = f"{path}/hologram.png"
+    logger.info(f"Store hologram image file '{fn}'")
     cv.imwrite(fn, img)
 
     imin = np.min(img)
     imax = np.max(img)
     iavg = np.average(img)
-    logger.info("Pixel values: %d - %d (avg: %.1f)" % (imin, imax, iavg))
+    logger.info(f"Pixel values: {imin:d} - {imax:d} (avg: {iavg:.1f})")
 
     logger.info("Done.")
 

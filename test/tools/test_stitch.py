@@ -6,7 +6,9 @@
 
 import cv2 as cv
 import matplotlib.pyplot as plt
-from nanofactorytools import image, Shear, ShearCanvas
+
+from nanofactorysystem import image
+from nanofactorysystem.tools.stitch import Shear, ShearCanvas
 
 
 def plot1(img, cb=False):
@@ -32,7 +34,7 @@ def plot2(img1, img2, cb=False):
 # Camera background image
 fn_base = "focus-2/base.png"
 
-# Filanames of sub-images
+# Filenames of sub-images
 fn = "focus-2/plane-1/img-%02d-%02d.png"
 
 # Offset between adjacent images in micrometers in stage coordinate

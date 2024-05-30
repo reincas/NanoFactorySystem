@@ -27,7 +27,7 @@ args = {
 user = "Reinhard"
 objective = "Zeiss 20x"
 path = mkdir(".test/focus")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 
 logger.info("Initialize system object...")
 with System(user, objective, logger, **args) as system:
@@ -36,7 +36,7 @@ with System(user, objective, logger, **args) as system:
     focus = Focus(system, logger, **args)
     
     logger.info("Store background image...")
-    focus.imgBack.write("%s/back.zdc" % path)
+    focus.imgBack.write(f"{path}/back.zdc")
     
     logger.info("Expose vertical line and detect focus...")
     x = system.x0
@@ -49,10 +49,10 @@ with System(user, objective, logger, **args) as system:
     focus.run(x, y, z, dz, power, speed, duration)
     
     logger.info("Store images...")
-    focus.imgPre.write("%s/image_pre.zdc" % path)
-    focus.imgPost.write("%s/image_post.zdc" % path)
+    focus.imgPre.write(f"{path}/image_pre.zdc")
+    focus.imgPost.write(f"{path}/image_post.zdc")
     
     logger.info("Store results...")
     dc = focus.container()
-    dc.write("%s/focus.zdc" % path)
+    dc.write(f"{path}/focus.zdc")
     logger.info("Done.")

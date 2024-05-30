@@ -12,6 +12,7 @@
 import math
 from scidatacontainer import Container
 
+from . import ImageContainer
 from .config import sysConfig, popargs
 from .parameter import Parameter
 from .devices import Camera, Dhm, A3200
@@ -50,7 +51,7 @@ class System(Parameter):
         # Store optional sample data dictionary. Applications using the
         # system should include this item into their data container.
         self.sample = popargs(kwargs, "sample")
-        
+
         # Initialize the MatrixVision camera
         args = popargs(kwargs, "camera")
         self.camera = Camera(user, self.objective, logger=self.log, **args)
@@ -121,46 +122,46 @@ class System(Parameter):
 
 
     def update_pos(self, level, *args):
-        
+
         """ Update camera calibration data. """
-        
+
         self.transform.update(level, *args)
-        
+
 
     def object_pos(self, v_px, vs=None):
-        
+
         """ Return object coordinates from given camera image coordinates
         based on the given or current stage coordinates. Object and stage
         coordinates are absolute x,y,z coordinates in micrometres, image
         coordinates are x,y coordinates in pixels relative to the image
         centre. """
-        
+
         if vs is None:
             vs = self.system.controller.position("XYZ")
         return self.transform.object_pos(v_px, vs)
-    
+
 
     def camera_pos(self, v_um, vs=None):
-        
+
         """ Return camera image coordinates from given object coordinates
         based on the given or current stage coordinates. Object and stage
         coordinates are absolute x,y,z coordinates in micrometres, image
         coordinates are x,y coordinates in pixels relative to the image
         centre. """
-        
+
         if vs is None:
             vs = self.system.controller.position("XY")
         return self.transform.camera_pos(v_um, vs)
 
 
     def stage_pos(self, v_um, v_px):
-        
+
         """ Return stage coordinates required to match the given object
         coordinates to the given image coordinates. Object and stage
         coordinates are absolute x,y,z coordinates in micrometres, image
         coordinates are x,y coordinates in pixels relative to the image
         centre. """
-        
+
         return self.transform.stage_pos(v_um, v_px)
 
 
@@ -172,7 +173,7 @@ class System(Parameter):
         self.controller.moveabs(self["speed"], x=self.x0, y=self.y0, z=self.z0)
         if wait:
             self.controller.wait("XYZ")
-        self.log.debug("Moved to home position %.0f, %.0f, %.0f" % (self.x0, self.y0, self.z0))
+        self.log.debug(f"Moved to home position {self.x0:.0f}, {self.y0:.0f}, {self.z0:.0f}")
 
 
     def position(self, axes):
@@ -185,7 +186,7 @@ class System(Parameter):
 
 
     def current_pos(self):
-        
+
         """ Return a dictionary containing the current position of all axes
         in micrometres. """
 
@@ -223,7 +224,7 @@ class System(Parameter):
         self.controller.pulse(power, duration)
 
 
-    def getimage(self):
+    def getimage(self) -> ImageContainer:
 
         """ Get a camera image and return an image container. """
 
@@ -241,7 +242,7 @@ class System(Parameter):
     def polyline(self, line, power, speed, dia):
 
         """ Exposed a single 2D polyline with given laser power and
-        eposure speed at the current position. The given approximate
+        exposure speed at the current position. The given approximate
         focus diameter is used to handle very short polylines. """
 
         x = [x for x, y in line]
@@ -307,7 +308,7 @@ class System(Parameter):
 
 
     def items(self):
-        
+
         items = {
             "data/objective.json": self.objective,
             "data/controller.json": self.controller.parameters(),
@@ -318,8 +319,8 @@ class System(Parameter):
         if self.sample:
             items["data/sample.json"] = self.sample
         return items
-    
-        
+
+
     def container(self, config=None, **kwargs):
 
         """ Return system configuration as SciDataContainer. """

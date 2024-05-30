@@ -32,7 +32,7 @@ import ctypes
 import numpy as np
 try:
     from mvIMPACT import acquire
-except:
+except ImportError:
     acquire = None
 
 
@@ -48,7 +48,7 @@ class Property(object):
         # Locate component
         locator = acquire.DeviceComponentLocator(self.device, acquire.dltSetting, "Base")
         if locator.findComponent(self.name) < 0:
-            raise RuntimeError("Component '%s' not found!" % self.name)
+            raise RuntimeError(f"Component '{self.name}' not found!")
 
         # Bind component to a property object
         self.obj = mvProperty
@@ -58,21 +58,21 @@ class Property(object):
     def minValue(self):
 
         if not self.obj.hasMinValue:
-            raise AttributeError("Component '%s' has no min value!" % self.name)
+            raise AttributeError(f"Component '{self.name}' has no min value!")
         return self.obj.getMinValue()
 
     @property
     def maxValue(self):
 
         if not self.obj.hasMaxValue:
-            raise AttributeError("Component '%s' has no max value!" % self.name)
+            raise AttributeError(f"Component '{self.name}' has no max value!")
         return self.obj.getMaxValue()
 
     @property
     def choices(self):
 
         if not self.obj.hasDict:
-            raise AttributeError("Component '%s' is no selector!" % self.name)
+            raise AttributeError(f"Component '{self.name}' is no selector!")
         size = self.obj.dictSize()
         return [self.obj.getTranslationDictString(i) for i in range(size)]
 
@@ -127,7 +127,7 @@ class PropertySelect(Property):
                 raise ValueError("Selection value not integer!")
             size = self.obj.dictSize()
             if v < 0 or v >= size:
-                raise ValueError("Selection value %d not in range 0-%d!" % (v, size-1))
+                raise ValueError(f"Selection value {v:d} not in range 0-{size - 1:d}!")
             v = self.obj.getTranslationDictString(v)
         self.obj.writeS(v)
 
@@ -135,7 +135,7 @@ class PropertySelect(Property):
 ##########################################################################
 class CameraDevice(object):
 
-    """ MatrixVision camera device class. This is a conveniance wrapper to the
+    """ MatrixVision camera device class. This is a convenience wrapper to the
     MatrixVision library. """
 
     # Property classes
@@ -203,9 +203,9 @@ class CameraDevice(object):
         """ Return description string for the camera. """
 
         if self.opened:
-            result = "Camera %d: %s (S/N %s), %d x %d pixel." \
-                     % (self["deviceID"], self["product"], self["serial"],
-                        self["Width"], self["Height"])
+            result = (f"Camera {self['deviceID']:d}: "
+                      f"{self['product']} "
+                      f"(S/N {self['serial']}), {self['Width']:d} x {self['Height']:d} pixel.")
         else:
             result = "Camera closed."
         return result
@@ -225,12 +225,12 @@ class CameraDevice(object):
         if key in self._properties:
             cls = self._properties[key]
             if cls is None:
-                raise RuntimeError("Item %s is read-only!" % key)
+                raise RuntimeError(f"Item {key} is read-only!")
             self._property[key] = cls(self.device, key)
             self._property[key].value = value
             return
 
-        raise KeyError("Unknown item %s!" % key)
+        raise KeyError(f"Unknown item {key}!")
         
 
     def __getitem__(self, key):
@@ -247,7 +247,7 @@ class CameraDevice(object):
                 value = self._property[key].value
             return value
 
-        raise KeyError("Unknown item %s!" % key)
+        raise KeyError(f"Unknown item {key}!")
 
 
     def property(self, key):
@@ -259,10 +259,10 @@ class CameraDevice(object):
             self._property[key] = self._properties[key](self.device, key)
             return self._property[key]
 
-        raise KeyError("Unknown item %s!" % key)
+        raise KeyError(f"Unknown item {key}!")
 
         
-    def getimage(self):
+    def getimage(self) -> np.ndarray:
 
         """ Grab and return a camera image. """
 

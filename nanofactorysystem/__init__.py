@@ -5,7 +5,7 @@
 ##########################################################################
 #
 # This is the Python package NanoFactorySystem. It allows to control the
-# Laser Nanofactory sytem from Femtika via the class System.
+# Laser Nanofactory system from Femtika via the class System.
 #
 ##########################################################################
 

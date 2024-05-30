@@ -24,6 +24,10 @@ readme = "README.md"
 dependencies = [
     'NumPy>=1.15',
     'SciDataContainer>=1.1',
+	"Scikit-Image",
+	"tqdm",
+	"matplotlib",  # Extra?
+	"opencv-python",  # Extra?
 ]
 classifiers = [
     "Development Status :: 3 - Alpha",

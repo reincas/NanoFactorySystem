@@ -70,8 +70,8 @@ class Dhm(Parameter):
         configs = self.device.ConfigList
         name = dict(configs)[cid]
         self.device.Config = cid
-        self.log.info("Holographic Microscope: %s" % self.device)
-        logger.info("Objective: %s [%d]" % (name, cid))
+        self.log.info(f"Holographic Microscope: {self.device}")
+        logger.info(f"Objective: {name} [{cid:d}]")  # TODO: Replace with self.log?
 
         # Done
         self.log.info("Initialized holographic microscope.")
@@ -164,7 +164,7 @@ class Dhm(Parameter):
             "optCount": count,
             "minValue": int(np.min(holo)),
             "maxValue": int(np.max(holo)),
-            "avgerageValue": float(np.average(holo)),
+            "averageValue": float(np.average(holo)),
             "lowQuantileValue": int(imin),
             "medianValue": int(imedian),
             "highQuantileValue": int(imax),

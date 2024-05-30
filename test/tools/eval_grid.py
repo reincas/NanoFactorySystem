@@ -26,7 +26,7 @@ nx = 5
 ny = 5
 off = 0
 dt = 1.0
-path = Path("./.test/grid-%.1f-%d-%dx%d" % (dt, off, nx, ny))
+path = Path(f"./.test/grid-{dt:.1f}-{off:d}-{nx:d}x{ny:d}")
 
 file = str(Path(path, "pre_holo.zdc"))
 holo = HoloContainer(file=file).img

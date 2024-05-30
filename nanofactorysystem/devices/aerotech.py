@@ -17,6 +17,9 @@
 import os
 import socket
 import time
+from enum import Enum
+from typing import Any, Optional
+
 from scidatacontainer import Container
 
 from ..parameter import Parameter
@@ -37,6 +40,18 @@ TASKSTATE_Queue = 9
 TASKSTATE = ("unavailable", "inactive", "idle", "programReady",
              "programRunning", "programFeedheld", "programPaused",
              "programComplete", "error", "queue")
+
+class TaskState(Enum):
+    unavailable = 0
+    inactive = 1
+    idle = 2
+    program_ready = 3
+    program_running = 4
+    programmfeed_held = 5
+    program_paused = 6
+    program_complete = 7
+    error = 8
+    queue = 9
 
 # Drive status bit masks
 DRIVESTATUS_InPosition = 0x02000000
@@ -76,9 +91,9 @@ END PROGRAM
 
 ##########################################################################
 class A3200(Parameter):
-    
+
     """ Class for controlling an Aerotech A3200 system."""
-    
+
     _defaults = sysConfig.controller | {
         "xInit": None,
         "yInit": None,
@@ -87,11 +102,11 @@ class A3200(Parameter):
         "tasks": {},
         "softwareVersion": None,
         }
-        
+
     def __init__(self, user, logger=None, **kwargs):
 
         # Initialize parameter class
-        args = popargs(kwargs, "controller")        
+        args = popargs(kwargs, "controller")
         super().__init__(user, logger, **args)
         self.log.info("Initializing Aerotech A3200 system.")
 
@@ -131,7 +146,7 @@ class A3200(Parameter):
         self.task_pgms = {}
 
         # Laser calibration
-        args = popargs(kwargs, "attenuator")        
+        args = popargs(kwargs, "attenuator")
         self.attenuator = Attenuator(user, self.log, **args)
 
         # Done
@@ -142,28 +157,16 @@ class A3200(Parameter):
     def __str__(self):
 
         if self.opened:
-            result = "%s %s (driver %s) at %s:%s." % \
-                     (self["manufacturer"], self["model"],
-                      self["softwareVersion"], self["host"], self["port"])
+            result = f"{self['manufacturer']} {self['model']} (driver {self['softwareVersion']}) at {self['host']}:{self['port']}."
         else:
             result = "Aerotech A3200 disconnected."
         return result
-
-
-    def close(self):
-
-        """ Close connection to the A3200 system. """
-
-        self.socket.close()
-        self.opened = False
-
 
     def __enter__(self):
 
         """ Context manager entry method. """
 
         return self
-
 
     def __exit__(self, errtype, value, tb):
 
@@ -172,8 +175,14 @@ class A3200(Parameter):
         #print("".join(traceback.format_exception(errtype, value, tb)))
         self.close()
 
+    def close(self):
 
-    def run(self, cmd):
+        """ Close connection to the A3200 system. """
+
+        self.socket.close()
+        self.opened = False
+
+    def run(self, cmd: str) -> str:
 
         """ Run the given AeroBasic command on the A3200 controller. """
 
@@ -195,13 +204,13 @@ class A3200(Parameter):
         return response
 
 
-    def version(self):
+    def version(self) -> str:
 
         """ Return A3200 software version. """
 
         return self.run("~VERSION")
 
-    
+
     def reset(self):
 
         """ Acknowledge all warnings. """
@@ -210,17 +219,17 @@ class A3200(Parameter):
             raise RuntimeError("Not connected!")
 
         self.run("ACKNOWLEDGEALL")
-        
+
 
     def home(self, axes=None):
-        
+
         """ Run a home cycle on the given axes. """
 
         if axes in None:
             axes = "XYZ"
         axes = self.normaxes(axes, "XYZ")
         for axis in axes:
-            self.run("HOME %s" % axis)
+            self.run(f"HOME {axis}")
 
 
     def normaxes(self, axes, limit=None):
@@ -236,7 +245,7 @@ class A3200(Parameter):
         false = tuple(c for c in axes if c.upper() not in limit)
         if len(false) > 0:
             false = ", ".join(false)
-            raise RuntimeError("Wrong axes: %s!" % false)
+            raise RuntimeError(f"Wrong axes: {false}!")
         return axes.upper()
 
 
@@ -255,10 +264,10 @@ class A3200(Parameter):
                 if self.z > self["zMax"]:
                     self.close()
                     raise RuntimeError("Maximum z position exceeded!")
-            dest.append("%s%f" % (axis, 0.001*pos))
+            dest.append(f"{axis}{0.001 * pos:f}")
         dest = " ".join(sorted(dest))
         self.run("INCREMENTAL")
-        self.run("LINEAR %s F%f" % (dest, 0.001*speed))
+        self.run(f"LINEAR {dest} F{0.001 * speed:f}")
 
 
     def moveabs(self, speed, **axes):
@@ -276,10 +285,10 @@ class A3200(Parameter):
                 if self.z > self["zMax"]:
                     self.close()
                     raise RuntimeError("Maximum z position exceeded!")
-            dest.append("%s%f" % (axis, 0.001*pos))
+            dest.append(f"{axis}{0.001 * pos:f}")
         dest = " ".join(sorted(dest))
         self.run("ABSOLUTE")
-        self.run("LINEAR %s F%f" % (dest, 0.001*speed))
+        self.run(f"LINEAR {dest} F{0.001 * speed:f}")
 
 
     def position(self, axes):
@@ -289,7 +298,7 @@ class A3200(Parameter):
         number if a single axis is requested. """
 
         axes = self.normaxes(axes, "XYZAB")
-        cmd = ["AXISSTATUS(%s, DATAITEM_PositionFeedback)" % a for a in axes]
+        cmd = [f"AXISSTATUS({a}, DATAITEM_PositionFeedback)" for a in axes]
         pos = [self.run(c) for c in cmd]
         pos = [1000 * float(p.replace(",", ".")) for p in pos]
         if len(pos) == 1:
@@ -304,7 +313,7 @@ class A3200(Parameter):
         single number if a single axis is requested. """
 
         axes = self.normaxes(axes, "XYZAB")
-        cmd = ["AXISSTATUS(%s, DATAITEM_VelocityFeedback)" % a for a in axes]
+        cmd = [f"AXISSTATUS({a}, DATAITEM_VelocityFeedback)" for a in axes]
         speed = [self.run(c) for c in cmd]
         speed = [1000 * float(p.replace(",", ".")) for p in speed]
         if len(speed) == 1:
@@ -319,7 +328,7 @@ class A3200(Parameter):
         """
 
         axes = self.normaxes(axes, "XYZAB")
-        cmd = ["AXISSTATUS(%s, DATAITEM_DriveStatus)" % a for a in axes]
+        cmd = [f"AXISSTATUS({a}, DATAITEM_DriveStatus)" for a in axes]
         bitmask = DRIVESTATUS_InPosition
         if not wait:
             return all((int(self.run(c)) & bitmask) != 0 for c in cmd)
@@ -329,7 +338,7 @@ class A3200(Parameter):
         return True
 
 
-    def wait(self, axes, pause=None):
+    def wait(self, axes, pause: Optional[float]=None):
 
         """ Wait until all given axes are in position after pause
         milliseconds. """
@@ -344,32 +353,31 @@ class A3200(Parameter):
         """ Load AeroBasic program from given file and store it as task.
         Valid task numbers range from 1-32. """
 
-        #print('PROGRAM %d LOAD "%s"' % (task, fn))
-        self.run('PROGRAM %d LOAD "%s"' % (task, fn))
+        # print(f'PROGRAM {task:d} LOAD "{fn}"')
+        self.run(f'PROGRAM {task:d} LOAD "{fn}"')
 
 
     def start(self, task):
 
         """ Start execution of the given task. """
 
-        self.run("PROGRAM %d START" % task)
+        self.run(f"PROGRAM {task:d} START")
 
 
-    def stop(self, task):
+    def stop(self, task_id):
 
         """ Stop and remove the given task. """
 
-        self.run("PROGRAM %d STOP" % task)
+        self.run(f"PROGRAM {task_id:d} STOP")
 
 
-    def state(self, task):
+    def state(self, task_id:int) -> TaskState:
 
         """ Return status of given task as integer value and as string.
         """
 
-        state = int(self.run("TASKSTATUS(%d, DATAITEM_TaskState)" % task))
-        return state, TASKSTATE[state]
-
+        state_id = int(self.run(f"TASKSTATUS({task_id:d}, DATAITEM_TaskState)"))
+        return TaskState(state_id)
 
     def attenuate(self, att):
 
@@ -378,8 +386,8 @@ class A3200(Parameter):
 
         att = float(att)
         if att < 0.0 or att > 10.0:
-            raise RuntimeError("Not a valid attenuator value: %g!" % att)
-        self.run("$AO[0].A=%f" % att)
+            raise RuntimeError(f"Not a valid attenuator value: {att:g}!")
+        self.run(f"$AO[0].A={att:f}")
 
 
     def power(self, power):
@@ -388,8 +396,8 @@ class A3200(Parameter):
 
         att = self.attenuator.ptoa(power)
         self.attenuate(att)
-        
-        
+
+
     def laseron(self, power):
 
         """ Switch laser on with given power. """
@@ -423,7 +431,7 @@ class A3200(Parameter):
         name = "zline"
         if name in self["tasks"]:
             return
-        
+
         # Default file name
         if fn is None:
             fn = "__zline__.pgm"
@@ -431,27 +439,27 @@ class A3200(Parameter):
         # First free task number
         tasks = self["tasks"].values()
         if len(tasks) == 0:
-            task = 1
+            task_id = 1
         else:
-            task = min(set(range(1, max(tasks)+2)) - set(tasks))
+            task_id = min(set(range(1, max(tasks)+2)) - set(tasks))
 
         # Store AeroBasic program as file
-        self["tasks"][name] = task
+        self["tasks"][name] = task_id
         self.task_pgms[name] = ZLINE_PGM
         with open(fn, "w") as fp:
             fp.write(self.task_pgms[name])
 
         # Stop any running program 1 
-        self.stop(task)
+        self.stop(task_id)
 
         # Load AeroBasic program 1 from file
         path = os.path.join(os.getcwd(), fn)
-        self.load(task, path)
+        self.load(task_id, path)
 
         # Done
-        return task
+        return task_id
 
-        
+
     def zline(self, power, fast, slow, dz):
 
         """ Run zline program with fast and slow speed in µm/s as well
@@ -460,7 +468,7 @@ class A3200(Parameter):
 
         # Initialize zline program
         name = "zline"
-        if not name in self["tasks"]:
+        if name not in self["tasks"]:
             self.init_zline()
 
         # Task number        
@@ -470,34 +478,40 @@ class A3200(Parameter):
         if self.z + 0.5*dz > self["zMax"]:
             self.close()
             raise RuntimeError("Maximum z position exceeded!")
-        self.run("$global[0] = %f" % (0.001*fast))
-        self.run("$global[1] = %f" % (0.001*slow))
-        self.run("$global[2] = %f" % (0.001*dz))
+        self.run(f"$global[0] = {0.001 * fast:f}")
+        self.run(f"$global[1] = {0.001 * slow:f}")
+        self.run(f"$global[2] = {0.001 * dz:f}")
 
         # Set laser power
         self.power(power)
 
         # Run zline program
         self.start(task)
-        state = TASKSTATE_ProgramRunning
-        while state == TASKSTATE_ProgramRunning:
-            state = int(self.run("TASKSTATUS(%d, DATAITEM_TaskState)" % task))
+        state = TaskState.program_running
+        while state == TaskState.program_running:
+            state = self.state(task)
 
         # Program failure
-        if state != TASKSTATE_ProgramComplete:
+        if state != TaskState.program_complete:
             self.close()
-            raise RuntimeError("Task state '%s' (%d)!" \
-                               % (TASKSTATE[state], state))
+            raise RuntimeError(f"Task state '{state.name}' ({state.value})!")
 
 
-    def info(self):
+    def info(self) -> dict[str, Any]:
 
         """ Return information dictionary. """
 
-        keys = ("zMax", "description", "model", "manufacturer",
-                "softwareVersion", "host", "port")
+        keys = (
+            "zMax",
+            "description",
+            "model",
+            "manufacturer",
+            "softwareVersion",
+            "host",
+            "port"
+        )
         return {k: self[k] for k in keys}
-    
+
 
     def container(self, config=None, **kwargs):
 
@@ -511,7 +525,7 @@ class A3200(Parameter):
             "title": "Motion control system parameters",
             "description": "Parameters of the Aerotech A3200 system.",
             }
-        
+
         # Create container dictionary
         items = {
             "content.json": content,
@@ -521,7 +535,7 @@ class A3200(Parameter):
 
         # Add program files
         for name, task in self["tasks"]:
-            item = "data/%s.pgm" % name
+            item = f"data/{name}.pgm"
             items[item] = self.task_pgms[name]
 
         # Return container object
