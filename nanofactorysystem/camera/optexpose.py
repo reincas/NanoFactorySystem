@@ -8,10 +8,12 @@
 # time of a camera device.
 #
 ##########################################################################
+from nanofactorysystem.camera import CameraDevice
 
-def expose(camera, t, level):
 
-    """ Get camera image with given eposure time and return
+def expose(camera: CameraDevice, t, level) -> float:
+
+    """ Get camera image with given exposure time and return
     deviation of mean value from the given value. """
     
     camera["ExposureTime"] = t
@@ -20,7 +22,7 @@ def expose(camera, t, level):
     return result
 
     
-def optExpose(camera, level=127):
+def optExpose(camera: CameraDevice, level=127) -> float:
 
     """ Find exposure time resulting in a given mean value of the image
     content. """

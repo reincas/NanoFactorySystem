@@ -8,17 +8,17 @@
 # device or tool classes of the package NanoFactorySystem.
 #
 ##########################################################################
-
+import abc
 import logging
 from scidatacontainer import load_config
 
 from .config import sysConfig
 
 
-class Parameter(object):
+class Parameter(abc.ABC):
 
     """ Prototype class providing a standardized interface to export
-    parameters and results of an application class to a data packege
+    parameters and results of an application class to a data package
     object. """
 
     _defaults = {"dummy": None}
@@ -34,7 +34,8 @@ class Parameter(object):
             author = self.user.get("name", None),
             email = self.user.get("email", None),
             organization = self.user.get("organization", None),
-            orcid = self.user.get("orcid", None))
+            orcid = self.user.get("orcid", None)
+        )
                 
         # Store logger
         self.log = logger or logging
@@ -49,7 +50,7 @@ class Parameter(object):
             self[key] = value
 
 
-    def __setitem__(self, key, value):
+    def __setitem__(self, key:str, value):
 
         """ Setter method to access class parameters using the
         dictionary syntax. """
@@ -60,11 +61,11 @@ class Parameter(object):
         elif key in self._defaults:
             self._params[key] = value
         else:
-            raise KeyError("Unknown item %s!" % key)
+            raise KeyError(f"Unknown item {key}!")
         
         
 
-    def __getitem__(self, key):
+    def __getitem__(self, key:str):
 
         """ Getter method to access class parameters using the
         dictionary syntax. """
@@ -75,7 +76,7 @@ class Parameter(object):
         elif key in self._defaults:
             value = self._params[key]
         else:
-            raise KeyError("Unknown item %s!" % key)
+            raise KeyError(f"Unknown item {key}!")
         #print("Value", value)
         return value
 

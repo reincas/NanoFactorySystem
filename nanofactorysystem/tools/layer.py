@@ -147,13 +147,15 @@ class LayerBisect(object):
         # Determine all negative focus scans crossing the current lower
         # edge. Set corrected lower edge to the maximum of all these
         # scan ranges.
+        # TODO(dwoiwode): is i array or bool?
         i = (z0_miss < lower) & (z1_miss > lower)
         if any(i):
             lower = np.max(z1_miss[i])
-        
+
         # Determine all negative focus scans crossing the current upper
         # edge. Set corrected upper edge to the minimum of all these
         # scan ranges.
+        # TODO(dwoiwode): is i array or bool?
         i = (z0_miss < upper) & (z1_miss > upper)
         if any(i):
             upper = np.max(z0_miss[i])
@@ -275,7 +277,7 @@ class LayerBisect(object):
 
         # Step 2: Increase scanned range until at least one positive and
         # one negative focus scan was encountered
-        if (np.all(value > 0.0) or np.all(value < 0.0)):
+        if np.all(value > 0.0) or np.all(value < 0.0):
 
             # Avoid an endless search if there is something wrong with
             # the laser beam position.
@@ -536,14 +538,12 @@ class Layer(Parameter):
 
         # Run layer detection algorithm
         if path:
-            path = mkdir("%s/focus" % path)
+            path = mkdir(f"{path}/focus")
         finished = False
         steps = []
         offsets = []
         while not finished:
             pos = len(steps)
-            if path:
-                subpath = mkdir("%s/focus-%02d" % (path, pos))
 
             # Next exposure coordinates
             x, y = self._spiral(pos)
@@ -553,9 +553,10 @@ class Layer(Parameter):
             self.focus.run(x, y, z, dz, power, speed, duration)
             f = self.focus.container()
             if path:
-                self.focus.imgPre.write("%s/image_pre.zdc" % subpath)
-                self.focus.imgPost.write("%s/image_post.zdc" % subpath)
-                f.write("%s/focus.zdc" % subpath)
+                subpath = mkdir(f"{path}/focus-{pos:02d}")
+                self.focus.imgPre.write(f"{subpath}/image_pre.zdc")
+                self.focus.imgPost.write(f"{subpath}/image_post.zdc")
+                f.write(f"{subpath}/focus.zdc")
 
             # Hit status
             status = self.focus.result["status"]
@@ -597,15 +598,15 @@ class Layer(Parameter):
             if bi:
                 zlo = "%g [%g]" % flex_round(z_lower, dz_lower)
                 zup = "%g [%g]" % flex_round(z_upper, dz_upper)
-                s = "bisect %16s %16s" % (zlo, zup)
+                s = f"bisect {zlo:>16} {zup:>16}"
             else:
                 zlo, dzlo = flex_round(z_lower, dz)
                 zup, dzup = flex_round(z_upper, dz)
-                s = "prepare  %g ... %g [%g]" % (zlo, zup, dzup)
-            step = "Step %d:" % pos
+                s = f"prepare  {zlo:g} ... {zup:g} [{dzup:g}]"
+            step = f"Step {pos:d}:"
             z = "%g [%g]" % flex_round(z, dz)
             hit = self._hitvalue[hit]
-            self.log.debug("%-9s %16s -> %-9s | %s" % (step, z, hit, s))
+            self.log.debug(f"{step:<9} {z:>16} -> {hit:<9} | {s}")
 
         # Final result
         dx, dy = np.mean(offsets, axis=0)
@@ -714,7 +715,7 @@ class Layer(Parameter):
         # Collect UUIDs of focus detections as references
         refs = {}
         for step in self.steps:
-            key = "focus-%02d" % step["exposure"]
+            key = f"focus-{step['exposure']:02d}"
             refs[key] = step["focusUuid"]
 
         # General metadata

@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides the function optImage to get a hologram immage
+# This module provides the function optImage to get a hologram image
 # with optimized contrast.
 #
 ##########################################################################
@@ -16,7 +16,7 @@ import numpy as np
 def optImage(dhm, maxof=9, logger=None):
 
     """ Return image with optimized exposure time. The number of
-    overflow pixels in the returned image will will be less or equal
+    overflow pixels in the returned image will be less or equal
     maxof. The second return value is the number of camera images
     grabbed by the algorithm. """
 
@@ -60,13 +60,13 @@ def optImage(dhm, maxof=9, logger=None):
         if smin is None:
             str0 = "None"
         else:
-            str0 = "%4d" % smin
-        str1 = "%4d [%4d]" % (s, numof)
+            str0 = f"{smin:4d}"
+        str1 = f"{s:4d} [{numof:4d}]"
         if smax is None:
             str2 = "None"
         else:
-            str2 = "%4d" % smax
-        logger.debug("%03d: %s --  %s --  %s" % (count, str0, str1, str2))
+            str2 = f"{smax:4d}"
+        logger.debug(f"{count:03d}: {str0} --  {str1} --  {str2}")
 
         # Number of overflow pixels above limit
         if numof > maxof:

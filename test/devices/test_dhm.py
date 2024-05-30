@@ -16,23 +16,23 @@ user = "Reinhard"
 objective = "Zeiss 20x"
 objective = sysConfig.objective(objective)
 path = mkdir(".test/dhm")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 with Dhm(user, objective, logger, **args) as dhm:
     
     logger.info("Motor scan.")
     m = dhm.motorscan()
-    logger.info("Motor pos: %.1f µm (set: %.1f µm)" % (dhm.device.MotorPos, m))
+    logger.info(f"Motor pos: {dhm.device.MotorPos:.1f} µm (set: {m:.1f} µm)")
 
     logger.info("Get hologram container.")
     dc = dhm.container(opt=True)
-    fn = "%s/hologram.zdc" % path
-    logger.info("Store hologram container file '%s'" % fn)
+    fn = f"{path}/hologram.zdc"
+    logger.info(f"Store hologram container file '{fn}'")
     dc.write(fn)
     print(dc)
 
     logger.info("Test camera shutter.")
     shutter = dhm.device.CameraShutter
     shutterus = dhm.device.CameraShutterUs
-    logger.info("Shutter: %.1f us [%d]" % (shutterus, shutter))
+    logger.info(f"Shutter: {shutterus:.1f} us [{shutter:d}]")
 
     logger.info("Done.")

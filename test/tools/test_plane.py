@@ -36,7 +36,7 @@ ny = 2
 user = "Reinhard"
 objective = "Zeiss 20x"
 path = mkdir(".test/plane")
-logger = getLogger(logfile="%s/console.log" % path)
+logger = getLogger(logfile=f"{path}/console.log")
 
 logger.info("Initialize system object...")
 with System(user, objective, logger, **args) as system:
@@ -46,11 +46,11 @@ with System(user, objective, logger, **args) as system:
     plane = Plane(zlo, zup, system, logger, **args)
         
     #logger.info("Load steps...")
-    #with open("%s/steps.json" % path, "r") as fp:
+    # with open(f"{path}/steps.json", "r") as fp:
     #    plane.steps = json.loads(fp.read())
     
     logger.info("Store background image...")
-    plane.layer.focus.imgBack.write("%s/back.zdc" % path)
+    plane.layer.focus.imgBack.write(f"{path}/back.zdc")
 
     logger.info("Run plane detection...")
     for j in range(ny):
@@ -60,10 +60,10 @@ with System(user, objective, logger, **args) as system:
             plane.run(x, y, path=path)
 
     #logger.info("Store steps...")
-    #with open("%s/steps.json" % path, "w") as fp:
+    # with open(f"{path}/steps.json", "w") as fp:
     #    fp.write(json.dumps(plane.steps))
     
     logger.info("Store results...")
     dc = plane.container()
-    dc.write("%s/plane.zdc" % path)
+    dc.write(f"{path}/plane.zdc")
     logger.info("Done.")

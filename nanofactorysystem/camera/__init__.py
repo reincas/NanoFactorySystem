@@ -5,7 +5,7 @@
 ##########################################################################
 #
 # This subpackage of the Python package NanoFactorySystem provides
-# classes and fuctions used to access the industrial camera from
+# classes and functions used to access the industrial camera from
 # MatrixVision of the Laser Nanofactory system from Femtika.
 #
 ##########################################################################

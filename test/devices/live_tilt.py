@@ -31,11 +31,11 @@ def getImage(dhm):
     holo, count = dhm.getimage()
     #return image.normcolor(holo)
     spectrum, fx, fy, weight = reconstruct.locateOrder(holo, 16)
-    dhm.log.info("First order coordinates: %d, %d [%.1f%%]" % (fx, fy, 100*weight))
+    dhm.log.info(f"First order coordinates: {fx:d}, {fy:d} [{100 * weight:.1f}%]")
 
     maxpixel = 255
     numof = np.count_nonzero(holo >= maxpixel)
-    dhm.log.info("Overflow pixels: %d" % numof)
+    dhm.log.info(f"Overflow pixels: {numof:d}")
     
     img = np.log(np.abs(spectrum))
     h, w = img.shape
@@ -48,7 +48,7 @@ def getImage(dhm):
     
     rmax = np.sqrt(fx**2 + fy**2) - r0
     rmax = min(rmax, abs(fx), w//2-abs(fx), abs(fy), h//2-abs(fy))
-    dhm.log.info("Maximum radius: %d pixels" % rmax)
+    dhm.log.info(f"Maximum radius: {rmax:d} pixels")
     if rmax > 0:
         img = image.drawCircle(img, fx, fy, rmax, image.CV_RED, 1)
         img = image.drawCircle(img, -fx, -fy, rmax, image.CV_RED, 1)
@@ -105,12 +105,12 @@ if __name__ == "__main__":
             #client.CameraShutter = client.CameraShutter-2
             shutter = dhm.device.CameraShutter
             shutterus = dhm.device.CameraShutterUs
-            logger.info("Shutter: %.1f us [%d]" % (shutterus, shutter))
+            logger.info(f"Shutter: {shutterus:.1f} us [{shutter:d}]")
         
         logger.info("Start Spectrum Display Loop...")
         run = True
         win = None
-        while (run):
+        while run:
             img = getImage(dhm)
             win = showImage(ax, img, win)
             #plt.pause(0.1)

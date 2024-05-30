@@ -57,9 +57,9 @@ def diff(img0, img1, r=None):
     return img
 
 
-def norm(img):
+def norm(img:np.ndarray) -> tuple[np.ndarray, float, float]:
 
-    """ Spread image values to the fullrange of 0-255 and return it as a
+    """ Spread image values to the fullrange of 0-255 and return it as an
     unsigned 8-bit integer image. Also return the minimum and maximum
     values of the initial image. """
 
@@ -137,14 +137,14 @@ def subshift(img, dx, dy, sigma):
     img = cv.filter2D(img, -1, kernel)
 
     #maxval = max(kernel[:,(0,-1)].max(), kernel[(0,-1),:].max())
-    #print("kernel size:    %d" % size)
-    #print("max edge value: %g" % maxval)
+    # print(f"kernel size:    {size:d}")
+    # print(f"max edge value: {maxval:g}")
     return img
 
 
 def subdiff(img0, img1, dx, dy, sigma=2.0):
 
-    """ Shift each image half way and return the differencial image.
+    """ Shift each image half way and return the differential image.
     Parameters dx and dy are expected as img1 registered on img0. """
 
     if img0.dtype != float:

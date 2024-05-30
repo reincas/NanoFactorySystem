@@ -51,8 +51,8 @@ dt = args["grid"]["duration"]
 
 user = "Reinhard"
 objective = "Zeiss 20x"
-path = mkdir(".test/grid-%.1f-%d-%dx%d" % (dt, off, nx, ny))
-logger = getLogger(logfile="%s/console.log" % path)
+path = mkdir(f".test/grid-{dt:.1f}-{off:d}-{nx:d}x{ny:d}")
+logger = getLogger(logfile=f"{path}/console.log")
 
 logger.info("Initialize system object...")
 with System(user, objective, logger, **args) as system:
@@ -61,16 +61,16 @@ with System(user, objective, logger, **args) as system:
     logger.info("Motor scan...")
     mopt = system.dhm.motorscan()
     m = system.dhm.device.MotorPos
-    logger.info("Motor pos: %.1f µm (set: %.1f µm)" % (m, mopt))
+    logger.info(f"Motor pos: {m:.1f} µm (set: {mopt:.1f} µm)")
 
     # Initialize layer object
     logger.info("Initialize layer object...")
-    subpath = mkdir("%s/layer" % path)
+    subpath = mkdir(f"{path}/layer")
     layer = Layer(system, logger, **args)
 
     # Store background image
     logger.info("Store background image...")
-    layer.focus.imgBack.write("%s/back.zdc" % subpath)
+    layer.focus.imgBack.write(f"{subpath}/back.zdc")
 
     # Run layer detection
     pitch = args["grid"]["gridPitch"]
@@ -81,15 +81,15 @@ with System(user, objective, logger, **args) as system:
     # Run pitch detection
     logger.info("Run pitch detection...")
     ((pxx, pxy), (pyx, pyy)) = layer.pitch()
-    logger.info("Camera pitch xx: %.3f µm/px" % pxx)
-    logger.info("Camera pitch xy: %.3f µm/px" % pxy)
-    logger.info("Camera pitch yx: %.3f µm/px" % pyx)
-    logger.info("Camera pitch yy: %.3f µm/px" % pyy)
+    logger.info(f"Camera pitch xx: {pxx:.3f} µm/px")
+    logger.info(f"Camera pitch xy: {pxy:.3f} µm/px")
+    logger.info(f"Camera pitch yx: {pyx:.3f} µm/px")
+    logger.info(f"Camera pitch yy: {pyy:.3f} µm/px")
 
     # Store layer results
     logger.info("Store layer results...")
     dc = layer.container()
-    dc.write("%s/layer.zdc" % subpath)
+    dc.write(f"{subpath}/layer.zdc")
     result = dc["meas/result.json"]
 
     # Initialize grid object
@@ -109,9 +109,9 @@ with System(user, objective, logger, **args) as system:
     xh, yh, zh = system.stage_pos([x, y, z], [0, 0])
     system.moveabs(x=xh, y=yh, z=zh+off, wait=delay)
     dc = system.dhm.container(opt=True)
-    fn = "%s/pre_holo.zdc" % path
+    fn = f"{path}/pre_holo.zdc"
     dc.write(fn)
-    logger.info("Hologram container: %s" % fn)
+    logger.info(f"Hologram container: {fn}")
 
     # Run grid exposure
     logger.info("Expose grid...")
@@ -124,14 +124,14 @@ with System(user, objective, logger, **args) as system:
     xh, yh, zh = system.stage_pos([x, y, z], [0, 0])
     system.moveabs(x=xh, y=yh, z=zh+off, wait=delay)
     dc = system.dhm.container(opt=True)
-    fn = "%s/post_holo.zdc" % path
+    fn = f"{path}/post_holo.zdc"
     dc.write(fn)
-    logger.info("Hologram container: %s" % fn)
+    logger.info(f"Hologram container: {fn}")
     
     # Store grid results
     logger.info("Store grid results...")
     dc = grid.container()
-    dc.write("%s/grid.zdc" % path)
+    dc.write(f"{path}/grid.zdc")
     print(dc)
 
     logger.info("Done.")

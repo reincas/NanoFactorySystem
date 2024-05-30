@@ -5,7 +5,7 @@
 ##########################################################################
 #
 # This subpackage of the Python package NanoFactorySystem provides
-# classes and fuctions used to access the digital holographic microscope
+# classes and functions used to access the digital holographic microscope
 # from LyncéeTec integrated in the Laser Nanofactory system of Femtika.
 #
 ##########################################################################

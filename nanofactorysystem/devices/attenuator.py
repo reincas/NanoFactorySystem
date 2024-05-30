@@ -76,9 +76,9 @@ class Attenuator(Parameter):
 
         # Attenuator range is always 0..10
         if min(a) != self["valueMin"]:
-            raise RuntimeError("Attenuator data must start at %.1f!" % self["valueMin"])
+            raise RuntimeError(f"Attenuator data must start at {self['valueMin']:.1f}!")
         if max(a) != self["valueMax"]:
-            raise RuntimeError("Attenuator data must end at %.1f!" % self["valueMax"])
+            raise RuntimeError(f"Attenuator data must end at {self['valueMax']:.1f}!")
 
         # Power range
         self["powerMin"] = min(p)
@@ -91,8 +91,7 @@ class Attenuator(Parameter):
 
     def __str__(self):
 
-        return "Attenuator: %.2f - %.2f mW (%d steps)." % \
-               (self["powerMin"], self["powerMax"], self.num)
+        return f"Attenuator: {self['powerMin']:.2f} - {self['powerMax']:.2f} mW ({self.num:d} steps)."
     
 
     def info(self):

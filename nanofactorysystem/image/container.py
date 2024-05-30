@@ -22,7 +22,7 @@ class ImageContainer(Container):
 
     def __pre_init__(self):
 
-        """ Build items dictionary if in cration mode. """
+        """ Build items dictionary if in creation mode. """
 
         # Not in creation mode
         if (self.kwargs["file"] is not None) or \
@@ -86,7 +86,7 @@ class ImageContainer(Container):
         # Type check of the container
         if (self.content["containerType"]["name"] != self.containerType) or \
            (self.content["containerType"]["version"] != self.containerVersion):
-            raise RuntimeError("Containertype must be '%s'!" % self.containerType)
+            raise RuntimeError(f"Containertype must be '{self.containerType}'!")
 
 
     @property

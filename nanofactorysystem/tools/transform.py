@@ -83,11 +83,11 @@ class Transform(object):
         
         # Level test
         level = LEVELS.index(level.lower())
-        if level > 0 and level < self.level:
+        if 0 < level < self.level:
             return False
         
         # Run requested update method
-        update = getattr(self, "update_%s" % LEVELS[level])
+        update = getattr(self, f"update_{LEVELS[level]}")
         update(*args)
         self._pinv = None
         self.level = level
@@ -152,7 +152,7 @@ class Transform(object):
 
     def update_grid(self, A, dr):
         
-        """ Update transformation matrix with given two dimensional affine
+        """ Update transformation matrix with given two-dimensional affine
         2x3 matrix in micrometres per pixel. """
 
         self.P[:2,:] = A

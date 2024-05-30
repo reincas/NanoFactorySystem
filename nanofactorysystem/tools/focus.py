@@ -33,10 +33,10 @@ class FocusStatus(object):
         ]
 
 
-    def status(self, value):
+    def status(self, value:int):
         
         assert isinstance(value, int)
-        assert value >= 0 and value < len(self._status)
+        assert 0 <= value < len(self._status)
         return self._status[value][1]
     
     
@@ -46,7 +46,7 @@ class FocusStatus(object):
         try:
             value = [v for v,n in self._status].index(key)
         except ValueError:
-            raise AttributeError("Unknown attribute '%s'!" % key)
+            raise AttributeError(f"Unknown attribute '{key}'!")
         return value
 
 focusStatus = FocusStatus()
@@ -60,7 +60,7 @@ def markFocus(dc, lw=2, **args):
 
     * center:  draw center area circle
     * contour: draw contour of focus area
-    * focus:   mark focus center by cross hair lines
+    * focus:   mark focus center by cross-hair lines
     """
 
     # Radius of center area

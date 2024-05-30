@@ -4,7 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# This module provides image stitiching classes and functions.
+# This module provides image stitching classes and functions.
 #
 ##########################################################################
 
@@ -73,7 +73,7 @@ class Canvas(object):
         if offsetx + width > self.width:
             dx = offsetx + width - self.width
             img = img[:,:-dx]
-            
+
         # Partial overlap on the bottom of the canvas
         if offsety < 0:
             dy = -offsety
@@ -109,7 +109,7 @@ class Canvas(object):
         cnt = np.where(self.count == 0, 1, self.count)
         canvas = np.where(self.count == 0, 0, canvas/cnt)
         canvas = canvas.astype(np.uint8)
-        
+
         return canvas
 
 
@@ -139,7 +139,7 @@ def _intersect(img1, img2, x, y):
     else:
         x1 = slice(None)
         x2 = slice(None)
-    
+
     # Vertical slices
     if y < 0:
         y1 = slice(0, h+y)
@@ -189,7 +189,7 @@ def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
 
     # Camera resolution in pixel per micrometer
     resolution = float(resolution)
-    
+
     # Offset between adjacent images in micrometers in stage coordinate
     # system
     pitch_x = float(pitch_x)
@@ -221,7 +221,7 @@ def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
             a21.append(dy)
     a11 = np.mean(a11) / pitch_x
     a21 = np.mean(a21) / pitch_x
-    
+
     # Vertical translation vector
     print("Vertical translation vector...")
     dx_raw = 0
@@ -243,7 +243,7 @@ def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
     a22 = np.mean(a22) / pitch_y
 
     # Return shear matrix
-    shear = Shear(a11, a12, a21, a22)
+    shear = Shear((a11, a12, a21, a22))
     print(shear)
     print("Done.")
     return shear
@@ -261,7 +261,7 @@ class Shear(object):
 
         if file:
             mat = self.load(file)
-            
+
         self.a11 = float(mat[0])
         self.a12 = float(mat[1])
         self.a21 = float(mat[2])
@@ -270,7 +270,7 @@ class Shear(object):
 
     def __repr__(self):
 
-        return "Shear(%.8f, %.8f, %.8f, %.8f)" % (self.a11, self.a12, self.a21, self.a22)
+        return f"Shear({self.a11:.8f}, {self.a12:.8f}, {self.a21:.8f}, {self.a22:.8f})"
 
 
     def pixel(self, dx, dy):
@@ -280,39 +280,39 @@ class Shear(object):
 
         px = round(self.a11*dx + self.a12*dy)
         py = round(self.a21*dx + self.a22*dy)
-        return px, py        
+        return px, py
 
 
     def save(self, fn):
 
-        """ Save coordinate transforamtion matrix to JSON file. """
+        """ Save coordinate transformation matrix to JSON file. """
 
         data = json.dumps((self.a11, self.a12, self.a21, self.a22))
         with open(fn, "w") as fp:
             fp.write(data)
 
 
-    def load(self, fn):
-    
+    def load(self, fn:str) -> dict:
+
         """ Restore shear object from given JSON data file. """
-    
+
         with open(fn, "r") as fp:
             data = fp.read()
         return json.loads(data)
 
 
 ##########################################################################
-# Image stitching canvas with coodinate transformation
+# Image stitching canvas with coordinate transformation
 ##########################################################################
 
 class ShearCanvas(Canvas):
 
-    """ Image stitching canvas with coodinate transformation from stage
+    """ Image stitching canvas with coordinate transformation from stage
     coordinates to camera coordinates. """
 
     def __init__(self, pitch_x, pitch_y, nx, ny, w, h, shear):
 
-        """ Initialize a canvas covering nx times ny images of witdh w
+        """ Initialize a canvas covering nx times ny images of width w
         and height h with given horizontal and vertical pitches using
         the given coordinate transformation shear.  """
 
@@ -328,10 +328,10 @@ class ShearCanvas(Canvas):
         # Size of sub-images in pixels
         self.w = int(w)
         self.h = int(h)
-        
+
         # Coordinate mapping object
         self.shear = shear
-        
+
         # Bounding box of the canvas in camera pixel coordinates
         x = (self.nx-1) * self.pitch_x
         y = (self.ny-1) * self.pitch_y
@@ -350,13 +350,13 @@ class ShearCanvas(Canvas):
 
         # Initialize canvas
         super().__init__(x1-self.x0, y1-self.y0)
-        
+
 
     def add(self, img, i, j):
 
         """ Register given image on the canvas on given horizontal and
         vertical index position. """
-        
+
         dx = i * self.pitch_x
         dy = j * self.pitch_y
         dx, dy = self.shear.pixel(dx, dy)
@@ -367,7 +367,7 @@ class ShearCanvas(Canvas):
 
         """ Read image from every image position and add it to the
         canvas. Return the superposition image. """
-    
+
         for j in range(self.ny):
             for i in range(self.nx):
                 img = readdiff(fn % (i, self.ny-1-j), img_back)

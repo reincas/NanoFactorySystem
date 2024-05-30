@@ -8,6 +8,7 @@
 # Nanofactory system from Femtika.
 #
 ##########################################################################
+from functools import cached_property
 
 import numpy as np
 from scidatacontainer import Container
@@ -24,7 +25,7 @@ class PlaneFit(object):
     """ Fit a plane to the given list of x,y,z values by least squares
     fitting of the z values. """
 
-    def __init__(self, points):
+    def __init__(self, points, *, params=None):
 
         """ Run the fitting algorithm and store the results. """
 
@@ -32,12 +33,14 @@ class PlaneFit(object):
         A = np.array(points, dtype=float)
         b = np.array(A[:,-1])
         A[:,-1] = 1.0
-        self.params = np.linalg.lstsq(A, b, rcond=None)[0]
+        if params is None:
+            params = np.linalg.lstsq(A, b, rcond=None)[0]
+
+        self.params = params
 
         # Average z deviation
         self.dev = np.dot(A, self.params) - b
         self.avg = np.sqrt(sum(self.dev*self.dev))/len(self.dev)
-        self.maxdev = max(abs(self.dev))
 
         # Surface normal vector
         p0 = self.getvec(0, 0)
@@ -55,49 +58,54 @@ class PlaneFit(object):
 
         # Azimuthal angle
         self.phi = np.arctan2(y, x) * 180.0 / np.pi
-        while self.phi > 180.0:
-            self.phi -= 360.0
-        while self.phi <= -180.0:
-            self.phi += 360.0
+        self.phi = (self.phi % 360) - 180
+        # TODO: With modulo slightly different edge cases (-180 vs 180)
+        # while self.phi > 180.0:
+        #     self.phi -= 360.0
+        # while self.phi <= -180.0:
+        #     self.phi += 360.0
 
+    @cached_property
+    def max_dev(self) -> float:
+        return np.max(np.abs(self.dev))
 
-    def __str__(self):
+    def __str__(self) -> str:
 
         """ Return result string. """
 
-        s = []
-        s.append("polar angle:    %.1f° (%.2f %%)" % (self.theta, 100*self.slope))
-        s.append("azimuth angle:  %.1f°" % self.phi)
-        s.append("mean deviation: %.3f µm (max. %.3f µm)" % (self.avg, self.maxdev))
+        s = [
+            f"polar angle:    {self.theta:.1f}° ({100 * self.slope:.2f} %)",
+            f"azimuth angle:  {self.phi:.1f}°",
+            f"mean deviation: {self.avg:.3f} µm (max. {self.max_dev:.3f} µm)"
+        ]
         return "\n".join(s)
-
 
     def log_results(self, func, name=None):
 
         """ Pass result string to given logger function line by line.
-        Each line eventually preceeded by an optional name string. """
+        Each line eventually preceded by an optional name string. """
 
         for line in str(self).split("\n"):
             if name is not None:
-                line = "%s %s" % (name, line)
+                line = f"{name} {line}"
             func(line)
-            
 
-    def getz(self, x, y):
+
+    def getz(self, x: float, y: float) -> float:
 
         """ Return z value of the plane at the given lateral xy
         position. """
 
         return np.dot(self.params, [x, y, 1])
-    
 
-    def getvec(self, x, y):
+
+    def getvec(self, x: float, y: float) -> np.ndarray:
 
         """ Return xyz vector with z value of the plane at the given
         lateral xy position. """
 
         z = self.getz(x, y)
-        return np.array([x, y, z], dtype=float)
+        return np.asarray([x, y, z], dtype=float)
 
 
 ##########################################################################
@@ -111,7 +119,7 @@ class zPlane(object):
         sx = params["xSlope"]
         sy = params["ySlope"]
         z0 = params["z0"]
-        self.params = np.array([sx, sy, z0], dtype=float)
+        self.params = np.asarray([sx, sy, z0], dtype=float)
 
 
     def getz(self, x, y):
@@ -120,8 +128,8 @@ class zPlane(object):
         position. """
 
         return np.dot(self.params, [x, y, 1])
-    
-            
+
+
 ##########################################################################
 class Plane(Parameter):
 
@@ -139,7 +147,7 @@ class Plane(Parameter):
         # Store system object
         self.system = system
         user = self.system.user["key"]
-        
+
         # Initialize parameter class
         args = popargs(kwargs, "plane")
         super().__init__(user, logger, **args)
@@ -161,8 +169,8 @@ class Plane(Parameter):
     def run(self, x, y, path=None, home=False):
 
         pos = len(self.steps)
-        path = mkdir("%s/layer" % path, clean=False)
-        path = mkdir("%s/layer-%02d" % (path, pos))
+        path = mkdir(f"{path}/layer", clean=False)
+        path = mkdir(f"{path}/layer-{pos:02d}")
 
         # Store current xyz position
         x0, y0, z0 = self.system.position("XYZ")
@@ -174,7 +182,7 @@ class Plane(Parameter):
             dz = self["dzFineDefault"]
         self.layer.run(x, y, self.zlo, self.zup, dz, path, home=False)
         l = self.layer.container()
-        l.write("%s/layer.zdc" % path)
+        l.write(f"{path}/layer.zdc")
         result = l["meas/result.json"]
 
         # Append results of this step
@@ -195,7 +203,7 @@ class Plane(Parameter):
         # Store results as estimates for the next scan
         self.zlo = result["zLower"]
         self.zup = result["zUpper"]
-        
+
         # Move stages back to initial position
         if home:
             delay = self.system["delay"]
@@ -211,8 +219,10 @@ class Plane(Parameter):
         upper = points[:,(0,1,3)]
 
         result = {}
-        for key, points, name in [("lower", lower, "Lower"),
-                                  ("upper", upper, "Upper")]:
+        for key, points, name in [
+            ("lower", lower, "Lower"),
+            ("upper", upper, "Upper")
+        ]:
             plane = PlaneFit(points)
             plane.log_results(self.log.info, name)
             result[key] = {
@@ -220,17 +230,17 @@ class Plane(Parameter):
                 "ySlope": plane.params[1],
                 "z0": plane.params[2],
                 "avgDeviation": plane.avg,
-                "maxDeviation": plane.maxdev,
+                "maxDeviation": plane.max_dev,
                 "gradient": plane.slope,
                 "polarAngle": plane.theta,
                 "azimuthAngle": plane.phi,
                 "points": points.tolist(),
                 }
-        
+
         self.steps = []
         return result, steps
-    
-    
+
+
     def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """
@@ -239,11 +249,11 @@ class Plane(Parameter):
         if len(self.steps) == 0:
             raise RuntimeError("No results!")
         result, steps = self._pop_results()
-        
+
         # Collect UUIDs of focus detections as references
         refs = {}
         for step in steps:
-            key = "scan-%02d" % step["scan"]
+            key = f"scan-{step['scan']:02d}"
             refs[key] = step["layerUuid"]
 
         # General metadata
