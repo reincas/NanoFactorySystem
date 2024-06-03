@@ -29,6 +29,7 @@
 ##########################################################################
 
 import ctypes
+import warnings
 
 import numpy as np
 
@@ -36,6 +37,7 @@ try:
     from mvIMPACT import acquire
 except ImportError:
     acquire = None
+    warnings.warn("Could not import mvIMPACT -> No acquire function")
 
 
 ##########################################################################
@@ -161,6 +163,8 @@ class CameraDevice(object):
         """ Initialize the camera. """
 
         # Initialize attributes
+        if acquire is None:
+            raise ImportError("mvIMPACT not imported")
         self._property = {}
 
         # Get camera device

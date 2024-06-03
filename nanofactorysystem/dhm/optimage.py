@@ -117,3 +117,77 @@ def optImage(dhm, maxof=9, logger=None):
     # Return optimum image and total number of grabbed images
     dhm.device.CameraShutter = smin
     return optimg, count
+
+
+def optImageMedian(dhm, vmedian=127, logger=None) -> tuple[np.ndarray, int]:
+    """ Return image with optimized exposure time. The mean value of the returned image will be close to vmean.
+    The second return value is the number of camera images grabbed by the algorithm. """
+
+    # Prepare logger
+    logger = logger or logging
+
+    # Emergency break: Maximum number of images
+    maxcount = 100
+
+    # Maximum pixel value
+    maxpixel = (1 << dhm.device.CameraBitPerPixel) - 1
+
+    # Shutter limits
+    minshutter = dhm.device.CameraMinShutter
+    maxshutter = dhm.device.CameraMaxShutter
+
+    # Initial shutter value
+    s = s0 = dhm.device.CameraShutter
+    if s0 < 10:
+        s = 10
+
+    # Find optimum shutter value
+    smin = None
+    smax = None
+
+    count = 0
+    while True:
+        # Set exposure time
+        dhm.device.CameraShutter = s
+
+        # Get camera image and quantile value
+        img = dhm.device.CameraImage
+        img_median = np.median(img)
+        count += 1
+
+        # Show intermediate results
+        if smin is None:
+            str0 = "None"
+        else:
+            str0 = f"{smin:4d}"
+        str1 = f"{s:4d} [{img_median:5.1f}]"
+        if smax is None:
+            str2 = "None"
+        else:
+            str2 = f"{smax:4d}"
+        logger.debug(f"{count:03d}: {str0} --  {str1} --  {str2}")
+
+        if abs(img_median - vmedian) < 0.5:
+            break
+
+        if smax is not None and smin is not None and smax - smin <= 1:
+            break
+
+        if count > maxcount:
+            raise RuntimeError("optImage failed!")
+
+        if img_median > vmedian:
+            smax = s
+        else:
+            smin = s
+
+        # Next shutter value
+        if smin is None:
+            s = max(minshutter, s >> 1)
+        elif smax is None:
+            s = min(maxshutter, s << 1)
+        else:
+            s = (smin + smax) >> 1
+
+    # Return optimum image and total number of grabbed images
+    return img, count

@@ -5,6 +5,9 @@ requires = [
 	"NumPy",
 	"SciPy",
 	"SciDataContainer",
+#    "OffAxisHolo", #  Currently only exists locally (https://github.com/reincas/OffAxisHolo.git)
+#    "PlotFont", # Currently only exists locally (https://github.com/reincas/PlotFont)
+#    "mvImpact", # Installation guide: https://assets.balluff.com/documents/DRF_957356_AA_000/Building_page.html
 ]
 build-backend = "setuptools.build_meta"
 

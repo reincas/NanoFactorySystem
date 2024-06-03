@@ -8,6 +8,7 @@
 # from LyncéeTec.
 #
 ##########################################################################
+import time
 
 import numpy as np
 
@@ -67,9 +68,12 @@ class Dhm(Parameter):
         cid = self.objective["dhmId"]
         configs = self.device.ConfigList
         name = dict(configs)[cid]
-        self.device.Config = cid
+        if cid != self.device.Config:
+            self.log.info("Objective changed")
+            self.device.Config = cid
+            time.sleep(2)
         self.log.info(f"Holographic Microscope: {self.device}")
-        logger.info(f"Objective: {name} [{cid:d}]")  # TODO: Replace with self.log?
+        self.log.info(f"Objective: {name} [{cid:d}]")
 
         # Done
         self.log.info("Initialized holographic microscope.")

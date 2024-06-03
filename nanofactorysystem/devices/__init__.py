@@ -10,7 +10,7 @@
 #
 ##########################################################################
 
-from .aerotech import A3200
+from .aerotech_old import A3200
 from .attenuator import Attenuator
 from .camera import Camera
 from .dhm import Dhm

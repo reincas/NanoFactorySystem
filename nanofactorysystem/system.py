@@ -13,7 +13,6 @@ import math
 
 from scidatacontainer import Container
 
-from . import ImageContainer
 from .config import sysConfig, popargs
 from .devices import Camera, Dhm, A3200
 from .parameter import Parameter
@@ -33,6 +32,7 @@ class System(Parameter):
     def __init__(self, user, objective, logger=None, **kwargs):
 
         """ Initialize the scanner algorithm. """
+        from nanofactorysystem.devices.aerotech import Aerotech3200
 
         # Not open now
         self.opened = False
@@ -70,6 +70,9 @@ class System(Parameter):
         args = popargs(kwargs, ("attenuator", "controller"))
         self.controller = A3200(user, self.log, **args)
         self.controller.init_zline()
+        self.a3200_new = Aerotech3200()
+        # self.a3200.connect()
+        self.a3200_new.api.socket = self.controller.socket
 
         # Center the galvo scanner
         self.controller.moveabs(100, a=0, b=0)
@@ -180,7 +183,7 @@ class System(Parameter):
         """ Return a dictionary containing the current position of all axes
         in micrometres. """
 
-        return dict(zip("xyzab", self.position("XYZAB")))
+        return dict(zip("XYZAB", self.position("XYZAB")))
 
     def wait(self, axes, pause=None):
 
@@ -210,11 +213,11 @@ class System(Parameter):
 
         self.controller.pulse(power, duration)
 
-    def getimage(self) -> ImageContainer:
+    def getimage(self) -> "ImageContainer":
 
         """ Get a camera image and return an image container. """
 
-        return self.camera.container()
+        return self.camera.container(loc=self.current_pos())
 
     def optexpose(self, level=127):
 

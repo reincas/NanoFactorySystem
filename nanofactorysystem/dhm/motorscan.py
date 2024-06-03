@@ -120,12 +120,22 @@ def moveMotor(dhm, m, opt=False):
     dhm.device.MotorPos = m
 
     # Grab camera image
-    img = dhm.getimage(opt)[0]
-    if opt:
-        dhm.device.CameraShutter = dhm.device.CameraShutter - 2
+    imgs = []
+    k = 5
+    for i in range(k):
+        img = dhm.getimage(opt=False)[0]
+        imgs.append(img)
 
-    # Return weight of diffraction order peak
-    return locateOrder(img)[-1]
+    vlo, vhi = np.quantile(np.stack(imgs), [0.05, 0.95], method="nearest")
+    c = float(vhi - vlo) / 255
+    return c
+
+    # img = dhm.getimage(opt)[0]
+    # if opt:
+    #     dhm.device.CameraShutter = dhm.device.CameraShutter - 2
+    #
+    # # Return weight of diffraction order peak
+    # return locateOrder(img)[-1]
 
 
 def addMotor(dhm, data, m, opt=False, logger=None):
@@ -210,15 +220,9 @@ def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
             addMotor(dhm, data, m + 0.3 * dm, logger=logger)
             addMotor(dhm, data, m + 0.7 * dm, logger=logger)
 
-<<<<<<< HEAD
         # Stop if a increased diffraction peak indicates interference
-        #if data.tripleThreshold(thresh):
+        # if data.tripleThreshold(thresh):
         #    break
-=======
-        # Stop if an increased diffraction peak indicates interference
-        if data.tripleThreshold(thresh):
-            break
->>>>>>> fe5ff671efdacd1d5bce40142374878fed387a0d
 
         if m == m2:
             break
