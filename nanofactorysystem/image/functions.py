@@ -8,9 +8,9 @@
 #
 ##########################################################################
 
-import numpy as np
-import matplotlib.pyplot as plt
 import cv2 as cv
+import matplotlib.pyplot as plt
+import numpy as np
 from skimage.registration import phase_cross_correlation
 
 # BGR colors
@@ -21,7 +21,6 @@ CV_RED = (0, 0, 255)
 
 
 def read(fn):
-
     """ Rear image from file and eventually convert it to grayscale. """
 
     img = cv.imread(fn)
@@ -30,14 +29,12 @@ def read(fn):
 
 
 def write(fn, img):
-
     """ Write image to file. """
 
     cv.imwrite(fn, img)
-    
+
 
 def gray(img):
-
     """ Eventually convert image to grayscale. """
 
     if len(img.shape) > 2:
@@ -46,10 +43,9 @@ def gray(img):
 
 
 def diff(img0, img1, r=None):
-
     """ Return floating point difference image blurred with Gaussian
     kernel. """
-    
+
     img = cv.absdiff(img0, img1)
     if img.dtype != float:
         img = img.astype(float)
@@ -57,8 +53,7 @@ def diff(img0, img1, r=None):
     return img
 
 
-def norm(img:np.ndarray) -> tuple[np.ndarray, float, float]:
-
+def norm(img: np.ndarray) -> tuple[np.ndarray, float, float]:
     """ Spread image values to the fullrange of 0-255 and return it as an
     unsigned 8-bit integer image. Also return the minimum and maximum
     values of the initial image. """
@@ -70,7 +65,6 @@ def norm(img:np.ndarray) -> tuple[np.ndarray, float, float]:
 
 
 def crop(img, shape, offset=None):
-
     """ Return central sub-image with given shape (tuple) or quadratic
     size (int). Eventually reduce color space to gray scale. """
 
@@ -82,43 +76,40 @@ def crop(img, shape, offset=None):
         offx, offy = offset
     else:
         offx, offy = 0, 0
-    
+
     img = gray(img)
     h, w = img.shape
     if h < height or w < width:
         raise RuntimeError("Image too small!")
 
-    x0 = offx + (w-width) // 2
-    y0 = offy + (h-height) // 2
+    x0 = offx + (w - width) // 2
+    y0 = offy + (h - height) // 2
     x1 = x0 + width
     y1 = y0 + height
-    return img[y0:y1,x0:x1]
+    return img[y0:y1, x0:x1]
 
 
 def blur(img, r):
-
     """ Apply a Gaussian blur to the given image. """
 
     if img.dtype != float:
         img = img.astype(float)
     if r:
-        img = cv.GaussianBlur(img, (0,0), r, borderType=cv.BORDER_DEFAULT)
+        img = cv.GaussianBlur(img, (0, 0), r, borderType=cv.BORDER_DEFAULT)
     return img
 
 
 def gauss(size, sigma, dx=0.0, dy=0.0, norm=False):
-
     """ Quadratic Gaussian kernel array with optional offset. """
 
     x, y = coordinates((size, size))
-    gauss = np.exp(-((x+dx)**2+(y+dy)**2)/sigma**2)
+    gauss = np.exp(-((x + dx) ** 2 + (y + dy) ** 2) / sigma ** 2)
     if norm:
         gauss /= gauss.sum()
     return gauss
 
-    
-def register(img0, img1, ups=100):
 
+def register(img0, img1, ups=100):
     """ Register img1 on img0 with sub-pixel resolution. """
 
     ## RuntimeWarning: invalid value encountered in cdouble_scalars
@@ -127,23 +118,21 @@ def register(img0, img1, ups=100):
 
 
 def subshift(img, dx, dy, sigma):
-
     """ Shift image with sub-pixel accuracy by filtering with an offset
     Gaussian kernel. """
 
-    r = round(np.sqrt(dx*dx+dy*dy)+2*sigma)
-    size = 2*r + 1
+    r = round(np.sqrt(dx * dx + dy * dy) + 2 * sigma)
+    size = 2 * r + 1
     kernel = gauss(size, sigma, dx, dy, norm=True)
     img = cv.filter2D(img, -1, kernel)
 
-    #maxval = max(kernel[:,(0,-1)].max(), kernel[(0,-1),:].max())
+    # maxval = max(kernel[:,(0,-1)].max(), kernel[(0,-1),:].max())
     # print(f"kernel size:    {size:d}")
     # print(f"max edge value: {maxval:g}")
     return img
 
 
 def subdiff(img0, img1, dx, dy, sigma=2.0):
-
     """ Shift each image half way and return the differential image.
     Parameters dx and dy are expected as img1 registered on img0. """
 
@@ -151,21 +140,20 @@ def subdiff(img0, img1, dx, dy, sigma=2.0):
         img0 = img0.astype(float)
     if img1.dtype != float:
         img1 = img1.astype(float)
-    img0 = subshift(img0, -0.5*dx, -0.5*dy, sigma)
-    img1 = subshift(img1, 0.5*dx, 0.5*dy, sigma)
+    img0 = subshift(img0, -0.5 * dx, -0.5 * dy, sigma)
+    img1 = subshift(img1, 0.5 * dx, 0.5 * dy, sigma)
     img = diff(img0, img1, None)
     return img
 
 
 def normcolor(img, cmap=None):
-
     """ Normalize given floating point image and convert it to 8-bit BGR
     image. """
 
     if cmap is None:
         cmap = "viridis"
     img = cv.normalize(img, None, 0.0, 1.0, cv.NORM_MINMAX, cv.CV_64F)
-    img = plt.get_cmap(cmap)(img)[:,:,:3]
+    img = plt.get_cmap(cmap)(img)[:, :, :3]
     img *= 255
     img = img.astype(np.uint8)
     img = cv.cvtColor(img, cv.COLOR_RGB2BGR)
@@ -173,15 +161,13 @@ def normcolor(img, cmap=None):
 
 
 def get_contours(img, thres):
-
     """ Return a list of contours from the image at given threshold. """
 
     img = np.where(img <= thres, 0, 1).astype(np.uint8)
     return cv.findContours(img, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE)[0]
 
-    
-def contour_mask(shape, contour):
 
+def contour_mask(shape, contour):
     """ Return boolean array with True for all elements inside the
     contour. """
 
@@ -191,27 +177,24 @@ def contour_mask(shape, contour):
 
 
 def circle_mask(shape, r, dx, dy):
-
     """ Return boolean array with True for all elements inside a circle
     with radius r and given center offset. """
 
     x, y = coordinates(shape)
-    return (x-dx)**2 + (y-dy)**2 <= r**2
+    return (x - dx) ** 2 + (y - dy) ** 2 <= r ** 2
 
 
 def coordinates(shape):
-
     """ Return centered x and y coordinate matrices. """
 
     h, w = shape
-    x = np.arange(w, dtype=float) - 0.5*(w-1) 
-    y = np.arange(h, dtype=float) - 0.5*(h-1)
+    x = np.arange(w, dtype=float) - 0.5 * (w - 1)
+    y = np.arange(h, dtype=float) - 0.5 * (h - 1)
     x, y = np.meshgrid(x, y, indexing="xy")
     return x, y
 
 
 def stats(img, mask=None):
-
     """ Return average value and standard deviation of flattened and
     optionally masked array. """
 
@@ -223,38 +206,34 @@ def stats(img, mask=None):
 
 
 def drawCross(img, x, y, s, color, thickness=1, center=True):
-
     if center:
         h, w, _ = img.shape
-        x = round(x + w/2)
-        y = round(y + h/2)
-    img = cv.line(img, (x-s//2, y), (x+s//2, y), color, thickness)
-    img = cv.line(img, (x, y-s//2), (x, y+s//2), color, thickness)
+        x = round(x + w / 2)
+        y = round(y + h / 2)
+    img = cv.line(img, (x - s // 2, y), (x + s // 2, y), color, thickness)
+    img = cv.line(img, (x, y - s // 2), (x, y + s // 2), color, thickness)
     return img
-  
+
 
 def drawCircle(img, x, y, r, color, thickness=1, center=True):
-
     if center:
         h, w, _ = img.shape
-        x = round(x + w/2)
-        y = round(y + h/2)
+        x = round(x + w / 2)
+        y = round(y + h / 2)
     r = round(r)
     img = cv.circle(img, (x, y), r, color, thickness)
     return img
 
 
 def addBorder(img, width, value=0):
-    
     """ Add a frame with given width and value to the given image. """
-    
+
     if len(img.shape) == 3:
         h, w, d = img.shape
-        result = np.ones((h+2*width, w+2*width, d), dtype=img.dtype) * value
-        result[width:width+h,width:width+w,:] = img
+        result = np.ones((h + 2 * width, w + 2 * width, d), dtype=img.dtype) * value
+        result[width:width + h, width:width + w, :] = img
     else:
         h, w = img.shape
-        result = np.ones((h+2*width, w+2*width), dtype=img.dtype) * value
-        result[width:width+h,width:width+w] = img
+        result = np.ones((h + 2 * width, w + 2 * width), dtype=img.dtype) * value
+        result[width:width + h, width:width + w] = img
     return result
-

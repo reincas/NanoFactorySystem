@@ -14,7 +14,6 @@ from scidatacontainer import Container
 
 
 class ImageContainer(Container):
-
     """ SciDataContainer for the storage of a camera image. """
 
     containerType = "CameraImage"
@@ -26,9 +25,9 @@ class ImageContainer(Container):
 
         # Not in creation mode
         if (self.kwargs["file"] is not None) or \
-           (self.kwargs["uuid"] is not None):
+                (self.kwargs["uuid"] is not None):
             return
-        
+
         # Initialize items dictionary
         if self.kwargs["items"] is None:
             items = {}
@@ -55,7 +54,7 @@ class ImageContainer(Container):
         if not isinstance(img, np.ndarray) or len(img.shape) != 2:
             raise RuntimeError("Hologram image expected!")
         items["meas/image.png"] = img
-        
+
         # Camera parameters
         params = self.kwargs.pop("params")
         if not isinstance(params, dict):
@@ -78,38 +77,34 @@ class ImageContainer(Container):
         # Replace container items dictionary
         self.kwargs["items"] = items
 
-
     def __post_init__(self):
 
         """ Initialize this container. """
 
         # Type check of the container
         if (self.content["containerType"]["name"] != self.containerType) or \
-           (self.content["containerType"]["version"] != self.containerVersion):
+                (self.content["containerType"]["version"] != self.containerVersion):
             raise RuntimeError(f"Containertype must be '{self.containerType}'!")
-
 
     @property
     def img(self):
 
         """ Shortcut to the camera image. """
-        
-        return self["meas/image.png"]
 
+        return self["meas/image.png"]
 
     @property
     def params(self):
 
         """ Shortcut to the parameter data dictionary. """
-        
-        return self["data/camera.json"]
 
+        return self["data/camera.json"]
 
     @property
     def location(self):
-        
+
         """ Return xyz position of the image or None. """
-        
+
         if "data/location.json" not in self:
             return None
         return self["data/location.json"]

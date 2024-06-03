@@ -10,25 +10,25 @@
 ##########################################################################
 
 import math
+
 from scidatacontainer import Container
 
 from . import ImageContainer
 from .config import sysConfig, popargs
-from .parameter import Parameter
 from .devices import Camera, Dhm, A3200
+from .parameter import Parameter
 from .tools import Transform
 
 
 ##########################################################################
 class System(Parameter):
-
     """ Main class for the Femtika Nanofactory system. """
 
     _defaults = sysConfig.system | {
         "backOffset": -300.0,
         "speed": 2000.0,
         "delay": 10.0,
-        }
+    }
 
     def __init__(self, user, objective, logger=None, **kwargs):
 
@@ -85,7 +85,6 @@ class System(Parameter):
         # Done
         self.log.info("Initialized system.")
 
-
     def close(self, home=True):
 
         """ Close connection to hardware devices. """
@@ -105,28 +104,24 @@ class System(Parameter):
         self.opened = False
         self.log.info("System closed.")
 
-
     def __enter__(self):
 
         """ Context manager entry method. """
 
         return self
 
-
     def __exit__(self, errtype, value, tb):
 
         """ Context manager exit method. """
 
-        #print("".join(traceback.format_exception(errtype, value, tb)))
+        # print("".join(traceback.format_exception(errtype, value, tb)))
         self.close()
-
 
     def update_pos(self, level, *args):
 
         """ Update camera calibration data. """
 
         self.transform.update(level, *args)
-
 
     def object_pos(self, v_px, vs=None):
 
@@ -140,7 +135,6 @@ class System(Parameter):
             vs = self.system.controller.position("XYZ")
         return self.transform.object_pos(v_px, vs)
 
-
     def camera_pos(self, v_um, vs=None):
 
         """ Return camera image coordinates from given object coordinates
@@ -153,7 +147,6 @@ class System(Parameter):
             vs = self.system.controller.position("XY")
         return self.transform.camera_pos(v_um, vs)
 
-
     def stage_pos(self, v_um, v_px):
 
         """ Return stage coordinates required to match the given object
@@ -163,7 +156,6 @@ class System(Parameter):
         centre. """
 
         return self.transform.stage_pos(v_um, v_px)
-
 
     def home(self, wait=False):
 
@@ -175,7 +167,6 @@ class System(Parameter):
             self.controller.wait("XYZ")
         self.log.debug(f"Moved to home position {self.x0:.0f}, {self.y0:.0f}, {self.z0:.0f}")
 
-
     def position(self, axes):
 
         """ Return current measured positions in micrometres on the
@@ -184,7 +175,6 @@ class System(Parameter):
 
         return self.controller.position(axes)
 
-
     def current_pos(self):
 
         """ Return a dictionary containing the current position of all axes
@@ -192,14 +182,12 @@ class System(Parameter):
 
         return dict(zip("xyzab", self.position("XYZAB")))
 
-
     def wait(self, axes, pause=None):
 
         """ Wait until all given axes are in position after pause
         milliseconds. """
 
         self.controller.wait(axes, pause)
-
 
     def moveabs(self, speed=None, wait=None, **axes):
 
@@ -215,7 +203,6 @@ class System(Parameter):
             wait_axes = "".join(axes.keys())
             self.controller.wait(wait_axes, wait)
 
-
     def pulse(self, power, duration):
 
         """ Deliver laser pulse with given power in milliwatts and
@@ -223,13 +210,11 @@ class System(Parameter):
 
         self.controller.pulse(power, duration)
 
-
     def getimage(self) -> ImageContainer:
 
         """ Get a camera image and return an image container. """
 
         return self.camera.container()
-
 
     def optexpose(self, level=127):
 
@@ -237,7 +222,6 @@ class System(Parameter):
         """
 
         return self.camera.optexpose(level)
-
 
     def polyline(self, line, power, speed, dia):
 
@@ -251,13 +235,13 @@ class System(Parameter):
         lly = min(y)
         urx = max(x)
         ury = max(y)
-        size = math.sqrt((urx-llx)**2 + (ury-lly)**2)
+        size = math.sqrt((urx - llx) ** 2 + (ury - lly) ** 2)
 
-        if size < 0.2*dia:
-            x = 0.5*(llx+urx)
-            y = 0.5*(lly+ury)
+        if size < 0.2 * dia:
+            x = 0.5 * (llx + urx)
+            y = 0.5 * (lly + ury)
             self.controller.moveabs(self["speed"], x=x, y=y)
-            self.pulse(power, 10*dia/speed)
+            self.pulse(power, 10 * dia / speed)
         else:
             x, y = line[0]
             self.controller.moveabs(self["speed"], x=x, y=y)
@@ -265,7 +249,6 @@ class System(Parameter):
             for x, y in line[1:]:
                 self.controller.moveabs(speed, x=x, y=y)
             self.controller.laseroff()
-
 
     def polylines(self, z, lines, power, speed, dia):
 
@@ -277,7 +260,6 @@ class System(Parameter):
         for line in lines:
             self.polyline(line, power, speed, dia)
 
-
     def dots(self, z, img, pitch, power, dt):
 
         """ Exposed the given 1 bit image as an array of laser pulses
@@ -288,15 +270,14 @@ class System(Parameter):
         x0, y0 = self.position("xy")
         h = len(img)
         for j, row in enumerate(img):
-            y = y0 + (j-0.5*(h-1))*pitch
+            y = y0 + (j - 0.5 * (h - 1)) * pitch
             w = len(row)
             for i, value in enumerate(row):
-                x = x0 + (i-0.5*(w-1))*pitch
+                x = x0 + (i - 0.5 * (w - 1)) * pitch
                 if value > 0:
                     self.controller.moveabs(self["speed"], x=x, y=y)
                     self.pulse(power, dt)
         self.controller.moveabs(self["speed"], x=x0, y=y0)
-
 
     def zline(self, power, fast, slow, dz):
 
@@ -306,7 +287,6 @@ class System(Parameter):
 
         self.controller.zline(power, fast, slow, dz)
 
-
     def items(self):
 
         items = {
@@ -315,11 +295,10 @@ class System(Parameter):
             "data/camera.json": self.camera.parameters(),
             "data/dhm.json": self.dhm.parameters(),
             "data/system.json": self.parameters(),
-            }
+        }
         if self.sample:
             items["data/sample.json"] = self.sample
         return items
-
 
     def container(self, config=None, **kwargs):
 
@@ -328,17 +307,17 @@ class System(Parameter):
         # General metadata
         content = {
             "containerType": {"name": "NanoFactory", "version": 1.1},
-            }
+        }
         meta = {
             "title": "System Configuration Data",
             "description": "Parameters of the Laser Nanofactory system.",
-            }
+        }
 
         # Create container dictionary
         items = {
-            "content.json": content,
-            "meta.json": meta,
-            } | self.items()
+                    "content.json": content,
+                    "meta.json": meta,
+                } | self.items()
 
         # Return container object
         config = config or self.config

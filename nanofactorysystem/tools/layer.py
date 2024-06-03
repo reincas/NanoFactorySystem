@@ -10,31 +10,30 @@
 ##########################################################################
 
 import math
-import numpy as np
-from skimage.registration import phase_cross_correlation
-from scidatacontainer import Container
 
-from ..parameter import Parameter
-from ..config import popargs
-from ..runtime import mkdir
+import numpy as np
+from scidatacontainer import Container
+from skimage.registration import phase_cross_correlation
+
 from .focus import Focus, focusStatus
+from ..config import popargs
 from ..image import functions as image
+from ..parameter import Parameter
+from ..runtime import mkdir
 
 
 ##########################################################################
 def flex_round(value, uncertainty):
-
     """ Round the given uncertainty value to 3 digits if its mantissa is
     in the range 1.0...2.9 and 2 digits in the range 3.0...9.9. Round
     the value to the same number of decimals as the uncertainty. """
 
-    digits = 1-math.floor(math.log10(uncertainty/3.0))
+    digits = 1 - math.floor(math.log10(uncertainty / 3.0))
     return round(value, digits), round(uncertainty, digits)
 
 
 ##########################################################################
 class LayerBisect(object):
-
     """ Layer edge bisectioning class. It is used to determine the z
     position of the lower and upper photoresin interface.
 
@@ -49,21 +48,21 @@ class LayerBisect(object):
 
     # Translation of focus detection results to numerical values
     _hitvalue = {False: -1.0, None: 0.0, True: 1.0}
-    
+
     def __init__(self, zmax, maxmult, zlo, zup, dz, beta, resolution):
 
         """ Initialize the layer scan object. """
 
         # Maximum allowed z position
         self.zmax = float(zmax)
-        
+
         # Initial scan range is limited to maxmult*dz
         self.maxmult = float(maxmult)
-        
+
         # Start from scratch with a single estimation for the layer
         # position
         if zlo == zup:
-            
+
             # Initial z position and length of the scan
             self.z_init = float(zlo)
             self.dz_init = float(dz)
@@ -75,8 +74,8 @@ class LayerBisect(object):
         # Skip the coarse detection phase with given estimations for the
         # lower and upper layer interface
         else:
-            bisect = [[zlo-0.5*dz, zlo+0.5*dz],
-                      [zup-0.5*dz, zup+0.5*dz]]
+            bisect = [[zlo - 0.5 * dz, zlo + 0.5 * dz],
+                      [zup - 0.5 * dz, zup + 0.5 * dz]]
             self.bisect = np.array(bisect, dtype=float)
 
         # Scan length decrement factor
@@ -88,7 +87,6 @@ class LayerBisect(object):
         # Initialize an empty list for the scan results
         self.results = None
 
-
     def stepline(self, mode="both"):
 
         """ Return x and y vector of the step function combining all
@@ -96,9 +94,9 @@ class LayerBisect(object):
         weight of a miss is -1. """
 
         # Start and end positions and weight value 
-        z0 = self.results[:,0]
-        z1 = self.results[:,1]
-        value = self.results[:,2]
+        z0 = self.results[:, 0]
+        z1 = self.results[:, 1]
+        value = self.results[:, 2]
 
         # Sorted list of unique z positions
         pos = np.unique(np.concatenate((z0, z1)))
@@ -117,22 +115,21 @@ class LayerBisect(object):
         elif mode == "miss":
             value = -n[:-1]
         else:
-            value = (p-n)[:-1]
+            value = (p - n)[:-1]
 
         # x and y coordinates of the corner points of the step function
         x = np.array((pos[:-1], pos[1:])).T.ravel()
         y = np.array((value, value)).T.ravel()
         return x, y
 
-
     def bisect_init(self):
 
         """ Initialize the two layer edge bisectioning objects. """
 
         # Start and end positions and weight value 
-        z0 = self.results[:,0]
-        z1 = self.results[:,1]
-        value = self.results[:,2]
+        z0 = self.results[:, 0]
+        z1 = self.results[:, 1]
+        value = self.results[:, 2]
 
         # Lower and upper edge of successful focus scans
         i = value > 0.0
@@ -162,10 +159,9 @@ class LayerBisect(object):
 
         # Initialize the array for the upper and lower estimates (axis
         # 1) for the lower and the upper edge (axis 0)
-        self.bisect = np.zeros((2,2), dtype=float)
-        self.bisect[:,0] = lower
-        self.bisect[:,1] = upper
-
+        self.bisect = np.zeros((2, 2), dtype=float)
+        self.bisect[:, 0] = lower
+        self.bisect[:, 1] = upper
 
     def bisect_next(self):
 
@@ -173,25 +169,25 @@ class LayerBisect(object):
         scan range. """
 
         # Current center and length of range
-        z = 0.5*(self.bisect[:,1] + self.bisect[:,0])
-        dz = self.bisect[:,1] - self.bisect[:,0]
+        z = 0.5 * (self.bisect[:, 1] + self.bisect[:, 0])
+        dz = self.bisect[:, 1] - self.bisect[:, 0]
 
         # Take edge with larger estimated range
         edge = np.argmax(dz)
 
         # Lower edge: scan lower segment of the estimated range
         if edge == 0:
-            z = z[edge] - 0.5*self.beta*dz[edge]
+            z = z[edge] - 0.5 * self.beta * dz[edge]
             dz = self.beta * dz[edge]
-            
+
         # Upper edge: scan upper segment of the estimated range
         else:
-            z = z[edge] + 0.5*self.beta*dz[edge]
+            z = z[edge] + 0.5 * self.beta * dz[edge]
             dz = self.beta * dz[edge]
 
         # Add some jitter to avoid series of ambiguous results at the
         # very edge of the layer
-        #z = z + 0.05*dz*(random.random()-0.5)
+        # z = z + 0.05*dz*(random.random()-0.5)
 
         # Store current edge for registration
         self.edge = edge
@@ -199,7 +195,6 @@ class LayerBisect(object):
         # Return the center z coordinate and the length of the next scan
         # range
         return z, dz
-
 
     def bisect_register(self, z, dz, hit):
 
@@ -212,26 +207,25 @@ class LayerBisect(object):
 
         # Focus detected: scan range is new estimate
         if hit:
-            lower = z - 0.5*dz
-            upper = z + 0.5*dz
+            lower = z - 0.5 * dz
+            upper = z + 0.5 * dz
 
         # No focus detected
         else:
-            
+
             # Lower edge: section above scan range is new estimate
             if self.edge == 0:
-                lower = z + 0.5*dz
-                upper = z + 1.5*dz
+                lower = z + 0.5 * dz
+                upper = z + 1.5 * dz
 
             # Upper edge: section below scan range is new estimate
             else:
-                lower = z - 1.5*dz
-                upper = z - 0.5*dz
+                lower = z - 1.5 * dz
+                upper = z - 0.5 * dz
 
         # Store new estimation range            
-        self.bisect[self.edge,0] = lower
-        self.bisect[self.edge,1] = upper
-
+        self.bisect[self.edge, 0] = lower
+        self.bisect[self.edge, 1] = upper
 
     def clip(self, z, dz):
 
@@ -240,16 +234,15 @@ class LayerBisect(object):
         impossible, because the whole range exceeds zma.  """
 
         # Apply zmax clipping
-        z0 = z - 0.5*dz
-        z1 = min(self.zmax, z + 0.5*dz)
+        z0 = z - 0.5 * dz
+        z1 = min(self.zmax, z + 0.5 * dz)
 
         # Clipping is impossible
         if z1 <= z0:
             raise ValueError("Focus scan failed!")
 
         # Return new range
-        return 0.5*(z0+z1), z1-z0
-    
+        return 0.5 * (z0 + z1), z1 - z0
 
     def next(self):
 
@@ -263,7 +256,7 @@ class LayerBisect(object):
             return self.clip(z, dz)
 
         # Step 1: Start with initial guess
-        if self.results is None or not any(self.results[:,-1] != 0.0):
+        if self.results is None or not any(self.results[:, -1] != 0.0):
             dz = self.dz_init
             z = self.z_init
 
@@ -271,9 +264,9 @@ class LayerBisect(object):
             return self.clip(z, dz)
 
         # Extract previous start and end positions and weight values
-        z0 = self.results[:,0]
-        z1 = self.results[:,1]
-        value = self.results[:,2]
+        z0 = self.results[:, 0]
+        z1 = self.results[:, 1]
+        value = self.results[:, 2]
 
         # Step 2: Increase scanned range until at least one positive and
         # one negative focus scan was encountered
@@ -281,13 +274,13 @@ class LayerBisect(object):
 
             # Avoid an endless search if there is something wrong with
             # the laser beam position.
-            if z1.max() - z0.min() > self.maxmult*self.dz_init:
+            if z1.max() - z0.min() > self.maxmult * self.dz_init:
                 raise RuntimeError("No layer found. Check laser!")
 
             # Upper end expansion
             if len(self.results) % 2 == 0:
                 dz = self.dz_init
-                z = np.max(z1) + 0.4*dz
+                z = np.max(z1) + 0.4 * dz
 
                 # Failing at this point forces lower end expansion
                 try:
@@ -297,8 +290,8 @@ class LayerBisect(object):
 
             # Lower end expansion
             dz = self.dz_init
-            z = np.min(z0) - 0.4*dz
-            
+            z = np.min(z0) - 0.4 * dz
+
             # Failing at this point is virtually impossible
             return self.clip(z, dz)
 
@@ -306,16 +299,16 @@ class LayerBisect(object):
         imin = np.argsort(z0)
         if not np.all(value[imin[:2]] < 0.0):
             dz = self.dz_init
-            z = z0[imin[0]] - 0.4*dz
-            
+            z = z0[imin[0]] - 0.4 * dz
+
             # Failing at this point is virtually impossible
             return self.clip(z, dz)
-            
+
         # Step 3b: Run until the two highest scans are negative
         imax = np.argsort(z1)
         if not np.all(value[imax[-2:]] < 0.0):
             dz = self.dz_init
-            z = z1[imax[-1]] + 0.4*dz
+            z = z1[imax[-1]] + 0.4 * dz
 
             # Failing at this point is not critical, proceed with 4a
             try:
@@ -329,7 +322,6 @@ class LayerBisect(object):
 
         # Failing at this point is virtually impossible
         return self.clip(z, dz)
-    
 
     def register(self, z, dz, hit):
 
@@ -339,9 +331,9 @@ class LayerBisect(object):
 
         # Not yet finished
         finished = False
-        
+
         # Append result to the list of results
-        row = [z-0.5*dz, z+0.5*dz, self._hitvalue[hit]]
+        row = [z - 0.5 * dz, z + 0.5 * dz, self._hitvalue[hit]]
         if self.results is None:
             self.results = np.array([row], dtype=float)
         else:
@@ -350,15 +342,14 @@ class LayerBisect(object):
         # Update estimation range for edge bisection
         if self.bisect is not None:
             self.bisect_register(z, dz, hit)
-            
+
             # End the layer scan when the uncertainty of the edge
             # estimates is smaller than the requested accuracy
-            if np.all((self.bisect[:,1] - self.bisect[:,0]) < self.resolution):
+            if np.all((self.bisect[:, 1] - self.bisect[:, 0]) < self.resolution):
                 finished = True
 
         # Done
         return finished
-
 
     def result(self):
 
@@ -374,18 +365,18 @@ class LayerBisect(object):
 
         # Edge detection has not yet started
         if self.result is None:
-            z_lower = self.z_init - 0.5*self.dz_init
-            z_upper = self.z_init + 0.5*self.dz_init
+            z_lower = self.z_init - 0.5 * self.dz_init
+            z_upper = self.z_init + 0.5 * self.dz_init
 
         # Edge bisectioning has not yet started
         elif self.bisect is None:
-            z_lower = np.min(self.results[:,0])
-            z_upper = np.max(self.results[:,1])
+            z_lower = np.min(self.results[:, 0])
+            z_upper = np.max(self.results[:, 1])
 
         # Edge bisectioning is running
         else:
-            z_lower, z_upper = 0.5 * (self.bisect[:,1] + self.bisect[:,0])
-            dz_lower, dz_upper = self.bisect[:,1] - self.bisect[:,0]
+            z_lower, z_upper = 0.5 * (self.bisect[:, 1] + self.bisect[:, 0])
+            dz_lower, dz_upper = self.bisect[:, 1] - self.bisect[:, 0]
             bisect = True
 
         # Done
@@ -394,7 +385,6 @@ class LayerBisect(object):
 
 ##########################################################################
 class Layer(Parameter):
-
     """ Layer edge detector class. After initializing just call the
     method detect() to run the edge detection. """
 
@@ -413,12 +403,11 @@ class Layer(Parameter):
         "beta": 0.7,
         "resolution": 0.5,
         "lateralPitch": 4.0,
-        }
+    }
 
     # Translation of focus detection results to numerical values
     _hitvalue = {False: "no focus", None: "ambiguous", True: "focus"}
-    
-    
+
     def __init__(self, system, logger=None, **kwargs):
 
         """ Initialize the layer scan object. """
@@ -426,7 +415,7 @@ class Layer(Parameter):
         # Store system object
         self.system = system
         user = self.system.user["key"]
-        
+
         # Initialize parameter class
         args = popargs(kwargs, "layer")
         super().__init__(user, logger, **args)
@@ -438,12 +427,11 @@ class Layer(Parameter):
         # Initialize focus detection
         args = popargs(kwargs, "focus")
         self.focus = Focus(self.system, logger, **args)
-        
+
         # No result yet
         self.steps = None
         self.result = None
         self.log.info("Initialized layer detector.")
-
 
     def _spiral(self, pos):
 
@@ -457,15 +445,15 @@ class Layer(Parameter):
 
         else:
             # Radius 1, 2, 3, ...
-            fp, r = math.modf(0.5*(math.sqrt(pos)+1))
+            fp, r = math.modf(0.5 * (math.sqrt(pos) + 1))
             r = round(r)
 
             # Side 0, 1, 2, or 3
-            v = pos - (4*r*(r-1)+1)
-            s = v // (2*r)
+            v = pos - (4 * r * (r - 1) + 1)
+            s = v // (2 * r)
 
             # Position on the side -r+1 ... +r
-            p = (v % (2*r)) - r + 1
+            p = (v % (2 * r)) - r + 1
 
             # Integer x, y coordinates relative to center point
             if s == 0:
@@ -478,10 +466,9 @@ class Layer(Parameter):
                 i, j = -r, -p
 
         # Return the coordinates
-        x = self["xCenter"] + i*self["lateralPitch"]
-        y = self["yCenter"] + j*self["lateralPitch"]
+        x = self["xCenter"] + i * self["lateralPitch"]
+        y = self["yCenter"] + j * self["lateralPitch"]
         return x, y
-
 
     def run(self, x, y, zlo, zup, dz=None, path=None, home=True):
 
@@ -510,7 +497,6 @@ class Layer(Parameter):
         # Move stages back to initial position
         if home:
             self.system.moveabs(x=x0, y=y0, z=z0)
-        
 
     def _detect(self, x, y, zlo, zup, dz, path=None):
 
@@ -584,13 +570,13 @@ class Layer(Parameter):
                 "zUpper": z_upper,
                 "dzUpper": dz_upper,
                 "finished": finished,
-                })
+            })
             if hit:
                 step.update({
                     "focusOffset": self.focus.result["focusOffset"],
                     "focusArea": self.focus.result["focusArea"],
                     "circularity": self.focus.result["circularity"],
-                    })
+                })
                 offsets.append(self.focus.result["focusOffset"])
             steps.append(step)
 
@@ -621,7 +607,7 @@ class Layer(Parameter):
             "xOffsetStd": sx,
             "yOffsetStd": sy,
             "numOffset": len(offsets),
-            }
+        }
 
         # Update current coordinate transformation matrix
         self.system.update_pos("focus", dx, dy, sx, sy, len(offsets))
@@ -629,21 +615,20 @@ class Layer(Parameter):
         # Return final and intermediate results
         return result, steps
 
-
     def pitch(self):
-        
+
         """ Improve the camera pitch matrix fron the configuration file by
         registering images of the layer test structure in all for cardinal
         directions. Store the new camera pitch matrix in the results
         dictionary. """
-        
+
         if not self.result:
             raise RuntimeError("Run layer scan first!")
-            
+
         # Lateral center of the test spiral
-        x0 = self["xCenter"]        
+        x0 = self["xCenter"]
         y0 = self["yCenter"]
-        
+
         # Center of the resin layer
         zlo = self.result["zLower"]
         zup = self.result["zUpper"]
@@ -655,7 +640,7 @@ class Layer(Parameter):
 
         # Lateral camera shift for the test images
         shift = self["lateralPitch"]
-        
+
         # Size of AOI is twice the size of the test spiral
         size = round(np.sqrt(len(self.steps))) * self["lateralPitch"]
         size += 2 * shift
@@ -668,25 +653,25 @@ class Layer(Parameter):
         # Take image in the center and all four cardinal directions
         self.system.moveabs(x=x, y=y, z=z, wait=delay)
         imgC = image.crop(self.system.getimage().img, size)
-        self.system.moveabs(x=x-shift, y=y, z=z, wait=delay)
+        self.system.moveabs(x=x - shift, y=y, z=z, wait=delay)
         imgW = image.crop(self.system.getimage().img, size)
-        self.system.moveabs(x=x+shift, y=y, z=z, wait=delay)
+        self.system.moveabs(x=x + shift, y=y, z=z, wait=delay)
         imgE = image.crop(self.system.getimage().img, size)
-        self.system.moveabs(x=x, y=y-shift, z=z, wait=delay)
+        self.system.moveabs(x=x, y=y - shift, z=z, wait=delay)
         imgS = image.crop(self.system.getimage().img, size)
-        self.system.moveabs(x=x, y=y+shift, z=z, wait=delay)
+        self.system.moveabs(x=x, y=y + shift, z=z, wait=delay)
         imgN = image.crop(self.system.getimage().img, size)
 
         # Horizontal and vertical shift in pixels
         diffE = image.diff(imgC, imgE)
-        diffW = image.diff(imgW, imgC)    
+        diffW = image.diff(imgW, imgC)
         diffN = image.diff(imgC, imgN)
         diffS = image.diff(imgS, imgC)
         args = {
             "normalization": None,
             "upsample_factor": 20,
             "overlap_ratio": 0.3
-            }
+        }
         (pxy, pxx), err_x, _ = phase_cross_correlation(diffW, diffE, **args)
         (pyy, pyx), err_y, _ = phase_cross_correlation(diffS, diffN, **args)
 
@@ -697,13 +682,12 @@ class Layer(Parameter):
         self.result["cropSize"] = size
         self.result["horzPitchCorrelation"] = err_x
         self.result["vertPitchCorrelation"] = err_y
-        
+
         # Update current coordinate transformation matrix
         self.system.update_pos("layer", pitch, size, err_x, err_y)
 
         # Done.
         return pitch
-    
 
     def container(self, config=None, **kwargs):
 
@@ -721,11 +705,11 @@ class Layer(Parameter):
         # General metadata
         content = {
             "containerType": {"name": "LayerDetect", "version": 1.1},
-            }
+        }
         meta = {
             "title": "Layer Detection Data",
             "description": "Detection of upper and lower photoresin interfaces.",
-            }
+        }
 
         # Container dictionary
         items = self.system.items() | {
@@ -735,7 +719,7 @@ class Layer(Parameter):
             "data/layer.json": self.parameters(),
             "meas/steps.json": self.steps,
             "meas/result.json": self.result,
-            }
+        }
 
         # Return container object
         config = config or self.config

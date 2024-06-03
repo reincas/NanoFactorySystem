@@ -14,7 +14,6 @@ from scidatacontainer import Container
 
 
 class HoloContainer(Container):
-
     """ SciDataContainer for the storage of a digital hologram. """
 
     containerType = "HologramImage"
@@ -26,9 +25,9 @@ class HoloContainer(Container):
 
         # Not in creation mode
         if (self.kwargs["file"] is not None) or \
-           (self.kwargs["uuid"] is not None):
+                (self.kwargs["uuid"] is not None):
             return
-        
+
         # Create or update container items
         if self.kwargs["items"] is None:
             items = {}
@@ -78,38 +77,34 @@ class HoloContainer(Container):
         # Replace container items dictionary
         self.kwargs["items"] = items
 
-
     def __post_init__(self):
 
         """ Initialize this container. """
 
         # Type check of the container
         if (self.content["containerType"]["name"] != self.containerType) or \
-           (self.content["containerType"]["version"] != self.containerVersion):
+                (self.content["containerType"]["version"] != self.containerVersion):
             raise RuntimeError(f"Containertype must be '{self.containerType}'!")
-
 
     @property
     def img(self):
 
         """ Shortcut to the hologram image. """
-        
-        return self["meas/image.png"]
 
+        return self["meas/image.png"]
 
     @property
     def params(self):
 
         """ Shortcut to the parameter data dictionary. """
-        
-        return self["data/hologram.json"]
 
+        return self["data/hologram.json"]
 
     @property
     def location(self):
-        
+
         """ Return xyz position of the image or None. """
-        
+
         if "data/location.json" not in self:
             return None
         return self["data/location.json"]

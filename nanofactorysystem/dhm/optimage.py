@@ -10,11 +10,11 @@
 ##########################################################################
 
 import logging
+
 import numpy as np
 
 
 def optImage(dhm, maxof=9, logger=None):
-
     """ Return image with optimized exposure time. The number of
     overflow pixels in the returned image will be less or equal
     maxof. The second return value is the number of camera images
@@ -22,10 +22,10 @@ def optImage(dhm, maxof=9, logger=None):
 
     # Prepare logger
     logger = logger or logging
-    
+
     # Emergency break: Maximum number of images
     maxcount = 100
-    
+
     # Maximum pixel value
     maxpixel = (1 << dhm.device.CameraBitPerPixel) - 1
 
@@ -42,13 +42,13 @@ def optImage(dhm, maxof=9, logger=None):
     smin = None
     smax = None
     optimg = None
-    
+
     count = 0
     while True:
         count += 1
         if count > maxcount:
             raise RuntimeError("optImage failed!")
-            
+
         # Set exposure time
         dhm.device.CameraShutter = s
 
@@ -100,7 +100,7 @@ def optImage(dhm, maxof=9, logger=None):
             raise RuntimeError("optImage failed!")
 
         # Set shutter value +1 above current optimum
-        dhm.device.CameraShutter = smin+1
+        dhm.device.CameraShutter = smin + 1
 
         # Take camera image
         img = dhm.device.CameraImage

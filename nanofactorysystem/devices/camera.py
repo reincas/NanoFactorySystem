@@ -8,14 +8,13 @@
 #
 ##########################################################################
 
-from ..parameter import Parameter
-from ..config import sysConfig, popargs
 from ..camera import CameraDevice, optExpose
+from ..config import sysConfig, popargs
 from ..image import ImageContainer
+from ..parameter import Parameter
 
 
 class Camera(Parameter):
-
     """ Camera class. """
 
     _defaults = sysConfig.camera | {
@@ -27,7 +26,7 @@ class Camera(Parameter):
         "GainSelector": "AnalogAll",
         "Gain": 0,
         "GainAuto": 0,
-        }
+    }
 
     def __init__(self, user, objective, logger=None, **kwargs):
 
@@ -58,10 +57,9 @@ class Camera(Parameter):
         for key, value in self._params.items():
             self.device[key] = value
         self.setaoi(None)
-        
+
         # Done
         self.log.info("Initialized camera.")
-        
 
     def __enter__(self):
 
@@ -69,13 +67,11 @@ class Camera(Parameter):
 
         return self
 
-
     def __exit__(self, errtype, value, tb):
 
         """ Context manager exit method. """
 
         self.device.close()
-
 
     def close(self):
 
@@ -84,14 +80,13 @@ class Camera(Parameter):
         # Closed already
         if not self.opened:
             return
-        
+
         self.device["AcquisitionMode"] = "Continuous"
 
         # Close the device
         self.device.close()
         self.opened = False
         self.log.info("Camera closed.")
-
 
     def setaoi(self, size=None):
 
@@ -108,7 +103,7 @@ class Camera(Parameter):
         wmax = self.device.property("Width").maxValue
         hmin = self.device.property("Height").minValue
         hmax = self.device.property("Height").maxValue
-        
+
         # Maximize area of interest
         if size is None:
             self.device["Width"] = wmax
@@ -128,7 +123,6 @@ class Camera(Parameter):
             self.w = size
             self.h = size
 
-
     def optexpose(self, level=127):
 
         """ Find exposure time resulting in a given mean value of the image
@@ -138,12 +132,11 @@ class Camera(Parameter):
             raise RuntimeError("Camera device closed!")
         self.log.info("Start exposure time optimization.")
 
-        t = optExpose(self.device, level)        
+        t = optExpose(self.device, level)
         img = self.device.getimage()
         avg = img.mean()
         self.log.info(f"Optimized exposure time: {0.001 * t:.3f} ms, mean image value: {avg:.1f} (goal: {level:d})")
         return img, t
-
 
     def getimage(self):
 
@@ -154,7 +147,6 @@ class Camera(Parameter):
 
         return self.device.getimage()
 
-
     def info(self):
 
         """ Return a dictionary containing the camera device info. """
@@ -164,8 +156,7 @@ class Camera(Parameter):
             "product": self.device["product"],
             "serial": self.device["serial"],
             "id": self.device["deviceID"],
-            }
-    
+        }
 
     def container(self, loc=None, config=None, **kwargs) -> ImageContainer:
 
@@ -176,10 +167,10 @@ class Camera(Parameter):
 
         # Camera parameters
         kwargs["params"] = self.parameters()
-        
+
         # Objective parameters
         kwargs["objective"] = self.objective
-        
+
         # Location coordinates
         kwargs["loc"] = loc
 

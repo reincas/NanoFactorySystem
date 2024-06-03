@@ -13,14 +13,13 @@ import logging
 from pathlib import Path
 from shutil import rmtree
 
-
 LOGFMT = logging.Formatter(fmt="%(asctime)s / %(levelname)s / %(message)s",
                            datefmt="%Y-%m-%d %H:%M:%S")
 
-def getLogger(logfile=None):
 
+def getLogger(logfile=None):
     """ Configure and return a logger object. """
-    
+
     # Initialize logger object
     logger = logging.getLogger('dummy')
     logger.setLevel(logging.DEBUG)
@@ -37,13 +36,12 @@ def getLogger(logfile=None):
         filehandler.setLevel(logging.DEBUG)
         filehandler.setFormatter(LOGFMT)
         logger.addHandler(filehandler)
-    
+
     # Return logger object
     return logger
 
 
 def mkdir(path, clean=True):
-
     """ Make sure that the given folder exists and is empty. """
 
     p = Path(path)

@@ -13,15 +13,14 @@ from functools import cached_property
 import numpy as np
 from scidatacontainer import Container
 
-from ..parameter import Parameter
-from ..config import popargs
-from ..runtime import mkdir
 from .layer import Layer
+from ..config import popargs
+from ..parameter import Parameter
+from ..runtime import mkdir
 
 
 ##########################################################################
 class PlaneFit(object):
-
     """ Fit a plane to the given list of x,y,z values by least squares
     fitting of the z values. """
 
@@ -31,8 +30,8 @@ class PlaneFit(object):
 
         # Least squares plane fitting
         A = np.array(points, dtype=float)
-        b = np.array(A[:,-1])
-        A[:,-1] = 1.0
+        b = np.array(A[:, -1])
+        A[:, -1] = 1.0
         if params is None:
             params = np.linalg.lstsq(A, b, rcond=None)[0]
 
@@ -40,7 +39,7 @@ class PlaneFit(object):
 
         # Average z deviation
         self.dev = np.dot(A, self.params) - b
-        self.avg = np.sqrt(sum(self.dev*self.dev))/len(self.dev)
+        self.avg = np.sqrt(sum(self.dev * self.dev)) / len(self.dev)
 
         # Surface normal vector
         p0 = self.getvec(0, 0)
@@ -50,7 +49,7 @@ class PlaneFit(object):
 
         # Length of y projection and length of vector
         rxy = np.hypot(x, y)
-        #r = np.hypot(rxy, z)
+        # r = np.hypot(rxy, z)
 
         # Plane slope and polar angle
         self.slope = rxy / z
@@ -90,14 +89,12 @@ class PlaneFit(object):
                 line = f"{name} {line}"
             func(line)
 
-
     def getz(self, x: float, y: float) -> float:
 
         """ Return z value of the plane at the given lateral xy
         position. """
 
         return np.dot(self.params, [x, y, 1])
-
 
     def getvec(self, x: float, y: float) -> np.ndarray:
 
@@ -112,7 +109,6 @@ class PlaneFit(object):
 class zPlane(object):
 
     def __init__(self, plane, key):
-
         """ Store plane parameters. """
 
         params = plane["meas/result.json"][key]
@@ -121,9 +117,7 @@ class zPlane(object):
         z0 = params["z0"]
         self.params = np.asarray([sx, sy, z0], dtype=float)
 
-
     def getz(self, x, y):
-
         """ Return z value of the plane at the given lateral xy
         position. """
 
@@ -132,13 +126,12 @@ class zPlane(object):
 
 ##########################################################################
 class Plane(Parameter):
-
     """ Layer plane class. """
 
     _defaults = {
         "dzCoarseDefault": 100.0,
         "dzFineDefault": 10.0,
-        }
+    }
 
     def __init__(self, zlo, zup, system, logger=None, **kwargs):
 
@@ -164,7 +157,6 @@ class Plane(Parameter):
         # No results yet
         self.steps = []
         self.log.info("Initialized plane detector.")
-
 
     def run(self, x, y, path=None, home=False):
 
@@ -198,7 +190,7 @@ class Plane(Parameter):
             "dzUpper": result["dzUpper"],
             "dzInit": dz,
             "layerUuid": l.uuid,
-            })
+        })
 
         # Store results as estimates for the next scan
         self.zlo = result["zLower"]
@@ -209,14 +201,13 @@ class Plane(Parameter):
             delay = self.system["delay"]
             self.system.moveabs(wait=delay, x=x0, y=y0, z=z0)
 
-
     def _pop_results(self):
 
         steps = list(self.steps)
         points = [[s["x"], s["y"], s["zLower"], s["zUpper"]] for s in steps]
         points = np.array(points, dtype=float)
-        lower = points[:,(0,1,2)]
-        upper = points[:,(0,1,3)]
+        lower = points[:, (0, 1, 2)]
+        upper = points[:, (0, 1, 3)]
 
         result = {}
         for key, points, name in [
@@ -235,11 +226,10 @@ class Plane(Parameter):
                 "polarAngle": plane.theta,
                 "azimuthAngle": plane.phi,
                 "points": points.tolist(),
-                }
+            }
 
         self.steps = []
         return result, steps
-
 
     def container(self, config=None, **kwargs):
 
@@ -259,11 +249,11 @@ class Plane(Parameter):
         # General metadata
         content = {
             "containerType": {"name": "LayerPlane", "version": 1.1},
-            }
+        }
         meta = {
             "title": "Plane Detection Data",
             "description": "Detection of upper and lower photoresin interface planes.",
-            }
+        }
 
         # Container dictionary
         items = self.system.items() | {
@@ -273,7 +263,7 @@ class Plane(Parameter):
             "data/plane.json": self.parameters(),
             "meas/steps.json": steps,
             "meas/result.json": result,
-            }
+        }
 
         # Return container object
         config = config or self.config

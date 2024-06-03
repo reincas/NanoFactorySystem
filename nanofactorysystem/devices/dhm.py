@@ -11,14 +11,13 @@
 
 import numpy as np
 
-from ..parameter import Parameter
 from ..config import sysConfig, popargs
 from ..dhm import DhmClient, optImage, motorScan
 from ..hologram import HoloContainer
+from ..parameter import Parameter
 
 
 class Dhm(Parameter):
-
     """ Class for digital holographic microscope. """
 
     _defaults = sysConfig.dhm | {
@@ -33,8 +32,7 @@ class Dhm(Parameter):
         "oplOptImage": True,
         "oplInitPos": None,
         "oplOptPos": None,
-        }
-
+    }
 
     def __init__(self, user, objective, logger=None, **kwargs):
 
@@ -64,7 +62,7 @@ class Dhm(Parameter):
         for key in self.device.set_keys():
             if key in self.keys() and self[key] is not None:
                 self.device[key] = self[key]
-        
+
         # Select objective
         cid = self.objective["dhmId"]
         configs = self.device.ConfigList
@@ -75,7 +73,6 @@ class Dhm(Parameter):
 
         # Done
         self.log.info("Initialized holographic microscope.")
-        
 
     def __enter__(self):
 
@@ -83,13 +80,11 @@ class Dhm(Parameter):
 
         return self
 
-
     def __exit__(self, errtype, value, tb):
 
         """ Context manager exit method. """
 
         self.device.close()
-
 
     def close(self):
 
@@ -98,12 +93,11 @@ class Dhm(Parameter):
         # Closed already
         if not self.opened:
             return
-        
+
         # Close the device
         self.device.close()
         self.opened = False
         self.log.info("Holographic microscope closed.")
-
 
     def getimage(self, opt=True):
 
@@ -119,7 +113,6 @@ class Dhm(Parameter):
             img = self.device.CameraImage
             count = None
         return img, count
-
 
     def motorscan(self, m0=None):
 
@@ -143,7 +136,6 @@ class Dhm(Parameter):
         self["oplOptPos"] = m
         return m
 
-
     def container(self, opt=True, loc=None, config=None, **kwargs):
 
         """ Return a HoloContainer with current hologram image. """
@@ -153,7 +145,7 @@ class Dhm(Parameter):
         kwargs["holo"] = holo
 
         # Median values
-        q = [self["contrastQuantile"], 0.5, 1.0-self["contrastQuantile"]]
+        q = [self["contrastQuantile"], 0.5, 1.0 - self["contrastQuantile"]]
         imin, imedian, imax = np.quantile(holo, q, method="nearest")
 
         # Overflow and underflow pixels
@@ -169,15 +161,15 @@ class Dhm(Parameter):
             "medianValue": int(imedian),
             "highQuantileValue": int(imax),
             "underflowPixel": numuf,
-            "overflowPixel": numof,            
-            }
-        
+            "overflowPixel": numof,
+        }
+
         # Hologram parameters
         kwargs["params"] = self.parameters()
 
         # Objective parameters
         kwargs["objective"] = self.objective
-        
+
         # Location coordinates
         kwargs["loc"] = loc
 

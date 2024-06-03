@@ -11,9 +11,11 @@
 
 import socket
 import struct
+
 import numpy as np
 
 from .commands import *
+
 
 # Info:
 #   CameraShutter = (CameraShutterUs - 30) / 20
@@ -25,7 +27,6 @@ from .commands import *
 
 
 class DhmClient(object):
-
     """ Client class to access the remote server HoloServ, which
     provides access to the digital holographic microscope from LynéeTec.
     This class only provides the most basic functionality of data
@@ -33,7 +34,7 @@ class DhmClient(object):
     in classes inheriting DhmClient. """
 
     manufacturer = "LyncéeTec"
-    
+
     _commands = {
         "ServerVersion": [None, C_GetVersion, "i"],
         "CmdVersion": [None, C_GetCmdVersion, "i"],
@@ -80,43 +81,38 @@ class DhmClient(object):
         "MotorMaxPos": [None, C_MaxMotorPos, "f"],
         "MotorPos": [C_SetMotorPos, C_GetMotorPos, "f"],
         "MotorUnitPos": [None, C_UnitMotorPos, "s"],
-        }
+    }
 
     _functions = {
         "OptCameraImage": [C_GetOptCameraImage, "h", "i"],
         "StartCameraGrabTime": [C_StartCameraGrabTime, "h", "i"],
-        }
+    }
 
     def __init__(self, host, port):
 
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)  
+        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.sock.connect((host, port))
 
         if self.ServerVersion < 3:
             raise RuntimeError("HoloServ is outdated!")
 
-
     def __enter__(self):
 
         return self
 
-
     def __exit__(self, etype, value, traceback):
-        
+
         self.close()
 
-
     def close(self):
-        
+
         data = struct.pack("i", C_Quit)
         self.sock.sendall(data)
         self.sock.close()
 
-
     def __str__(self) -> str:
         return f"{self.manufacturer} (S/N {self.DhmSerial})"
-    
-    
+
     def remoteCmd(self, cmd, outfmt, infmt, *inargs):
 
         # Normalize format strings
@@ -130,7 +126,7 @@ class DhmClient(object):
             raise RuntimeError(f"{len(infmt):d} arguments expected!")
 
         # Prepare transmission data
-        #print(cmd, outfmt, infmt, *inargs)
+        # print(cmd, outfmt, infmt, *inargs)
         fmt = "i"
         values = [cmd]
         for i, code in enumerate(infmt):
@@ -161,18 +157,18 @@ class DhmClient(object):
         for code in outfmt:
             if code == "i":
                 value = struct.unpack("i", self.sock.recv(4))[0]
-                
+
             elif code == "f":
-                    value = struct.unpack("f", self.sock.recv(4))[0]
-                                    
+                value = struct.unpack("f", self.sock.recv(4))[0]
+
             elif code == "d":
                 value = struct.unpack("d", self.sock.recv(8))[0]
-                
+
             elif code == "s":
                 size = struct.unpack("i", self.sock.recv(4))[0]
                 value = struct.unpack(f"{size:d}s", self.sock.recv(size))[0]
                 value = value.decode("utf8")
-                    
+
             elif code == "c":
                 count = struct.unpack("i", self.sock.recv(4))[0]
                 value = []
@@ -181,10 +177,10 @@ class DhmClient(object):
                     name = struct.unpack(f"{size:d}s", self.sock.recv(size))[0]
                     name = name.decode("utf8")
                     value.append((cid, name))
-                    
+
             elif code == "h":
                 height, width, stride = struct.unpack("iii", self.sock.recv(12))
-                size = stride*height
+                size = stride * height
                 data = b""
                 while len(data) < size:
                     data += self.sock.recv(size - len(data))
@@ -204,13 +200,12 @@ class DhmClient(object):
             return result[0]
         return tuple(result)
 
-
     def __setattr__(self, name, value):
 
         if name in self._commands:
             cmd, _, infmt = self._commands[name]
             if cmd is None:
-                raise(AttributeError, f"Attribute '{name}' is not writeable!")
+                raise (AttributeError, f"Attribute '{name}' is not writeable!")
 
             if isinstance(value, tuple):
                 self.remoteCmd(cmd, "", infmt, *value)
@@ -220,13 +215,12 @@ class DhmClient(object):
         else:
             super().__setattr__(name, value)
 
-
     def __getattr__(self, name):
 
         if name in self._commands:
             _, cmd, outfmt = self._commands[name]
             if cmd is None:
-                raise(AttributeError, f"Attribute '{name}' is not readable!")
+                raise (AttributeError, f"Attribute '{name}' is not readable!")
             return self.remoteCmd(cmd, outfmt, "")
 
         elif name in self._functions:
@@ -234,24 +228,22 @@ class DhmClient(object):
 
             def func(*inargs):
                 return self.remoteCmd(cmd, outfmt, infmt, *inargs)
+
             return func
 
         print(name)
         return super().__getattr__(name)
 
-
     def set_keys(self):
-        
-        keys = [k for k,v in self._commands.items() if v[0] is not None]
+
+        keys = [k for k, v in self._commands.items() if v[0] is not None]
         return list(sorted(keys))
-    
-        
+
     def keys(self):
-        
-        keys = [k for k,v in self._commands.items()]
+
+        keys = [k for k, v in self._commands.items()]
         return list(sorted(keys))
-    
-        
+
     def parameters(self):
 
         # Compile dhm data dictionary
@@ -259,13 +251,13 @@ class DhmClient(object):
             "server": {
                 "version": self.ServerVersion,
                 "commandVersion": self.CmdVersion,
-                },
+            },
             "dhm": {
                 "manufacturer": self.manufacturer,
                 "serial": self.DhmSerial,
                 "configId": self.Config,
                 "configName": dict(self.ConfigList)[self.Config],
-                },
+            },
             "objective": {
                 "name": self.ObjectiveName,
                 "description": self.ObjectiveDescription,
@@ -273,7 +265,7 @@ class DhmClient(object):
                 "numericalAperture": self.ObjectiveNumericalAperture,
                 "xPixelSizeUm": self.ObjectivePixelSizeXUm,
                 "yPixelSizeUm": self.ObjectivePixelSizeYUm,
-                },
+            },
             "camera": {
                 "serial": self.CameraSerial,
                 "name": self.CameraName,
@@ -298,10 +290,10 @@ class DhmClient(object):
                 "minBrightness": self.CameraMinBrightness,
                 "maxBrightness": self.CameraMaxBrightness,
                 "brightness": self.CameraBrightness,
-                },
+            },
             "laser": {
                 "wavelengthUm": self.LaserWavelength * 1e6,
-                },
+            },
             "motor": {
                 "minCoderPos": self.MotorMinCoderPos,
                 "maxCoderPos": self.MotorMaxCoderPos,
@@ -310,8 +302,8 @@ class DhmClient(object):
                 "maxPos": self.MotorMaxPos,
                 "pos": self.MotorPos,
                 "unitPos": self.MotorUnitPos,
-                }
             }
+        }
 
         # Add manufacturer names
         if "Basler" in params["camera"]["name"]:

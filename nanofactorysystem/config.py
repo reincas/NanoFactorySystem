@@ -51,7 +51,6 @@ from typing import Any
 
 
 def popargs(args, sections):
-
     """ Pop given sections from an arguments dictionary. """
 
     if isinstance(sections, str):
@@ -61,38 +60,32 @@ def popargs(args, sections):
 
 
 class Config(object):
-
     _path = Path.home() / "nanofactory.json"
 
     def __init__(self, path=None):
 
         if path is None:
-            path = self._path
+            path = Config._path
 
         with open(path, "rb") as fp:
             config = fp.read()
         self.config = json.loads(config)
 
-
     def keys(self):
 
-        return [k for k,v in self.config.items() if not isinstance(v, dict)]
-
+        return [k for k, v in self.config.items() if not isinstance(v, dict)]
 
     def sections(self):
 
-        return [k for k,v in self.config.items() if isinstance(v, dict)]
-
+        return [k for k, v in self.config.items() if isinstance(v, dict)]
 
     def users(self) -> list[str]:
 
         return [k[5:] for k in self.config.keys() if k[:5] == "user:"]
 
-
     def objectives(self) -> list[str]:
 
         return [k[10:] for k in self.config.keys() if k[:10] == "objective:"]
-
 
     def user(self, key: str) -> dict[str, Any]:
 
@@ -100,13 +93,11 @@ class Config(object):
             raise RuntimeError(f"Unknown user '{key}'!")
         return self.config[f"user:{key}"] | {"key": key}
 
-
     def objective(self, key: str) -> dict[str, Any]:
 
         if key not in self.objectives():
             raise RuntimeError(f"Unknown objective '{key}'!")
         return self.config[f"objective:{key}"] | {"key": key}
-
 
     def __getattr__(self, key: str):
 
@@ -115,7 +106,6 @@ class Config(object):
         elif key in self.sections():
             return dict(self.config[key])
         raise AttributeError(f"Unknown attribute '{key}'!")
-
 
     def __str__(self) -> str:
 
@@ -131,6 +121,7 @@ class Config(object):
                 lines.append(f"    {key} = {section[key]}")
 
         return "\n".join(lines)
+
 
 # Read the current config file
 sysConfig = Config()

@@ -13,27 +13,25 @@
 
 import bisect
 import logging
+
 import numpy as np
 from offaxisholo.reconstruct import locateOrder
 
 
 class Contrast(object):
-    
+
     def __init__(self):
-        
+
         self.position = []
         self.values = []
 
-
     def __len__(self):
-        
+
         return len(self.position)
-    
 
     def __iter__(self):
-        
+
         return self.values.__iter__()
-    
 
     def __getitem__(self, pos):
 
@@ -42,10 +40,9 @@ class Contrast(object):
         except ValueError:
             return
         return self.values[i]
-    
-        
+
     def add(self, pos, value):
-    
+
         """ Add motor position and contrast to the list of datapoints. """
 
         if pos in self.position:
@@ -56,76 +53,66 @@ class Contrast(object):
             self.position.insert(i, pos)
             self.values.insert(i, value)
 
-
     @property
     def imax(self):
-        
+
         return np.argmax(self.values)
-    
-    
+
     @property
     def minPos(self):
-        
+
         if len(self) == 0:
             return None
         return self.position[0]
-    
-    
+
     @property
     def maxPos(self):
-        
+
         if len(self) == 0:
             return None
         return self.position[-1]
-    
-    
+
     @property
     def nextPos(self):
-        
-        imax = self.imax 
+
+        imax = self.imax
         if imax <= 0:
             return -1
-        elif imax >= len(self)-1:
+        elif imax >= len(self) - 1:
             return 1
         return 0
 
-
     @property
     def hasTriple(self):
-        
-        return self.nextPos == 0
 
+        return self.nextPos == 0
 
     @property
     def triple(self):
-        
+
         if not self.hasTriple:
             raise RuntimeError("No triple!")
         imax = self.imax
-        return self.position[imax-1:imax+2]
-
+        return self.position[imax - 1:imax + 2]
 
     @property
     def tripleValues(self):
-        
+
         if not self.hasTriple:
             raise RuntimeError("No triple!")
         imax = self.imax
-        return self.values[imax-1:imax+2]
-
+        return self.values[imax - 1:imax + 2]
 
     def tripleThreshold(self, thresh):
-        
+
         return self.hasTriple and min(self.tripleValues) > thresh
 
-        
     def maxThreshold(self, thresh):
-        
+
         return max(self) > thresh
-        
+
 
 def moveMotor(dhm, m, opt=False):
-
     """ Move the OPL motor to the given position, take a camera image and
     return the relative weight of its first diffraction order peak. """
 
@@ -135,14 +122,13 @@ def moveMotor(dhm, m, opt=False):
     # Grab camera image
     img = dhm.getimage(opt)[0]
     if opt:
-        dhm.device.CameraShutter = dhm.device.CameraShutter-2
+        dhm.device.CameraShutter = dhm.device.CameraShutter - 2
 
     # Return weight of diffraction order peak
     return locateOrder(img)[-1]
 
 
 def addMotor(dhm, data, m, opt=False, logger=None):
-
     """ Move the OPL motor to the given position, take a camera image and
     return its contrast and the weight of its first diffraction order peak. """
 
@@ -155,13 +141,12 @@ def addMotor(dhm, data, m, opt=False, logger=None):
 
     w = moveMotor(dhm, m, opt)
     data.add(m, w)
-    
+
     logger.debug(f"Motor scan {len(data):02d}: {m:.1f} µm - {100 * w:.1f}%")
 
 
 def shortScan(dhm, steps=11, dm=250.0, thresh=0.05, m0=None, opt=True,
               logger=None):
-
     # Minimum and maximum motor position
     minpos = dhm.device.MotorMinPos
     maxpos = dhm.device.MotorMaxPos
@@ -173,13 +158,13 @@ def shortScan(dhm, steps=11, dm=250.0, thresh=0.05, m0=None, opt=True,
         m0 = float(m0)
 
     # Determine coarse scan range
-    m1 = m0 - dm*(steps-1)/2
+    m1 = m0 - dm * (steps - 1) / 2
     if m1 < minpos:
         m1 = minpos
-    m2 = m1 + (steps-1)*dm
+    m2 = m1 + (steps - 1) * dm
     if m2 > maxpos:
         m2 = maxpos
-        m1 = m2 - (steps-1)*dm
+        m1 = m2 - (steps - 1) * dm
 
         # Sanity check: That should never happen.
         if m1 < minpos:
@@ -189,7 +174,6 @@ def shortScan(dhm, steps=11, dm=250.0, thresh=0.05, m0=None, opt=True,
 
 
 def longScan(dhm, dm=250.0, thresh=0.05, opt=True, logger=None):
-
     # Minimum and maximum motor position
     m1 = dhm.device.MotorMinPos
     m2 = dhm.device.MotorMaxPos
@@ -198,7 +182,6 @@ def longScan(dhm, dm=250.0, thresh=0.05, opt=True, logger=None):
 
 
 def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
-
     # Prepare logger
     logger = logger or logging
 
@@ -212,8 +195,8 @@ def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
     while True:
 
         # Get weight of diffraction peak at current position
-        m = min(m2, m1 + i*dm)
-        
+        m = min(m2, m1 + i * dm)
+
         if data:
             opt = False
         addMotor(dhm, data, m, opt, logger=logger)
@@ -222,11 +205,11 @@ def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
             print(data.position)
             print(m)
         if data[m] > thresh:
-            addMotor(dhm, data, m-0.7*dm, logger=logger)
-            addMotor(dhm, data, m-0.3*dm, logger=logger)
-            addMotor(dhm, data, m+0.3*dm, logger=logger)
-            addMotor(dhm, data, m+0.7*dm, logger=logger)
-            
+            addMotor(dhm, data, m - 0.7 * dm, logger=logger)
+            addMotor(dhm, data, m - 0.3 * dm, logger=logger)
+            addMotor(dhm, data, m + 0.3 * dm, logger=logger)
+            addMotor(dhm, data, m + 0.7 * dm, logger=logger)
+
 <<<<<<< HEAD
         # Stop if a increased diffraction peak indicates interference
         #if data.tripleThreshold(thresh):
@@ -240,7 +223,7 @@ def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
         if m == m2:
             break
         i += 1
-        
+
     # No interference detected
     if not data.maxThreshold(thresh):
         return
@@ -267,7 +250,6 @@ def runScan(dhm, m1, m2, dm=250.0, thresh=0.05, opt=True, logger=None):
 
 
 def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
-
     # Prepare logger
     logger = logger or logging
 
@@ -278,7 +260,8 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
     c0 = moveMotor(dhm, m0)
     c2 = moveMotor(dhm, m2)
     count = 0
-    logger.debug(f"Bisect {count:02d}: {m0:.1f} µm - {100 * c0:.1f}%  ==  {m1:.1f} µm - {100 * c1:.1f}%  ==  {m2:.1f} µm {100 * c2:.1f}%")
+    logger.debug(
+        f"Bisect {count:02d}: {m0:.1f} µm - {100 * c0:.1f}%  ==  {m1:.1f} µm - {100 * c1:.1f}%  ==  {m2:.1f} µm {100 * c2:.1f}%")
 
     # Center point must have maximum contrast
     if c0 > c1 or c2 > c1:
@@ -288,7 +271,7 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
     # image contrast. Proceed until either the difference of the
     # contrast or the difference of the positions falls below the given
     # limits.
-    while max(abs(c1-c0), abs(c1-c2)) > minc and m2-m0 > minm:
+    while max(abs(c1 - c0), abs(c1 - c2)) > minc and m2 - m0 > minm:
         count += 1
 
         if m1 - m0 > m2 - m1:
@@ -323,18 +306,17 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
 
 
 def motorScan(
-    dhm,
-    mode="both",
-    steps=11,
-    dm=250.0,
-    thresh=0.05,
-    init=None,
-    minc=0.005,
-    minm=5.0,
-    opt=True,
-    logger=None
+        dhm,
+        mode="both",
+        steps=11,
+        dm=250.0,
+        thresh=0.05,
+        init=None,
+        minc=0.005,
+        minm=5.0,
+        opt=True,
+        logger=None
 ):
-
     mode = mode.lower()
     if mode not in ("short", "long", "both"):
         raise RuntimeError("Unknown OPL scan mode!")

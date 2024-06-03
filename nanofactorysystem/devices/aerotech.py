@@ -22,9 +22,9 @@ from typing import Any, Optional
 
 from scidatacontainer import Container
 
-from ..parameter import Parameter
-from ..config import sysConfig, popargs
 from .attenuator import Attenuator
+from ..config import sysConfig, popargs
+from ..parameter import Parameter
 
 # Task states
 TASKSTATE_Unavailable = 0
@@ -41,6 +41,7 @@ TASKSTATE = ("unavailable", "inactive", "idle", "programReady",
              "programRunning", "programFeedheld", "programPaused",
              "programComplete", "error", "queue")
 
+
 class TaskState(Enum):
     unavailable = 0
     inactive = 1
@@ -52,6 +53,7 @@ class TaskState(Enum):
     program_complete = 7
     error = 8
     queue = 9
+
 
 # Drive status bit masks
 DRIVESTATUS_InPosition = 0x02000000
@@ -91,7 +93,6 @@ END PROGRAM
 
 ##########################################################################
 class A3200(Parameter):
-
     """ Class for controlling an Aerotech A3200 system."""
 
     _defaults = sysConfig.controller | {
@@ -101,7 +102,7 @@ class A3200(Parameter):
         "zMax": None,
         "tasks": {},
         "softwareVersion": None,
-        }
+    }
 
     def __init__(self, user, logger=None, **kwargs):
 
@@ -153,7 +154,6 @@ class A3200(Parameter):
         self.log.info(str(self))
         self.log.info("Initialized Aerotech A3200 system.")
 
-
     def __str__(self):
 
         if self.opened:
@@ -172,7 +172,7 @@ class A3200(Parameter):
 
         """ Context manager exit method. """
 
-        #print("".join(traceback.format_exception(errtype, value, tb)))
+        # print("".join(traceback.format_exception(errtype, value, tb)))
         self.close()
 
     def close(self):
@@ -203,13 +203,11 @@ class A3200(Parameter):
             raise RuntimeError("Command failed!")
         return response
 
-
     def version(self) -> str:
 
         """ Return A3200 software version. """
 
         return self.run("~VERSION")
-
 
     def reset(self):
 
@@ -220,7 +218,6 @@ class A3200(Parameter):
 
         self.run("ACKNOWLEDGEALL")
 
-
     def home(self, axes=None):
 
         """ Run a home cycle on the given axes. """
@@ -230,7 +227,6 @@ class A3200(Parameter):
         axes = self.normaxes(axes, "XYZ")
         for axis in axes:
             self.run(f"HOME {axis}")
-
 
     def normaxes(self, axes, limit=None):
 
@@ -247,7 +243,6 @@ class A3200(Parameter):
             false = ", ".join(false)
             raise RuntimeError(f"Wrong axes: {false}!")
         return axes.upper()
-
 
     def moveinc(self, speed, **axes):
 
@@ -269,13 +264,11 @@ class A3200(Parameter):
         self.run("INCREMENTAL")
         self.run(f"LINEAR {dest} F{0.001 * speed:f}")
 
-
     def moveabs(self, speed, **axes):
 
         """ Move on one or more axes with the given speed in micrometers
         per second. The absolute positions are given in micrometers as
         named parameters. Example: moveabs(100, x=10327.7, z=2456.5)"""
-
 
         dest = []
         for axis, pos in axes.items():
@@ -289,7 +282,6 @@ class A3200(Parameter):
         dest = " ".join(sorted(dest))
         self.run("ABSOLUTE")
         self.run(f"LINEAR {dest} F{0.001 * speed:f}")
-
 
     def position(self, axes):
 
@@ -305,7 +297,6 @@ class A3200(Parameter):
             return pos[0]
         return pos
 
-
     def speed(self, axes):
 
         """ Return current measured speed in micrometers per second of
@@ -319,7 +310,6 @@ class A3200(Parameter):
         if len(speed) == 1:
             return speed[0]
         return speed
-
 
     def drivestatus(self, axes, wait=False):
 
@@ -337,16 +327,14 @@ class A3200(Parameter):
             pass
         return True
 
-
-    def wait(self, axes, pause: Optional[float]=None):
+    def wait(self, axes, pause: Optional[float] = None):
 
         """ Wait until all given axes are in position after pause
         milliseconds. """
 
         if pause is not None:
-            time.sleep(0.001*pause)
+            time.sleep(0.001 * pause)
         self.drivestatus(axes, True)
-
 
     def load(self, task, fn):
 
@@ -356,13 +344,11 @@ class A3200(Parameter):
         # print(f'PROGRAM {task:d} LOAD "{fn}"')
         self.run(f'PROGRAM {task:d} LOAD "{fn}"')
 
-
     def start(self, task):
 
         """ Start execution of the given task. """
 
         self.run(f"PROGRAM {task:d} START")
-
 
     def stop(self, task_id):
 
@@ -370,8 +356,7 @@ class A3200(Parameter):
 
         self.run(f"PROGRAM {task_id:d} STOP")
 
-
-    def state(self, task_id:int) -> TaskState:
+    def state(self, task_id: int) -> TaskState:
 
         """ Return status of given task as integer value and as string.
         """
@@ -389,14 +374,12 @@ class A3200(Parameter):
             raise RuntimeError(f"Not a valid attenuator value: {att:g}!")
         self.run(f"$AO[0].A={att:f}")
 
-
     def power(self, power):
 
         """ Set laser power to given value in milliwatts. """
 
         att = self.attenuator.ptoa(power)
         self.attenuate(att)
-
 
     def laseron(self, power):
 
@@ -405,13 +388,11 @@ class A3200(Parameter):
         self.power(power)
         self.run("GALVO LASEROVERRIDE A ON")
 
-
     def laseroff(self):
 
         """ Switch laser off. """
 
         self.run("GALVO LASEROVERRIDE A OFF")
-
 
     def pulse(self, power, duration):
 
@@ -421,7 +402,6 @@ class A3200(Parameter):
         self.laseron(power)
         time.sleep(duration)
         self.laseroff()
-
 
     def init_zline(self, fn=None):
 
@@ -441,7 +421,7 @@ class A3200(Parameter):
         if len(tasks) == 0:
             task_id = 1
         else:
-            task_id = min(set(range(1, max(tasks)+2)) - set(tasks))
+            task_id = min(set(range(1, max(tasks) + 2)) - set(tasks))
 
         # Store AeroBasic program as file
         self["tasks"][name] = task_id
@@ -459,7 +439,6 @@ class A3200(Parameter):
         # Done
         return task_id
 
-
     def zline(self, power, fast, slow, dz):
 
         """ Run zline program with fast and slow speed in µm/s as well
@@ -475,7 +454,7 @@ class A3200(Parameter):
         task = self["tasks"][name]
 
         # Store task parameters as global variables
-        if self.z + 0.5*dz > self["zMax"]:
+        if self.z + 0.5 * dz > self["zMax"]:
             self.close()
             raise RuntimeError("Maximum z position exceeded!")
         self.run(f"$global[0] = {0.001 * fast:f}")
@@ -496,7 +475,6 @@ class A3200(Parameter):
             self.close()
             raise RuntimeError(f"Task state '{state.name}' ({state.value})!")
 
-
     def info(self) -> dict[str, Any]:
 
         """ Return information dictionary. """
@@ -512,7 +490,6 @@ class A3200(Parameter):
         )
         return {k: self[k] for k in keys}
 
-
     def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """
@@ -520,18 +497,18 @@ class A3200(Parameter):
         # General metadata
         content = {
             "containerType": {"name": "MotionControl", "version": 1.1},
-            }
+        }
         meta = {
             "title": "Motion control system parameters",
             "description": "Parameters of the Aerotech A3200 system.",
-            }
+        }
 
         # Create container dictionary
         items = {
             "content.json": content,
             "meta.json": meta,
             "data/controller.json": self.parameters(),
-            }
+        }
 
         # Add program files
         for name, task in self["tasks"]:

@@ -9,10 +9,11 @@
 #
 ##########################################################################
 
-import numpy as np
 import cv2 as cv
-from skimage.filters import threshold_otsu
+import numpy as np
 from scidatacontainer import Container
+from skimage.filters import threshold_otsu
+
 np.seterr(invalid="ignore")
 
 from ..parameter import Parameter
@@ -22,7 +23,6 @@ from ..image import functions as image
 
 # Hard-coded focus status codes
 class FocusStatus(object):
-    
     _status = [
         ("focus", "focus"),
         ("nofocus", "no focus"),
@@ -30,31 +30,29 @@ class FocusStatus(object):
         ("offcenter", "off-center"),
         ("noncircular", "non-circular"),
         ("offset", "offset"),
-        ]
+    ]
 
+    def status(self, value: int):
 
-    def status(self, value:int):
-        
         assert isinstance(value, int)
         assert 0 <= value < len(self._status)
         return self._status[value][1]
-    
-    
+
     def __getattr__(self, key):
-        
+
         assert isinstance(key, str)
         try:
-            value = [v for v,n in self._status].index(key)
+            value = [v for v, n in self._status].index(key)
         except ValueError:
             raise AttributeError(f"Unknown attribute '{key}'!")
         return value
+
 
 focusStatus = FocusStatus()
 
 
 ##########################################################################
 def markFocus(dc, lw=2, **args):
-    
     """ Take focus container object and return a normalized differential
     image with markings. Recognized keyword arguments:
 
@@ -65,7 +63,7 @@ def markFocus(dc, lw=2, **args):
 
     # Radius of center area
     radius = dc["eval/parameter.json"]["centerRadius"]
-    
+
     # Results dictionary
     result = dc["eval/result.json"]
 
@@ -82,8 +80,8 @@ def markFocus(dc, lw=2, **args):
     # Draw center area circle
     if "center" in args and args["center"]:
         r = round(radius)
-        x = round(0.5*(w-1))
-        y = round(0.5*(h-1))
+        x = round(0.5 * (w - 1))
+        y = round(0.5 * (h - 1))
         cv.circle(img, (x, y), r, color, lw)
 
     # Draw contour line
@@ -91,15 +89,15 @@ def markFocus(dc, lw=2, **args):
         if result["focusContour"] is not None:
             contour = np.array(result["focusContour"])
             cv.drawContours(img, [contour], -1, color, lw)
-        
+
     # Draw focus position
     if "focus" in args and args["focus"]:
         if result["focusOffset"] is not None:
             xf, yf = result["focusOffset"]
-            x = round(xf + 0.5*(w-1))
-            y = round(yf + 0.5*(h-1))
-            cv.line(img, (x, 0), (x, w-1), color, lw)
-            cv.line(img, (0, y), (h-1, y), color, lw)
+            x = round(xf + 0.5 * (w - 1))
+            y = round(yf + 0.5 * (h - 1))
+            cv.line(img, (x, 0), (x, w - 1), color, lw)
+            cv.line(img, (0, y), (h - 1, y), color, lw)
 
     # Return image
     return img
@@ -107,7 +105,6 @@ def markFocus(dc, lw=2, **args):
 
 ##########################################################################
 class Focus(Parameter):
-
     """ Focus detector class. After initializing with a camera
     background image, the method detect() may be called with a pair of
     pre- and post-exposure images. """
@@ -124,13 +121,26 @@ class Focus(Parameter):
         "factorContour": 1.0,
         "peakContour": 0.2,
         "minCircularity": 0.85,
-        }
+    }
 
-    _resultkeys = [ "status", "statusString", "diffOffset", "diffMin",
-        "diffMax", "avgBack", "stdBack", "avgCenter", "stdCenter",
-        "avgContrast", "threshold", "thresholdSource", "focusContour",
-        "focusOffset", "focusArea", "circularity" ]
-
+    _resultkeys = [
+        "status",
+        "statusString",
+        "diffOffset",
+        "diffMin",
+        "diffMax",
+        "avgBack",
+        "stdBack",
+        "avgCenter",
+        "stdCenter",
+        "avgContrast",
+        "threshold",
+        "thresholdSource",
+        "focusContour",
+        "focusOffset",
+        "focusArea",
+        "circularity"
+    ]
 
     def __init__(self, system, logger=None, **kwargs):
 
@@ -141,7 +151,7 @@ class Focus(Parameter):
         # Store system object
         self.system = system
         user = self.system.user["key"]
-        
+
         # Initialize parameter class
         args = popargs(kwargs, "focus")
         super().__init__(user, logger, **args)
@@ -156,7 +166,7 @@ class Focus(Parameter):
         # Mask of the center region
         r = self["centerRadius"]
         self.mask = image.circle_mask(shape, r, 0.0, 0.0)
-        
+
         # No result yet
         self.exposure = None
         self.imgPre = None
@@ -165,14 +175,12 @@ class Focus(Parameter):
         self.result = None
         self.log.info("Initialized focus detector.")
 
-        
     def background(self, dz):
 
         """ Eventually move to given relative z position and
         take a background camera image. Find the exposure
         time to get camera images with an average pixel value
         of 127. Return image as image container object. """
-
 
         self.log.info("Take background image.")
 
@@ -182,11 +190,11 @@ class Focus(Parameter):
         # Move to background z position
         fast = self.system["speed"]
         delay = self.system["delay"]
-        self.system.moveabs(fast, delay, z=z0+dz)
+        self.system.moveabs(fast, delay, z=z0 + dz)
 
         # Set exposure time for normalized image
         self.system.optexpose(127)
-            
+
         # Take background image
         img = self.system.getimage()
 
@@ -197,9 +205,8 @@ class Focus(Parameter):
         self.log.info("Got background image.")
         return img
 
-
     def run(self, x, y, z, dz, power, speed, duration):
-        
+
         """ Exposed an axial line or point (dz=0) at given position and
         run focus detection. """
 
@@ -213,19 +220,18 @@ class Focus(Parameter):
         # Expose axial line
         self.imgPre, self.imgPost, self.exposure \
             = self.zline(x, y, z, dz, power, speed, duration)
-        
+
         # Detect focus spot
         self.diff, self.result \
             = self.detect(self.imgPre, self.imgPost)
 
-            
     def zline(self, x, y, z, dz, power, speed, duration):
-        
+
         """ Exposed an axial line or point (dz=0) at given position. """
 
         # Fast positioning speed
         fast = self.system["speed"]
-        
+
         # Delay time after stages reached their destination
         delay = self.system["delay"]
 
@@ -237,8 +243,8 @@ class Focus(Parameter):
 
         # Expose axial line
         if dz != 0.0:
-            v = min(speed, dz/duration)
-            dt = dz/v
+            v = min(speed, dz / duration)
+            dt = dz / v
             self.system.zline(power, fast, v, dz)
             self.system.wait("XYZ", delay)
 
@@ -248,7 +254,7 @@ class Focus(Parameter):
             dz = 0.0
             dt = duration
             self.system.pulse(power, dt)
-            
+
         # Take post exposure camera image
         img1 = self.system.getimage()
 
@@ -265,11 +271,10 @@ class Focus(Parameter):
             "setDuration": duration,
             "speed": v,
             "duration": dt,
-            }
-        
+        }
+
         # Done.
         return img0, img1, exposure
-            
 
     def detect(self, img0, img1):
 
@@ -284,8 +289,7 @@ class Focus(Parameter):
         self._find(diff, result)
         result["statusString"] = focusStatus.status(result["status"])
         return diff, result
-            
-            
+
     def _difference(self, img0, img1, result):
 
         """ Return the difference image of the given pre- and
@@ -302,7 +306,7 @@ class Focus(Parameter):
         # Prepare thresholded registration images
         avg0, std0 = image.stats(img0, self.mask)
         avg1, std1 = image.stats(img1, self.mask)
-        thres = 0.5*(avg0 + self["stdFactor"]*std0 + avg1 + self["stdFactor"]*std1)
+        thres = 0.5 * (avg0 + self["stdFactor"] * std0 + avg1 + self["stdFactor"] * std1)
         img0_reg = np.where(img0 < thres, 0, img0)
         img1_reg = np.where(img1 < thres, 0, img1)
 
@@ -320,7 +324,6 @@ class Focus(Parameter):
         # Done
         return diff
 
-
     def _find(self, diff, result):
 
         """ Focus detection algorithm acting on the given difference
@@ -335,8 +338,8 @@ class Focus(Parameter):
         result["stdBack"] = stdb
         result["avgCenter"] = avgc
         result["stdCenter"] = stdc
-        result["avgContrast"] = avgc/avgb
-        if avgc < avgb + 0.5*stdb and stdc < 1.3*stdb:
+        result["avgContrast"] = avgc / avgb
+        if avgc < avgb + 0.5 * stdb and stdc < 1.3 * stdb:
             result["status"] = focusStatus.nofocus
             return
 
@@ -344,7 +347,7 @@ class Focus(Parameter):
         img = image.blur(diff, self["blurContour"])
         thres0 = threshold_otsu(img, 256)
         avg, std = image.stats(img, self.mask)
-        thres1 = avg + self["factorContour"]*std
+        thres1 = avg + self["factorContour"] * std
         thres1 += self["peakContour"] * (img.max() - thres1)
         if thres0 > thres1:
             thres = thres0
@@ -353,7 +356,7 @@ class Focus(Parameter):
             thres = thres1
             result["thresholdSource"] = "noise"
         result["threshold"] = thres
-        
+
         # Find contours
         contours = image.get_contours(img, thres)
         if len(contours) < 1:
@@ -377,22 +380,22 @@ class Focus(Parameter):
         x, y = image.coordinates(diff.shape)
         weight = np.ma.array(diff, mask=~mask).astype(img.dtype)
         weight /= weight.sum()
-        dx = np.ma.array(weight*x, mask=~mask).sum()
-        dy = np.ma.array(weight*y, mask=~mask).sum()
+        dx = np.ma.array(weight * x, mask=~mask).sum()
+        dy = np.ma.array(weight * y, mask=~mask).sum()
         result["focusOffset"] = dx, dy
-        if dx**2 + dy**2 > self["centerRadius"]**2:
+        if dx ** 2 + dy ** 2 > self["centerRadius"] ** 2:
             result["status"] = focusStatus.offcenter
             return
 
         # Contour area and equivalent circle
         area = int(mask.astype(int).sum())
         result["focusArea"] = area
-        r = round(np.sqrt(area/np.pi))
+        r = round(np.sqrt(area / np.pi))
         cmask = image.circle_mask(diff.shape, r, dx, dy)
 
         # Circularity is relative overlap of contour and circle
         both = int((mask & cmask).astype(int).sum())
-        circularity = both/area
+        circularity = both / area
         result["circularity"] = circularity
         if circularity < self["minCircularity"]:
             result["status"] = focusStatus.noncircular
@@ -401,30 +404,29 @@ class Focus(Parameter):
         # Done
         result["status"] = focusStatus.focus
 
-
     def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """
 
         if self.result is None:
             raise RuntimeError("No results!")
-            
+
         # Collect UUIDs of background, pre- and post-exposure images as
         # references
         refs = {
             "imageBack": self.imgBack.uuid,
             "imagePre": self.imgPre.uuid,
             "imagePost": self.imgPost.uuid,
-            }
+        }
 
         # General metadata
         content = {
             "containerType": {"name": "FocusDetect", "version": 1.1},
-            }
+        }
         meta = {
             "title": "Focus Detection Data",
             "description": "Detection of laser focus spot on microscope image.",
-            }
+        }
 
         # Container dictionary
         items = self.system.items() | {
@@ -438,7 +440,7 @@ class Focus(Parameter):
             "data/focus.json": self.parameters(),
             "meas/image_diff.png": self.diff,
             "meas/result.json": self.result,
-            }
+        }
 
         # Return container object
         config = config or self.config

@@ -12,22 +12,20 @@ from nanofactorysystem.camera import CameraDevice
 
 
 def expose(camera: CameraDevice, t, level) -> float:
-
     """ Get camera image with given exposure time and return
     deviation of mean value from the given value. """
-    
+
     camera["ExposureTime"] = t
     img = camera.getimage()
-    result = img.mean()-level
+    result = img.mean() - level
     return result
 
-    
-def optExpose(camera: CameraDevice, level=127) -> float:
 
+def optExpose(camera: CameraDevice, level=127) -> float:
     """ Find exposure time resulting in a given mean value of the image
     content. """
 
-   # Initialize exposure mode
+    # Initialize exposure mode
     camera["ExposureMode"] = "Timed"
     camera["ExposureAuto"] = 0
     camera["ExposureTime"] = 20000
@@ -53,9 +51,9 @@ def optExpose(camera: CameraDevice, level=127) -> float:
         y1 = expose(camera, t1, level)
     else:
         raise RuntimeError("Optimization failed!")
-    
-    while (t1-t0) > 10.0:
-        t = t0 - y0*(t1-t0)/(y1-y0)
+
+    while (t1 - t0) > 10.0:
+        t = t0 - y0 * (t1 - t0) / (y1 - y0)
         y = expose(camera, t, level)
         if y < 0.0:
             t0 = t
@@ -66,8 +64,8 @@ def optExpose(camera: CameraDevice, level=127) -> float:
         else:
             break
     else:
-        t = 0.5 * (t0 + t1)            
+        t = 0.5 * (t0 + t1)
 
-    # Set and return the optimum exposure time
+        # Set and return the optimum exposure time
     camera["ExposureTime"] = t
     return t

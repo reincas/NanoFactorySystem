@@ -9,8 +9,9 @@
 ##########################################################################
 
 import json
-import numpy as np
+
 import cv2 as cv
+import numpy as np
 import skimage
 
 from ..image import functions as image
@@ -21,7 +22,6 @@ from ..image import functions as image
 ##########################################################################
 
 def readdiff(fn, back):
-
     """ Read image and subtract given background image. """
 
     img = image.read(fn)
@@ -47,7 +47,6 @@ class Canvas(object):
         self.count = np.zeros((self.height, self.width), dtype=int)
         self.images = []
 
-
     def add(self, img, offsetx, offsety):
 
         """ Register given image on the canvas with given offset. """
@@ -66,24 +65,24 @@ class Canvas(object):
         # Partial overlap on the left side of the canvas
         if offsetx < 0:
             dx = -offsetx
-            img = img[:,dx:]
+            img = img[:, dx:]
             offsetx = 0
 
         # Partial overlap on the right side of the canvas
         if offsetx + width > self.width:
             dx = offsetx + width - self.width
-            img = img[:,:-dx]
+            img = img[:, :-dx]
 
         # Partial overlap on the bottom of the canvas
         if offsety < 0:
             dy = -offsety
-            img = img[dy:,:]
+            img = img[dy:, :]
             offsety = 0
 
         # Partial overlap on the top of the canvas
         if offsety + height > self.height:
             dy = offsety + height - self.height
-            img = img[:-dy,:]
+            img = img[:-dy, :]
 
         # Size of the potentially cropped image
         height, width = img.shape
@@ -93,9 +92,8 @@ class Canvas(object):
         x2, y2 = x1 + width, y1 + height
 
         # Register the image on the canvas
-        self.count[y1:y2,x1:x2] += 1
+        self.count[y1:y2, x1:x2] += 1
         self.images.append((img, x1, y1, x2, y2))
-
 
     def get(self):
 
@@ -104,10 +102,10 @@ class Canvas(object):
         canvas = np.zeros((self.height, self.width), dtype=float)
 
         for img, x1, y1, x2, y2 in self.images:
-            canvas[y1:y2,x1:x2] += img
+            canvas[y1:y2, x1:x2] += img
 
         cnt = np.where(self.count == 0, 1, self.count)
-        canvas = np.where(self.count == 0, 0, canvas/cnt)
+        canvas = np.where(self.count == 0, 0, canvas / cnt)
         canvas = canvas.astype(np.uint8)
 
         return canvas
@@ -118,7 +116,6 @@ class Canvas(object):
 ##########################################################################
 
 def _intersect(img1, img2, x, y):
-
     """ Return intersection part of both images based on the given
     offset guess for img2 relative to img1. """
 
@@ -131,32 +128,31 @@ def _intersect(img1, img2, x, y):
 
     # Horizontal slices
     if x < 0:
-        x1 = slice(0, w+x)
+        x1 = slice(0, w + x)
         x2 = slice(-x, w)
     elif x > 0:
         x1 = slice(x, w)
-        x2 = slice(0, w-x)
+        x2 = slice(0, w - x)
     else:
         x1 = slice(None)
         x2 = slice(None)
 
     # Vertical slices
     if y < 0:
-        y1 = slice(0, h+y)
+        y1 = slice(0, h + y)
         y2 = slice(-y, h)
     elif y > 0:
         y1 = slice(y, h)
-        y2 = slice(0, h-y)
+        y2 = slice(0, h - y)
     else:
         y1 = slice(None)
         y2 = slice(None)
 
     # Return partial images
-    return img1[y1,x1], img2[y2,x2]
+    return img1[y1, x1], img2[y2, x2]
 
 
 def _register(img1, img2, dx_raw, dy_raw, resolution=100):
-
     """ Return stitching offset between the two given images. """
 
     # Get intersection part of both images based on the given offset
@@ -170,21 +166,20 @@ def _register(img1, img2, dx_raw, dy_raw, resolution=100):
     # Determine residual stiching offset between the two partial
     # images
     shifts = skimage.registration.phase_cross_correlation(img1, img2,
-                                            upsample_factor=resolution)[0]
+                                                          upsample_factor=resolution)[0]
     dy, dx = shifts
 
     # Much slower alternative for reference
-    #mask1 = img1 >= 16
-    #mask2 = img2 >= 16
-    #dy, dx = skimage.registration.phase_cross_correlation(img1, img2,
+    # mask1 = img1 >= 16
+    # mask2 = img2 >= 16
+    # dy, dx = skimage.registration.phase_cross_correlation(img1, img2,
     #            reference_mask=mask1, moving_mask=mask2, upsample_factor=resolution)
 
     # Return stiching offset
-    return dx_raw+dx, dy_raw+dy
+    return dx_raw + dx, dy_raw + dy
 
 
 def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
-
     """ Determine transformation matrix. """
 
     # Camera resolution in pixel per micrometer
@@ -209,14 +204,14 @@ def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
     a11 = []
     a21 = []
     for j in range(ny):
-        for i in range(nx-1):
+        for i in range(nx - 1):
             img1 = readdiff(fn % (i, j), img_b)
-            img2 = readdiff(fn % (i+1, j), img_b)
+            img2 = readdiff(fn % (i + 1, j), img_b)
             dx, dy = _register(img1, img2, dx_raw, dy_raw)
-            #print(dx, dy)
-            if np.sqrt((dx_raw-dx)**2+(dy_raw-dy)**2) > 20:
+            # print(dx, dy)
+            if np.sqrt((dx_raw - dx) ** 2 + (dy_raw - dy) ** 2) > 20:
                 raise RuntimeError("Shear deviation larger than expected!")
-            #print(i, j, dx, dy)
+            # print(i, j, dx, dy)
             a11.append(dx)
             a21.append(dy)
     a11 = np.mean(a11) / pitch_x
@@ -228,15 +223,15 @@ def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
     dy_raw = round(pitch_y * resolution)
     a12 = []
     a22 = []
-    for j in range(ny-1):
+    for j in range(ny - 1):
         for i in range(nx):
-            img1 = readdiff(fn % (i, ny-1-j), img_b)
-            img2 = readdiff(fn % (i, ny-2-j), img_b)
+            img1 = readdiff(fn % (i, ny - 1 - j), img_b)
+            img2 = readdiff(fn % (i, ny - 2 - j), img_b)
             dx, dy = _register(img1, img2, dx_raw, dy_raw)
-            #print(dx, dy)
-            if np.sqrt((dx_raw-dx)**2+(dy_raw-dy)**2) > 20:
+            # print(dx, dy)
+            if np.sqrt((dx_raw - dx) ** 2 + (dy_raw - dy) ** 2) > 20:
                 raise RuntimeError("Shear deviation larger than expected!")
-            #print(i, j, dx, dy)
+            # print(i, j, dx, dy)
             a12.append(dx)
             a22.append(dy)
     a12 = np.mean(a12) / pitch_y
@@ -256,7 +251,6 @@ def get_shear(resolution, pitch_x, pitch_y, nx, ny, fn, fn_base):
 class Shear(object):
 
     def __init__(self, mat=None, file=None):
-
         """ Store coordinate transformation matrix. """
 
         if file:
@@ -267,33 +261,25 @@ class Shear(object):
         self.a21 = float(mat[2])
         self.a22 = float(mat[3])
 
-
     def __repr__(self):
-
         return f"Shear({self.a11:.8f}, {self.a12:.8f}, {self.a21:.8f}, {self.a22:.8f})"
 
-
     def pixel(self, dx, dy):
-
         """ Convert given stage offset in micrometers to camera
         coordinates in pixels. """
 
-        px = round(self.a11*dx + self.a12*dy)
-        py = round(self.a21*dx + self.a22*dy)
+        px = round(self.a11 * dx + self.a12 * dy)
+        py = round(self.a21 * dx + self.a22 * dy)
         return px, py
 
-
     def save(self, fn):
-
         """ Save coordinate transformation matrix to JSON file. """
 
         data = json.dumps((self.a11, self.a12, self.a21, self.a22))
         with open(fn, "w") as fp:
             fp.write(data)
 
-
-    def load(self, fn:str) -> dict:
-
+    def load(self, fn: str) -> dict:
         """ Restore shear object from given JSON data file. """
 
         with open(fn, "r") as fp:
@@ -306,7 +292,6 @@ class Shear(object):
 ##########################################################################
 
 class ShearCanvas(Canvas):
-
     """ Image stitching canvas with coordinate transformation from stage
     coordinates to camera coordinates. """
 
@@ -333,8 +318,8 @@ class ShearCanvas(Canvas):
         self.shear = shear
 
         # Bounding box of the canvas in camera pixel coordinates
-        x = (self.nx-1) * self.pitch_x
-        y = (self.ny-1) * self.pitch_y
+        x = (self.nx - 1) * self.pitch_x
+        y = (self.ny - 1) * self.pitch_y
         bbox = [(0, 0), (x, 0), (x, y), (0, y)]
         v = [self.shear.pixel(x, y) for x, y in bbox]
         vx = [x for x, y in v]
@@ -349,8 +334,7 @@ class ShearCanvas(Canvas):
         y1 = max(vy)
 
         # Initialize canvas
-        super().__init__(x1-self.x0, y1-self.y0)
-
+        super().__init__(x1 - self.x0, y1 - self.y0)
 
     def add(self, img, i, j):
 
@@ -360,8 +344,7 @@ class ShearCanvas(Canvas):
         dx = i * self.pitch_x
         dy = j * self.pitch_y
         dx, dy = self.shear.pixel(dx, dy)
-        super().add(img, round(dx-self.x0), round(dy-self.y0))
-
+        super().add(img, round(dx - self.x0), round(dy - self.y0))
 
     def add_all(self, fn, img_back=None):
 
@@ -370,6 +353,6 @@ class ShearCanvas(Canvas):
 
         for j in range(self.ny):
             for i in range(self.nx):
-                img = readdiff(fn % (i, self.ny-1-j), img_back)
+                img = readdiff(fn % (i, self.ny - 1 - j), img_back)
                 self.add(img, i, j)
         return self.get()

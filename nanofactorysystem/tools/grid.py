@@ -8,18 +8,17 @@
 #
 ##########################################################################
 
-import numpy as np
 import cv2 as cv
-from scipy.ndimage import maximum_filter
+import numpy as np
 from scidatacontainer import Container
+from scipy.ndimage import maximum_filter
 
-from ..parameter import Parameter
 from ..config import popargs
 from ..image import functions as image
+from ..parameter import Parameter
 
 
 def detectGrid(img, logger, **params):
-
     """ Point grid detector. The algorithm detects the focus spots in the given
     burred difference image. The algorithm estimates a rotated quadratic mesh
     grid on which the spots are located. The algorithm is designed to be
@@ -51,24 +50,24 @@ def detectGrid(img, logger, **params):
     points = []
     for cnt in contours:
         M = cv.moments(cnt)
-        x = int(M['m10']/M['m00'])
-        y = int(M['m01']/M['m00'])
+        x = int(M['m10'] / M['m00'])
+        y = int(M['m01'] / M['m00'])
         points.append((x, y))
     points = np.array(points, dtype=int)
 
     ### DEBUG: Remove and add some points
-    #idx = (3, 16, 27, 33)
-    #points = np.array([points[i,:] for i in range(len(points)) if i not in idx])
-    #points = np.concatenate((points, [[100, 200], [345, 202]]), axis=0)
+    # idx = (3, 16, 27, 33)
+    # points = np.array([points[i,:] for i in range(len(points)) if i not in idx])
+    # points = np.concatenate((points, [[100, 200], [345, 202]]), axis=0)
     ### DEBUG
 
     # Determine the distance vector and its magnitude for every
     # unordered pair of points
     n = len(points)
-    i = np.indices((n, n)).reshape((2,n*n)).T
-    i = i[i[:,0] < i[:,1],:]
-    dist = points[i[:,0],:] - points[i[:,1],:]
-    d = np.sqrt((dist*dist).sum(axis=1))
+    i = np.indices((n, n)).reshape((2, n * n)).T
+    i = i[i[:, 0] < i[:, 1], :]
+    dist = points[i[:, 0], :] - points[i[:, 1], :]
+    d = np.sqrt((dist * dist).sum(axis=1))
 
     # Determine dmean as estimated distance of adjacent points. Group
     # increasing distances by length increments exceeding minstep. The
@@ -89,8 +88,8 @@ def detectGrid(img, logger, **params):
 
     # Get the indices of all point pairs in the determined group. Grid
     # pitch is the mean distance of the point pairs in the group.
-    maxdiff = 1.2*(groups[k].max()-groups[k].min())
-    jmin = np.argwhere(abs(d-dmean) < maxdiff).ravel()
+    maxdiff = 1.2 * (groups[k].max() - groups[k].min())
+    jmin = np.argwhere(abs(d - dmean) < maxdiff).ravel()
     if len(jmin) < 4:
         logger.error("Detection of grid pitch failed!")
         raise RuntimeError("Detection of grid pitch failed!")
@@ -104,24 +103,24 @@ def detectGrid(img, logger, **params):
     # by pi/2. Angles above pi/4 are fliped to pi/2-angle.
     pi2 = np.pi / 2
     pi4 = np.pi / 4
-    dist = dist[jmin,:]
-    angle = np.arctan2(dist[:,1], dist[:,0])
+    dist = dist[jmin, :]
+    angle = np.arctan2(dist[:, 1], dist[:, 0])
     angle = angle % pi2
-    angle = np.where(angle < pi4, angle, pi2-angle)
+    angle = np.where(angle < pi4, angle, pi2 - angle)
 
     # Group the sorted list of rotation angles by increments larger than
     # minangle. The rotation angle of the grid is determined as the mean
     # angle of the largest group. All point pairs outside this group are
     # considered as outliers and being ignored.
     angle = np.sort(angle)
-    groups = np.split(angle, np.where(np.diff(angle) > minangle)[0]+1)
+    groups = np.split(angle, np.where(np.diff(angle) > minangle)[0] + 1)
     k = np.argmax([len(g) for g in groups])
     if len(groups) > 1:
         num = len(angle) - len(groups[k])
         angle = groups[k]
         logger.warn(f"{num:d} outliers ignored (angle)!")
     angle = angle.mean()
-    alpha = angle * 180.0/np.pi
+    alpha = angle * 180.0 / np.pi
     logger.info(f"Grid angle: {alpha:.3f}°")
 
     # Rotate points back to achieve horizontal and vertical grid
@@ -137,8 +136,8 @@ def detectGrid(img, logger, **params):
     # and being ignored.
     offset = []
     for i in range(2):
-        off = np.sort((pt[:,i] / pitch) % 1.0)
-        groups = np.split(off, np.where(np.diff(off) > minoff)[0]+1)
+        off = np.sort((pt[:, i] / pitch) % 1.0)
+        groups = np.split(off, np.where(np.diff(off) > minoff)[0] + 1)
         k = np.argmax([len(g) for g in groups])
         if len(groups) > 1:
             num = len(off) - len(groups[k])
@@ -149,34 +148,33 @@ def detectGrid(img, logger, **params):
     ox, oy = offset
 
     # Get grid indices of all points
-    pt[:,0] = (pt[:,0] - ox) / pitch
-    pt[:,1] = (pt[:,1] - oy) / pitch
+    pt[:, 0] = (pt[:, 0] - ox) / pitch
+    pt[:, 1] = (pt[:, 1] - oy) / pitch
     idx = np.round(pt).astype("int")
 
     # Determine distance of each point from the next grid point. All
     # points with a distance relative to the grid pitch above maxdist
     # are considered as outliers and being removed.
     dx = pt - idx
-    dx = np.sqrt((dx*dx).sum(axis=1))
+    dx = np.sqrt((dx * dx).sum(axis=1))
     i = np.argwhere(dx < maxdist).ravel()
     if len(i) != len(points):
         num = len(points) - len(i)
-        points = points[i,:]
-        idx = idx[i,:]
+        points = points[i, :]
+        idx = idx[i, :]
         logger.warn(f"{num:d} outliers removed (grid)!")
 
     # Determine grid size
-    idx[:,0] -= idx[:,0].min()
-    idx[:,1] -= idx[:,1].min()
-    nx = idx[:,0].max() + 1
-    ny = idx[:,1].max() + 1
+    idx[:, 0] -= idx[:, 0].min()
+    idx[:, 1] -= idx[:, 1].min()
+    nx = idx[:, 0].max() + 1
+    ny = idx[:, 1].max() + 1
 
     # Return points and parameters
     return points, idx, pitch, alpha, nx, ny
 
 
 def getTransform(src, w, h, dst, nx, ny, dx, dy):
-
     """ Map the source coordinates in pixels to a grid in micrometres.
     The positive source coordinates lead to points on a (w, h) image.
     The destination coordinates are relative coordinates of a grid of
@@ -194,12 +192,12 @@ def getTransform(src, w, h, dst, nx, ny, dx, dy):
 
     # Center image coordinates
     src = np.array(src)
-    src[:,0] = src[:,0] - w/2
-    src[:,1] = src[:,1] - h/2
+    src[:, 0] = src[:, 0] - w / 2
+    src[:, 1] = src[:, 1] - h / 2
 
     # Center destination grid coordinates in micrometres
-    x = (dst[:,0] - (nx-1)/2) * dx
-    y = (dst[:,1] - (ny-1)/2) * dy
+    x = (dst[:, 0] - (nx - 1) / 2) * dx
+    y = (dst[:, 1] - (ny - 1) / 2) * dy
     dst = np.stack((x, y), axis=1)
 
     # Get transformation matrix
@@ -207,12 +205,12 @@ def getTransform(src, w, h, dst, nx, ny, dx, dy):
     if not all(inliers):
         num = len(src) - inliers.sum()
         print(f"***** Estimation of transform failed for {num:d} points!")
-        #raise RuntimeError("Estimation of transform failed!")
+        # raise RuntimeError("Estimation of transform failed!")
 
     # Mean derivation of a single point
     x = np.concatenate((src, np.ones((len(src), 1))), 1).T
     dr = np.dot(A, x).T - dst
-    dr = np.sqrt((dr*dr).sum(axis=1))
+    dr = np.sqrt((dr * dr).sum(axis=1))
     dr = dr.sum() / len(dr)
 
     # Return results
@@ -224,7 +222,6 @@ def getTransform(src, w, h, dst, nx, ny, dx, dy):
 ##########################################################################
 
 class Grid(Parameter):
-
     _defaults = {
         "xNum": None,
         "yNum": None,
@@ -244,7 +241,7 @@ class Grid(Parameter):
         "focusInitialNum": 9,
         "focusInitialStep": 2.5,
         "focusMinStep": 0.1,
-        }
+    }
 
     def __init__(self, system, logger=None, **kwargs):
 
@@ -265,7 +262,6 @@ class Grid(Parameter):
         self.imgParams = None
         self.result = None
         self.log.info("Initialized camera calibration.")
-
 
     def _focusValue(self, z, points, size, values):
 
@@ -290,14 +286,13 @@ class Grid(Parameter):
         r = (size - 1) // 2
         simg = np.zeros((size, size), dtype=float)
         for x, y in points:
-            simg += img[y-r:y+r+1,x-r:x+r+1]
+            simg += img[y - r:y + r + 1, x - r:x + r + 1]
         simg /= len(points)
         q = simg.max()
 
         # Return quality factor
         values.append((z, q))
         return q
-
 
     def _autoFocus(self, z0, num, step, minstep, points, size):
 
@@ -309,18 +304,18 @@ class Grid(Parameter):
             z += step
 
         # Maximum focus value
-        imax = np.argmax([v for z,v in values])
+        imax = np.argmax([v for z, v in values])
         zc, vc = values[imax]
 
         # Next lower z position
         if imax > 0:
-            zlo, vlo = values[imax-1]
+            zlo, vlo = values[imax - 1]
         else:
             zlo, vlo = zc - step, None
 
         # Next higher z position
-        if imax < len(values)-1:
-            zhi, vhi = values[imax+1]
+        if imax < len(values) - 1:
+            zhi, vhi = values[imax + 1]
         else:
             zhi, vhi = zc + step, None
 
@@ -341,10 +336,10 @@ class Grid(Parameter):
                 zhi, vhi = zhi + step, None
 
         # Bisectioning algorithm: Find maximum focus value
-        while max(zc-zlo, zhi-zc) > minstep:
+        while max(zc - zlo, zhi - zc) > minstep:
             self.log.info(f"{zlo:.1f}, {vlo:.1f}   {zc:.1f}, {vc:.1f}   {zhi:.1f}, {vhi:.1f}")
 
-            if zc-zlo > zhi-zc:
+            if zc - zlo > zhi - zc:
                 z = (zlo + zc) / 2
                 v = self._focusValue(z, points, size, values)
                 if v <= vc:
@@ -362,11 +357,10 @@ class Grid(Parameter):
                     zc, vc = z, v
 
         # Sort list of all determined focus quality factors
-        i = np.argsort([z for z,v in values])
+        i = np.argsort([z for z, v in values])
         values = np.array(values)[i]
         self.log.info(f"{zlo:.1f}, {vlo:.1f}   {zc:.1f}, {vc:.1f}   {zhi:.1f}, {vhi:.1f}")
         return zc, values
-
 
     def run(self, x0, y0, z0, nx, ny):
 
@@ -376,7 +370,7 @@ class Grid(Parameter):
 
         # Dictionary for results
         self.result = {}
-        
+
         # Store grid parameters
         self["x"] = x0
         self["y"] = y0
@@ -400,8 +394,8 @@ class Grid(Parameter):
         self.log.info(f"Expose {nx:d} x {ny:d} points (pitch: {pitch_um:.1f} µm)")
         for i in range(nx):
             for j in range(ny):
-                x = x0 + pitch_um*(i - (nx-1)/2)
-                y = y0 + pitch_um*(j - (ny-1)/2)
+                x = x0 + pitch_um * (i - (nx - 1) / 2)
+                y = y0 + pitch_um * (j - (ny - 1) / 2)
                 self.system.moveabs(x=x, y=y, z=z0, wait=delay)
                 self.system.pulse(power, dt)
 
@@ -432,7 +426,7 @@ class Grid(Parameter):
         assert isinstance(size, int) and size > 0 and size % 2 == 1
         zmax, values = self._autoFocus(z, num, step, minstep, src, size)
         z_off = zmax - z0
-        values[:,0] -= z0
+        values[:, 0] -= z0
         self.result["focusOffset"] = z_off
         self.result["offsetValues"] = values.tolist()
         self.log.info("Camera grid autofocus finished.")
@@ -449,8 +443,6 @@ class Grid(Parameter):
         self.system.update_pos("grid", A, dr)
         self.result["affineTransformation"] = self.system.transform.P.tolist()
         self.result["spotDerivation"] = dr
-        
-
 
     def container(self, config=None, **kwargs):
 
@@ -462,11 +454,11 @@ class Grid(Parameter):
         # General metadata
         content = {
             "containerType": {"name": "PointGrid", "version": 1.1},
-            }
+        }
         meta = {
             "title": "Camera Calibration",
             "description": "Grid-based camera calibration with auto-focus.",
-            }
+        }
 
         # Package dictionary
         items = {
@@ -478,9 +470,8 @@ class Grid(Parameter):
             "meas/image_pre.png": self.preImg,
             "meas/image_post.png": self.postImg,
             "meas/result.json": self.result,
-            }
+        }
 
         # Return container object
         config = config or self.config
         return Container(items=items, config=config, **kwargs)
-

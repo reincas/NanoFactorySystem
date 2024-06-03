@@ -11,5 +11,5 @@
 ##########################################################################
 
 from .dhmclient import DhmClient
-from .optimage import optImage
 from .motorscan import motorScan
+from .optimage import optImage

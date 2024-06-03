@@ -29,7 +29,9 @@
 ##########################################################################
 
 import ctypes
+
 import numpy as np
+
 try:
     from mvIMPACT import acquire
 except ImportError:
@@ -80,7 +82,7 @@ class Property(object):
     def value(self):
 
         return self.obj.read()
-    
+
     @value.setter
     def value(self, v):
 
@@ -90,21 +92,18 @@ class Property(object):
 class PropertyS(Property):
 
     def __init__(self, device, name):
-
         super().__init__(device, name, acquire.PropertyS())
 
 
 class PropertyInt(Property):
 
     def __init__(self, device, name):
-
         super().__init__(device, name, acquire.PropertyI64())
 
 
 class PropertyFloat(Property):
 
     def __init__(self, device, name):
-
         super().__init__(device, name, acquire.PropertyF())
 
 
@@ -118,7 +117,7 @@ class PropertySelect(Property):
     def value(self):
 
         return self.obj.readS()
-    
+
     @value.setter
     def value(self, v):
 
@@ -134,7 +133,6 @@ class PropertySelect(Property):
 
 ##########################################################################
 class CameraDevice(object):
-
     """ MatrixVision camera device class. This is a convenience wrapper to the
     MatrixVision library. """
 
@@ -156,7 +154,7 @@ class CameraDevice(object):
         "GainSelector": PropertySelect,
         "Gain": PropertyFloat,
         "GainAuto": PropertySelect,
-        }
+    }
 
     def __init__(self, product=None, deviceID=None):
 
@@ -164,7 +162,7 @@ class CameraDevice(object):
 
         # Initialize attributes
         self._property = {}
-        
+
         # Get camera device
         self.opened = False
         self.manager = acquire.DeviceManager()
@@ -188,7 +186,6 @@ class CameraDevice(object):
         # Store a function interface and clear the request and the
         # result queue
         self.fi = acquire.FunctionInterface(self.device)
-        
 
     def close(self):
 
@@ -196,7 +193,6 @@ class CameraDevice(object):
 
         self.device.close()
         self._property = {}
-
 
     def __str__(self):
 
@@ -210,12 +206,10 @@ class CameraDevice(object):
             result = "Camera closed."
         return result
 
-
     def keys(self):
-        
+
         return list(self._properties.keys())
-    
-    
+
     def __setitem__(self, key, value):
 
         if key in self._property:
@@ -231,7 +225,6 @@ class CameraDevice(object):
             return
 
         raise KeyError(f"Unknown item {key}!")
-        
 
     def __getitem__(self, key):
 
@@ -249,7 +242,6 @@ class CameraDevice(object):
 
         raise KeyError(f"Unknown item {key}!")
 
-
     def property(self, key):
 
         if key in self._property:
@@ -261,7 +253,6 @@ class CameraDevice(object):
 
         raise KeyError(f"Unknown item {key}!")
 
-        
     def getimage(self) -> np.ndarray:
 
         """ Grab and return a camera image. """
@@ -272,8 +263,8 @@ class CameraDevice(object):
         self.fi.imageRequestSingle()
 
         # Get result number from the result queue
-        timeout = max(50, round(2000*self["ExposureTime"]))
-        if np.log(timeout)/np.log(2) >= 32.0:
+        timeout = max(50, round(2000 * self["ExposureTime"]))
+        if np.log(timeout) / np.log(2) >= 32.0:
             raise RuntimeError("Timeout must be a 32 bit integer!")
         reqno = self.fi.imageRequestWaitFor(timeout)
         if self.fi.isRequestNrValid(reqno):
