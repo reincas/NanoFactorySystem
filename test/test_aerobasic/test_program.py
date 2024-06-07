@@ -49,6 +49,7 @@ def _write_plot(path: Path):
     try:
         movements = read_file(path)
         fig = plot_movements(movements)
+        fig.tight_layout()
         fig.savefig(path.with_suffix(".png"))
     except:
         print(f"Failed to create plot for {path}!")

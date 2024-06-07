@@ -31,7 +31,6 @@ class Camera(Parameter):
     def __init__(self, user, objective, logger=None, **kwargs):
 
         """ Initialize the camera. """
-
         # Not open now
         self.opened = False
 

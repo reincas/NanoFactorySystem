@@ -15,7 +15,7 @@ import bisect
 import logging
 
 import numpy as np
-from offaxisholo.reconstruct import locateOrder
+# from offaxisholo.reconstruct import locateOrder
 
 
 class Contrast(object):

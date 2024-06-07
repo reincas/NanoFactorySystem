@@ -32,6 +32,9 @@ class Point2D:
     def as_dict(self) -> Coordinate:
         return dataclasses.asdict(self)
 
+    def as_tuple(self):
+        return dataclasses.astuple(self)
+
     def rotate2D(self, rotation_rad:float) -> "Point2D":
         x_new = self.X * math.cos(rotation_rad) - self.Y * math.sin(rotation_rad)
         y_new = self.X * math.sin(rotation_rad) + self.Y * math.cos(rotation_rad)

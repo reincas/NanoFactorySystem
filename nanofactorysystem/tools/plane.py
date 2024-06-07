@@ -9,6 +9,7 @@
 #
 ##########################################################################
 from functools import cached_property
+from typing import Any
 
 import numpy as np
 from scidatacontainer import Container
@@ -155,7 +156,7 @@ class Plane(Parameter):
         self.zup = float(zup)
 
         # No results yet
-        self.steps = []
+        self.steps: list[dict[str, Any]] = []
         self.log.info("Initialized plane detector.")
 
     def run(self, x, y, path=None, home=False):
@@ -201,7 +202,7 @@ class Plane(Parameter):
             delay = self.system["delay"]
             self.system.moveabs(wait=delay, x=x0, y=y0, z=z0)
 
-    def _pop_results(self):
+    def _pop_results(self) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
 
         steps = list(self.steps)
         points = [[s["x"], s["y"], s["zLower"], s["zUpper"]] for s in steps]
@@ -231,7 +232,7 @@ class Plane(Parameter):
         self.steps = []
         return result, steps
 
-    def container(self, config=None, **kwargs):
+    def container(self, config=None, **kwargs) -> Container:
 
         """ Return results as SciDataContainer. """
 

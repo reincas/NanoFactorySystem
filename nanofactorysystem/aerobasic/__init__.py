@@ -172,6 +172,39 @@ class AeroBasicAPI(abc.ABC):
             cmd += f" E{E}"
 
         return self.send(cmd)
+    def LINEAR(
+            self,
+            X: Optional[float] = None,
+            Y: Optional[float] = None,
+            Z: Optional[float] = None,
+            A: Optional[float] = None,
+            B: Optional[float] = None,
+            F: Optional[float] = None,
+            E: Optional[float] = None
+    ):
+        if F is not None and E is not None:
+            raise ValueError(f"Cannot specify dependent and independent velcoity at same time ({E=}, {F=})")
+
+        cmd = "LINEAR"
+        # Axes
+        if X is not None:
+            cmd += f" X{X}"
+        if Y is not None:
+            cmd += f" Y{Y}"
+        if Z is not None:
+            cmd += f" Z{Z}"
+        if A is not None:
+            cmd += f" A{A}"
+        if B is not None:
+            cmd += f" B{B}"
+
+        # Velocities
+        if F is not None:
+            cmd += f" F{F}"
+        if E is not None:
+            cmd += f" E{E}"
+
+        return self.send(cmd)
 
     @staticmethod
     def _CW_CCW(

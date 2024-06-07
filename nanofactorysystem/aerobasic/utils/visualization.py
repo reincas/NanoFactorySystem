@@ -22,7 +22,8 @@ class Movement(abc.ABC):
     def __init__(self, *, laser_on: bool):
         self.laser_on = laser_on
 
-    def get_ax(self, ax: Optional[plt.Axes]) -> plt.Axes:
+    @staticmethod
+    def get_ax(ax: Optional[plt.Axes]) -> plt.Axes:
         if ax is None:
             return plt.gca()
         return ax
@@ -30,6 +31,19 @@ class Movement(abc.ABC):
     @abc.abstractmethod
     def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
         pass
+
+
+class PointMovement(Movement):
+    def __init__(self, location: Point3D, *, laser_on: bool):
+        super().__init__(laser_on=laser_on)
+        self.location = location
+
+    def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
+        ax = self.get_ax(ax)
+        if self.laser_on:
+            ax.scatter(*self.location.as_tuple(), **LASER_ON_PLOT_STYLE, **plot_kwargs)
+        else:
+            ax.scatter(*self.location.as_tuple(), **LASER_OFF_PLOT_STYLE, **plot_kwargs)
 
 
 class LinearMovement(Movement):
@@ -54,19 +68,18 @@ class LinearMovement(Movement):
 class ClockwiseMovement(Movement):
     def __init__(self, center: Point3D, start: Point3D, end: Point3D, *, laser_on: bool):
         super().__init__(laser_on=laser_on)
-        self.center = center
+        self.relative_center = center
         self.start = start
         self.end = end
 
     def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
         ax = self.get_ax(ax)
 
-        radius = np.sqrt((self.start.X - self.center.X) ** 2 + (self.start.Y - self.center.Y) ** 2)
-        print(radius)
+        radius = np.sqrt((self.relative_center.X) ** 2 + (self.relative_center.Y) ** 2)
 
         # Compute angles for start and end points relative to the center
-        start_angle = np.arctan2(self.start.Y - self.center.Y, self.start.X - self.center.X)
-        end_angle = np.arctan2(self.end.Y - self.center.Y, self.end.X - self.center.X)
+        start_angle = np.arctan2(self.start.Y + self.relative_center.Y, self.start.X + self.relative_center.X)
+        end_angle = np.arctan2(self.end.Y + self.relative_center.Y, self.end.X + self.relative_center.X)
 
         # Ensure that the angles are in a clockwise direction
         if start_angle <= end_angle:
@@ -74,8 +87,8 @@ class ClockwiseMovement(Movement):
 
         # Generate points on the arc
         theta = np.linspace(start_angle, end_angle, 100)
-        arc_x = self.center.X + radius * np.cos(theta)
-        arc_y = self.center.Y + radius * np.sin(theta)
+        arc_x = self.start.X + self.relative_center.X + radius * np.cos(theta)
+        arc_y = self.start.Y + self.relative_center.Y + radius * np.sin(theta)
         arc_z = np.linspace(self.start.Z, self.end.Z, len(arc_x))
 
         # Plot the arc
@@ -88,7 +101,7 @@ class ClockwiseMovement(Movement):
 class CounterclockwiseMovement(Movement):
     def __init__(self, center: Point3D, start: Point3D, end: Point3D, *, laser_on: bool):
         super().__init__(laser_on=laser_on)
-        self.center = center
+        self.center = center + start
         self.start = start
         self.end = end
 
@@ -120,15 +133,19 @@ class CounterclockwiseMovement(Movement):
 
 def read_file(path) -> list[Movement]:
     path = Path(path)
+    return read_text(path.read_text())
+
+
+def read_text(text: str) -> list[Movement]:
     movements = []
 
     laser_on = False
     x, y, z = 0, 0, 0
-    for line in path.read_text().split("\n"):
+    for line in text.split("\n"):
         # TODO: Laser power auslesen
         new_x, new_y, new_z = x, y, z
         if line.startswith("'"):
-            # Skip comment
+            # Skip comments
             continue
         elif "GALVO LASEROVERRIDE A ON" in line:
             laser_on = True
@@ -157,7 +174,7 @@ def read_file(path) -> list[Movement]:
         elif line.startswith("CW") or line.startswith("CCW"):
             op, *args = line.strip().split(" ")
             new_x, new_y, new_z = x, y, z
-            circle_center = Point3D(x, y, z)
+            circle_center = Point3D(0, 0, 0)
             axes = []
             for arg in args:
                 pos = float(arg[1:])
@@ -181,7 +198,7 @@ def read_file(path) -> list[Movement]:
                 elif ax == "F":
                     continue  # Speed doesnt matter atm
                 elif ax == "R":
-                    warnings.warn("Circle with radius not yet implemented")
+                    warnings.warn("Circle with radius not yet implemented and are skipped")
                 else:
                     raise RuntimeError(f"Did not recognize axis: {ax}")
             if op == "CW":
@@ -204,6 +221,11 @@ def read_file(path) -> list[Movement]:
                 )
             else:
                 raise RuntimeError("Something bad happened...")
+        elif line.startswith("DWELL"):
+            if laser_on:
+                movements.append(
+                    PointMovement(Point3D(x, y, z), laser_on=laser_on)
+                )
         x, y, z = new_x, new_y, new_z
 
     return movements

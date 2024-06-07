@@ -1,4 +1,6 @@
+import datetime
 import warnings
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -28,7 +30,7 @@ class AeroBasicProgram(AeroBasicAPI):
         self.variable_names = []
 
     def __repr__(self):
-        return f"AeroBasicProgram({len(self.lines)} lines. {len(self.variable_names)} variables)"
+        return f"{self.__class__.__name__}({len(self.lines)} lines. {len(self.variable_names)} variables)"
 
     def __str__(self) -> str:
         return self.to_text()
@@ -66,6 +68,14 @@ class AeroBasicProgram(AeroBasicAPI):
         elif isinstance(program, AeroBasicProgram):
             self.add_programm(program)
 
+    @contextmanager
+    def critical_section(self):
+        self.send("CRITICAL START")
+        try:
+            yield self
+        finally:
+            self.send("CRITICAL END")
+
     def send(self, command: str) -> str:
         if command.endswith("\n"):
             command = command[:-1]
@@ -75,9 +85,13 @@ class AeroBasicProgram(AeroBasicAPI):
     def add_programm(self, program: "AeroBasicProgram"):
         self.lines += program.lines
 
-    def to_text(self, *, with_variables=True, with_ending=True, compact=False) -> str:
+    def to_text(self, *, with_variables=True, with_ending=True, compact=False, add_timestamp=True) -> str:
         # TODO(dwoiwode): Make compact even more compact by multiple variable declarations per line
         s = ""
+        if add_timestamp:
+            s += f"' Created on {datetime.datetime.now():%Y-%m-%d %H:%M:%S.%f} by ({self.__class__.__name__})\n"
+            # TODO(dwoiwode): More metadata?
+
         if with_variables and len(self.variable_names) > 0:
             if not compact:
                 s += "' Declare variables"
@@ -93,7 +107,7 @@ class AeroBasicProgram(AeroBasicAPI):
         return s
 
     def write(self, file: Path | str, *, compact=False) -> str:
-        s = self.to_text(compact=compact)
+        s = self.to_text(compact=compact, add_timestamp=True)
         Path(file).write_text(s)
         return s
 

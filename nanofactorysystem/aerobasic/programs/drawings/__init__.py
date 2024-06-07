@@ -1,12 +1,12 @@
 import abc
 from typing import Optional
 
-from nanofactorysystem.aerobasic import SingleAxis, BezierMode, Axis
+from nanofactorysystem.aerobasic import SingleAxis, BezierMode, Axis, GalvoLaserOverrideMode
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
-from nanofactorysystem.devices.coordinate_system import CoordinateSystem
+from nanofactorysystem.devices.coordinate_system import CoordinateSystem, Point2D, Point3D
 
 
-class DrawableAeroBasicProgram(AeroBasicProgram, abc.ABC):
+class DrawableAeroBasicProgram(AeroBasicProgram):
     def __init__(self, coordinate_system: CoordinateSystem):
         super().__init__()
         self.coordinate_system = coordinate_system
@@ -110,9 +110,11 @@ class DrawableAeroBasicProgram(AeroBasicProgram, abc.ABC):
 
         # Convert axis center
         if axis1_center is not None:
-            axis1_center = self.coordinate_system.convert({axis1.parameter_name: axis1_center})[axis1_mapped]
+            # axis1_center = self.coordinate_system.convert({axis1.parameter_name: axis1_center})[axis1_mapped]
+            axis1_center = axis1_center * self.coordinate_system.unit.value
         if axis2_center is not None:
-            axis2_center = self.coordinate_system.convert({axis2.parameter_name: axis2_center})[axis2_mapped]
+            # axis2_center = self.coordinate_system.convert({axis2.parameter_name: axis2_center})[axis2_mapped]
+            axis2_center = axis2_center * self.coordinate_system.unit.value
 
         # Convert velocity
         if velocity is not None:
@@ -145,3 +147,46 @@ class DrawableAeroBasicProgram(AeroBasicProgram, abc.ABC):
             tolerance: Optional[float]
     ):
         raise NotImplemented("To be done")
+
+
+class DrawableObject(abc.ABC):
+    def __init__(self):
+        pass
+
+    def __repr__(self):
+        return f"{self.__class__.__name__} at {self.center_point}"
+
+    @property
+    @abc.abstractmethod
+    def center_point(self) -> Point2D:
+        pass
+
+    @abc.abstractmethod
+    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+        pass
+
+
+class DrawablePoint(DrawableObject):
+    def __init__(
+            self,
+            center: Point2D | Point3D,
+            duration: float = 0.1
+    ):
+        """
+        duration in seconds
+        """
+        super().__init__()
+        self.center = center
+        self.duration = duration
+
+    @property
+    def center_point(self) -> Point2D:
+        return self.center
+
+    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+        program = DrawableAeroBasicProgram(coordinate_system)
+        program.LINEAR(**self.center.as_dict())
+        program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.ON)
+        program.DWELL(self.duration)
+        program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.OFF)
+        return program

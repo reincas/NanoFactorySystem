@@ -12,6 +12,7 @@
 ##########################################################################
 
 import json
+import warnings
 from pathlib import Path
 from typing import Any
 
@@ -67,9 +68,13 @@ class Config(object):
         if path is None:
             path = Config._path
 
-        with open(path, "rb") as fp:
-            config = fp.read()
-        self.config = json.loads(config)
+        try:
+            with open(path, "rb") as fp:
+                config = fp.read()
+            self.config = json.loads(config)
+        except FileNotFoundError:
+            warnings.warn(f"Config file not found on system at {path}")
+            self.config = {}
 
     def keys(self):
 

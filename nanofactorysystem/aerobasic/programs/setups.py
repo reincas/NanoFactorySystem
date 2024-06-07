@@ -13,7 +13,6 @@ class DefaultSetup(AeroBasicProgram):
         self.send("PRIMARY")
         self.send("SECONDS")
         self.send(programming_mode.value)  # ABSOLUTE vs INCREMENTAL
-        self.ABSOLUTE()
         self.VELOCITY(velocity_mode)
         self.send("IFOV OFF")
 

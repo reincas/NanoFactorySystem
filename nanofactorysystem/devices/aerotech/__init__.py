@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Optional
 
 from nanofactorysystem.aerobasic import AxisStatusDataItem, SingleAxis, SystemStatusDataItem, WaitMode, Axis
-from nanofactorysystem.aerobasic.ascii import AerotechAsciiInterface
+from nanofactorysystem.aerobasic.ascii import AerotechAsciiInterface, DummyAsciiInterface
 from nanofactorysystem.aerobasic.constants import AxisStatus
 from nanofactorysystem.aerobasic.constants.tasks import ProgrammingMode, TaskState, TaskStatusDataItem, TaskMode, TaskStatus, \
     VelocityMode
@@ -20,8 +20,11 @@ from nanofactorysystem.devices.coordinate_system import Point3D
 class Aerotech3200:
     MAX_NUMBER_OF_TASKS = 32
 
-    def __init__(self, hostname: str = "127.0.0.1", port: int = 8000):
-        self.api = AerotechAsciiInterface(hostname=hostname, port=port)
+    def __init__(self, hostname: str = "127.0.0.1", port: int = 8000, *, dummy=False):
+        if dummy:
+            self.api = DummyAsciiInterface()
+        else:
+            self.api = AerotechAsciiInterface(hostname=hostname, port=port)
 
         # Own state
         self.programming_mode: Optional[ProgrammingMode] = None

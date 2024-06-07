@@ -24,10 +24,9 @@ class TestCorners(AeroBasicProgramTest):
             height=7,
             hatch_size=0.5,
             layer_height=0.75,
-            coordinate_system=coordinate_system,
             F=2000
         )
-        self.program(corner)
+        self.program(corner.draw_on(coordinate_system))
 
     def test_diagonal_corner(self):
         self.program(DefaultSetup())
@@ -47,11 +46,10 @@ class TestCorners(AeroBasicProgramTest):
             height=7,
             hatch_size=0.5,
             layer_height=0.75,
-            coordinate_system=coordinate_system,
             rotation_degree=45,
             F=2000
         )
-        self.program(corner)
+        self.program(corner.draw_on(coordinate_system))
 
     def test_all_markers(self):
         # Setup
@@ -75,10 +73,9 @@ class TestCorners(AeroBasicProgramTest):
             height=7,
             hatch_size=0.5,
             layer_height=0.75,
-            coordinate_system=coordinate_system,
             F=2000
         )
-        self.program(markers)
+        self.program(markers.draw_on(coordinate_system))
 
     def test_all_markers_optimized(self):
         self.test_all_markers()
