@@ -68,6 +68,10 @@ class AeroBasicProgram(AeroBasicAPI):
         elif isinstance(program, AeroBasicProgram):
             self.add_programm(program)
 
+    @property
+    def n_lines(self):
+        return len(self.lines)
+
     @contextmanager
     def critical_section(self):
         self.send("CRITICAL START")

@@ -440,43 +440,52 @@ class Rectangle3D(DrawableObject):
             self,
             slicing_direction: int,
             *,
-            starting_point: Point2D | Point3D = None
+            starting_point: Optional[Point2D | Point3D] = None
     ) -> list:
         """
         Converts a Rectangle (defined by starting Point and width/ height) to a list of points.
 
-        slicing direction 0 = horizontal
-        slicing direction 1 = vertical
+        slicing direction 0 = horizontal - x-direction
+        slicing direction 1 = vertical - y-direction
         """
+        # Todo für schräge rectangle usw überarbeiten
+        if not isinstance(self.bottom_left, Point3D):
+            self.bottom_left = Point3D(X=self.bottom_left.X, Y=self.bottom_left.Y, Z=0)
+
         point_list = []  # for saving the points - startpoint and endpoint in each row of the list
-        if slicing_direction == 0:  # horizontal - length = a
-            a = self.length
+
+        if slicing_direction == 0:  # x-direction
+            a = np.array((self.length, 0, 0))
+            b = np.array((0, self.width, 0))
+            N = int(np.ceil(b[1] / self.hatch_size))  # number of hatching lines
         elif slicing_direction == 1:  # vertical - width = a
-            a = self.width
+            a = np.array((0, self.width, 0))
+            b = np.array((self.length, 0, 0))
+            N = int(np.ceil(b[0] / self.hatch_size))  # number of hatching lines
+            # a *= -1
+            # b *= -1
         else:
             raise NotImplementedError(
                 f"No Implementation for slicing direction {slicing_direction}. Please use slicing direction 0 for "
                 f"horizontal slicing and slicing direction 1 for vertical slicing.")
 
-        N = np.ceil(a / self.hatch_size)  # number of hatching lines
-        hatch_size_opt = a / N  # optimised hatch size
-        i = 0  # running variable
+        hatch_size_opt = b / N  # optimised hatch size
 
-        for i in range(N):
+        for i in range(N + 1):
             if not point_list:
-                if starting_point is None or starting_point == 0:
-                    point_start = self.bottom_left + i * hatch_size_opt
+                if starting_point is None:
+                    point_start = self.bottom_left
                 else:
-                    point_start = starting_point + i * hatch_size_opt
+                    point_start = starting_point
             else:
-                point_start = point_list[-1][1] + i * hatch_size_opt
-            point_end = point_start + a * (-1) ** (i % 2)
+                point_start = point_list[-1][1] + Point3D(*hatch_size_opt)
+
+            adding = a * (-1) ** (i % 2)
+            point_end = point_start + Point3D(*adding)
 
             point_list.append((point_start, point_end))
         return point_list
 
-    # ToDo Kontrollieren der Punkte, damit die auch dreidimensional immer sind.
-    # ToDO dazu auf jeden fall kontrollieren, dass die hatching size und die layer height usw auch vektoriell addiert werden
     def slicing_layers(self) -> list:
         N = np.ceil(self.height / self.layer_height)  # number of layers for slicing
         layer_height_opt = self.height / N  # optimised layer height
@@ -487,81 +496,37 @@ class Rectangle3D(DrawableObject):
         for i in range(N):
             layer = self.calc_points_layer(i % 2, starting_point=a)
             points_structure.append(layer)
-            a = points_structure[-1][-1][1] + i * self.layer_height
-
+            a = points_structure[-1][-1][1] + i * layer_height_opt
         return points_structure
 
-    # def adding_acceleration(self, structure_points: list):
-    #  all_points = []
-    # for layer in structure_points:
-    #    for line in layer:
-    #       # direction vector with starting and endpoint
-    #      # designing length of acceleration part
-    #     # adding acceleration points before and after each line
-    #    pass
-    #      # saving the "new" point structure
-    #     pass
-    # return all_points
-
-    def adding_acceleration(self, structure_points: list):
-        all_points = []
-        # ToDo: change description of this method
-        for layer in structure_points:
-            new_layer = []
-            for line in layer:
-                # Assuming each line has two points: [start_point, end_point]
-                start_point = np.array(line[0])
-                end_point = np.array(line[1])
-
-                # Calculate the direction vector
-                direction_vector = end_point - start_point
-
-                # Normalize the direction vector
-                norm_direction_vector = direction_vector / np.linalg.norm(direction_vector)
-
-                # Calculate the length of the acceleration part (assume a specific length, e.g., 1 unit)
-                # TODO: calculate length in dependence on acceleration
-                length = 1.0
-
-                # Calculate the new points
-                new_start_point = start_point - norm_direction_vector * length
-                new_end_point = end_point + norm_direction_vector * length
-
-                # Add the new points to the new layer
-                new_layer.append(
-                    [new_start_point.tolist(), start_point.tolist(), end_point.tolist(), new_end_point.tolist()])
-
-            # Save the "new" point structure
-            all_points.append(new_layer)
-
-        return all_points
-
-    def points_to_cmds(self,
-                       program: DrawableAeroBasicProgram,
-                       structure_points: list
-                       ):
-        for layer in structure_points:
-            for line in layer:
-                point_start_accel = line[0]
-                point_start_laser = line[1]
-                point_end_laser = line[2]
-                point_end_accel = line[3]
-
-                program.LINEAR(X=point_start_accel[0], Y=point_start_accel[1], Z=point_start_accel[2])
-                program.LINEAR(X=point_start_laser[0], Y=point_start_laser[1], Z=point_start_laser[2])
-                program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.ON)
-                program.LINEAR(X=point_end_laser[0], Y=point_end_laser[1], Z=point_end_laser[2])
-                program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.OFF)
-                program.LINEAR(X=point_end_accel[0], Y=point_end_accel[1], Z=point_end_accel[2])
-        return program
-
     def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
-        raise NotImplementedError("TODO: Implement further")
         program = DrawableAeroBasicProgram(coordinate_system)
-        list_of_points = self.single_layer()
-        list_of_points = self.adding_acceleration(list_of_points)
+        N = int(np.ceil(self.height / self.layer_height))  # number of layers for slicing
+        layer_height_opt = self.height / N  # optimised layer height
+        i = 0  # running variable
+        a = None  # starting point for slicing layer
+        points_structure = []  # list of all points layer by layer
 
-        program = self.points_to_cmds(program, list_of_points)
+        for i in range(N):  # N layer for whole structure
+            layer = self.calc_points_layer(i % 2, starting_point=a)
+            points_structure.append(layer)
+            for lines in layer:  # 2 points per layer
+                starting_point = lines[0]
+                end_point = lines[1]
+
+                if i % 2 == 0:  # x-direction of slicing
+                    printing_line = [[starting_point.X, end_point.X]]
+                    Lines = XLines(y=starting_point.Y, z=starting_point.Z, lines=printing_line,
+                                   velocity=5, acceleration=2000)  # vel = 5mm/s acc = 2000 mm/s
+                else:  # y-direction of slicing
+                    printing_line = [[starting_point.Y, end_point.Y]]
+                    Lines = YLines(x=starting_point.X, z=starting_point.Z, lines=printing_line,
+                                   velocity=5, acceleration=2000)  # vel = 5mm/s acc = 2000 mm/s
+                prog = Lines.draw_on(coordinate_system=coordinate_system)
+                program.add_programm(prog)
+
+            a = self.bottom_left + layer_height_opt * i
+
         return program
 
 

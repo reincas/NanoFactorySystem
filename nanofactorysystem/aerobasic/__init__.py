@@ -35,6 +35,10 @@ class AeroBasicAPI(abc.ABC):
         # Acknowledge all errors and accept them
         return self.send("ACKNOWLEDGEALL")
 
+    def ERROR_DECODE(self, error_code:int,error_location:int):
+        # Acknowledge all errors and accept them
+        return self.send(f"ERRORDECODE {error_code:d}, {error_location:d}")
+
     def ABSOLUTE(self):
         # Set programming mode to "ABSOLUTE"
         return self.send("ABSOLUTE")
@@ -150,59 +154,26 @@ class AeroBasicAPI(abc.ABC):
             E: Optional[float] = None
     ):
         if F is not None and E is not None:
-            raise ValueError(f"Cannot specify dependent and independent velcoity at same time ({E=}, {F=})")
+            raise ValueError(f"Cannot specify dependent and independent velocity at same time ({E=}, {F=})")
 
         cmd = "LINEAR"
         # Axes
         if X is not None:
-            cmd += f" X{X}"
+            cmd += f" X{X:.10f}"
         if Y is not None:
-            cmd += f" Y{Y}"
+            cmd += f" Y{Y:.10f}"
         if Z is not None:
-            cmd += f" Z{Z}"
+            cmd += f" Z{Z:.10f}"
         if A is not None:
-            cmd += f" A{A}"
+            cmd += f" A{A:.10f}"
         if B is not None:
-            cmd += f" B{B}"
+            cmd += f" B{B:.10f}"
 
         # Velocities
         if F is not None:
-            cmd += f" F{F}"
+            cmd += f" F{F:f}"
         if E is not None:
-            cmd += f" E{E}"
-
-        return self.send(cmd)
-    def LINEAR(
-            self,
-            X: Optional[float] = None,
-            Y: Optional[float] = None,
-            Z: Optional[float] = None,
-            A: Optional[float] = None,
-            B: Optional[float] = None,
-            F: Optional[float] = None,
-            E: Optional[float] = None
-    ):
-        if F is not None and E is not None:
-            raise ValueError(f"Cannot specify dependent and independent velcoity at same time ({E=}, {F=})")
-
-        cmd = "LINEAR"
-        # Axes
-        if X is not None:
-            cmd += f" X{X}"
-        if Y is not None:
-            cmd += f" Y{Y}"
-        if Z is not None:
-            cmd += f" Z{Z}"
-        if A is not None:
-            cmd += f" A{A}"
-        if B is not None:
-            cmd += f" B{B}"
-
-        # Velocities
-        if F is not None:
-            cmd += f" F{F}"
-        if E is not None:
-            cmd += f" E{E}"
+            cmd += f" E{E:f}"
 
         return self.send(cmd)
 
@@ -220,16 +191,16 @@ class AeroBasicAPI(abc.ABC):
         # Axes
         AeroBasicAPI._assert_is_single_axis(axis1, name="axis1")
         AeroBasicAPI._assert_is_single_axis(axis2, name="axis2")
-        cmd = f"{axis1.parameter_name}{axis1_endpoint} {axis2.parameter_name}{axis2_endpoint}"
+        cmd = f"{axis1.parameter_name}{axis1_endpoint:.10f} {axis2.parameter_name}{axis2_endpoint:.10f}"
 
         # Need to have either radius OR (axis1_center and axis2_center)
         if (radius is None) == (axis1_center is None and axis2_center is None):
             raise ValueError(f"Invalid combination of arguments. Got {radius=}, {axis1_center=}, {axis2_center=}")
 
         if radius is not None:
-            cmd += f" R{radius}"
+            cmd += f" R{radius:.10f}"
         else:
-            cmd += f" I{axis1_center} J{axis2_center}"
+            cmd += f" I{axis1_center:.10f} J{axis2_center:.10f}"
 
         # Velocity
         if velocity is not None:

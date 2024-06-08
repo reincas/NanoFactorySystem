@@ -52,12 +52,13 @@ def _line_circle_intersection(
         - (x, y) first intersection
         - (x, y) second intersection
     """
+    EPS = 1e-9
     x0 = -a * c / (a * a + b * b)
     y0 = -b * c / (a * a + b * b)
 
-    if c * c > r * r * (a * a + b * b):
+    if c * c > r * r * (a * a + b * b) + EPS:
         return 0, None, None
-    elif abs(c * c - r * r * (a * a + b * b)) < 0:
+    elif abs(c * c - r * r * (a * a + b * b)) < EPS:
         return 1, (x0, y0), None
     else:
         d = r * r - c * c / (a * a + b * b)
@@ -86,7 +87,7 @@ def line_circle_intersection(
     y2 -= circle_center[1]
 
     a = y2 - y1
-    b = x1 - x2
+    b = x2 - x1
     c = x2 * y1 - x1 * y2
 
     n, intersection_1, intersection_2 = _line_circle_intersection(radius, a, b, c)

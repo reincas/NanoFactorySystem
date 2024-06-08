@@ -165,6 +165,26 @@ class DrawableObject(abc.ABC):
     def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
         pass
 
+    def _init_args(self):
+        code = self.__init__.__code__
+        start_idx = self.__init__.__code__.co_names.index("__init__") + 1
+        kwargs = {}
+        for name in code.co_names[start_idx:start_idx + code.co_argcount]:
+            attr = getattr(self, name, "[NOT FOUND]")
+            if attr == "[NOT FOUND]":
+                continue
+            if hasattr(attr, "to_json"):
+                attr = attr.to_json()
+            kwargs[name] = attr
+        return kwargs
+
+    def to_json(self):
+        return {
+            "__class__": self.__class__.__name__,
+            "center_point": self.center_point.as_tuple(),
+            "__init__": self._init_args()
+        }
+
 
 class DrawablePoint(DrawableObject):
     def __init__(

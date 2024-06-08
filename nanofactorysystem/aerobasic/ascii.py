@@ -152,7 +152,7 @@ class AerotechAsciiInterface(AeroBasicAPI):
 
         # Error handling -> Invalid Syntax
         if cmd_resp.return_code == ReturnCode.INVALID:
-            raise AerotechError(f"Command '{command}' has an invalid syntax!")
+            raise AerotechError(f"Command '{command.strip()}' has an invalid syntax!")
 
         # Error handling -> Code execution failed
         if cmd_resp.return_code == ReturnCode.FAULT:

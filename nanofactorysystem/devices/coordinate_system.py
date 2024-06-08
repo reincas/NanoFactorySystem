@@ -2,7 +2,7 @@ import abc
 import dataclasses
 import math
 from dataclasses import dataclass
-from enum import Enum, IntEnum
+from enum import Enum
 from functools import cached_property
 from typing import TypedDict, Callable, Iterable
 
@@ -29,13 +29,22 @@ class Point2D:
             return Point2D(X=self.X + other.X, Y=self.Y + other.Y)
         return Point2D(X=self.X + other, Y=self.Y + other)
 
+    def __mul__(self, other) -> "Point2D":
+        return self.__class__(**{k: v * other for k, v in self.as_dict().items()})
+
+    def to_2d(self) -> "Point2D":
+        return Point2D(X=self.X, Y=self.Y)
+
+    def to_json(self) -> dict[str, float]:
+        return self.as_dict()
+
     def as_dict(self) -> Coordinate:
         return dataclasses.asdict(self)
 
     def as_tuple(self):
         return dataclasses.astuple(self)
 
-    def rotate2D(self, rotation_rad:float) -> "Point2D":
+    def rotate2D(self, rotation_rad: float) -> "Point2D":
         x_new = self.X * math.cos(rotation_rad) - self.Y * math.sin(rotation_rad)
         y_new = self.X * math.sin(rotation_rad) + self.Y * math.cos(rotation_rad)
         return Point2D(x_new, y_new)
@@ -52,10 +61,8 @@ class Point3D(Point2D):
             return Point3D(X=self.X + other.X, Y=self.Y + other.Y, Z=self.Z)
         return Point3D(X=self.X + other, Y=self.Y + other, Z=self.Z + other)
 
-    def to_2d(self) -> Point2D:
-        return Point2D(X=self.X, Y=self.Y)
 
-    def rotate2D(self, rotation_rad:float) -> "Point3D":
+    def rotate2D(self, rotation_rad: float) -> "Point3D":
         return Point3D(0, 0, self.Z) + super().rotate2D(rotation_rad)  # Small hack to only implement once
 
 
@@ -79,6 +86,7 @@ class StaticOffset(ZFunction):
 
     def __repr__(self) -> str:
         return f"StaticOffset(value={self.value})"
+
 
 class Plane(ZFunction):
     def __init__(self, parameters: np.ndarray):
@@ -172,7 +180,7 @@ class PlaneFit(Plane):
 
 
 class Unit(Enum):
-    cm = 1e3
+    cm = 10
     mm = 1
     um = 1e-3
     nm = 1e-6

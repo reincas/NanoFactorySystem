@@ -162,11 +162,11 @@ class Aerotech3200:
         # Load program
         if task_id is None:
             # TODO: Better algorithm to determine task_id
-            task_id = 31
+            task_id = 2
         self.api.PROGRAM_LOAD(task_id, path)
 
         # Wait for program to be ready
-        task = Task(self.api, task_id)
+        task = Task(self.api, task_id, file_path=path)
         query_delay = 0.1
         for i in range(int(program_ready_timeout / query_delay)):
             task.sync_all()

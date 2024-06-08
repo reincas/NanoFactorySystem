@@ -140,10 +140,10 @@ def read_text(text: str) -> list[Movement]:
     movements = []
 
     laser_on = False
-    x, y, z = 0, 0, 0
+    x, y, z, a, b = 0, 0, 0, 0, 0
     for line in text.split("\n"):
         # TODO: Laser power auslesen
-        new_x, new_y, new_z = x, y, z
+        new_x, new_y, new_z, new_a, new_b = x, y, z, a, b
         if line.startswith("'"):
             # Skip comments
             continue
@@ -164,16 +164,24 @@ def read_text(text: str) -> list[Movement]:
                     new_y = pos
                 elif ax == "Z":
                     new_z = pos
+                elif ax == "A":
+                    new_a = pos
+                elif ax == "B":
+                    new_b = pos
                 elif ax == "F":
                     continue
                 else:
                     raise RuntimeError(f"Did not recognize axis: {ax}")
-            if x != 0 and y != 0:
-                movements.append(LinearMovement(Point3D(x, y, z), Point3D(new_x, new_y, new_z), laser_on=laser_on))
+            if (x + a) != 0 and (y + b) != 0:
+                movements.append(LinearMovement(
+                    Point3D(x + a, y + b, z),
+                    Point3D(new_x + new_a, new_y + new_b, new_z),
+                    laser_on=laser_on
+                ))
 
         elif line.startswith("CW") or line.startswith("CCW"):
             op, *args = line.strip().split(" ")
-            new_x, new_y, new_z = x, y, z
+            new_x, new_y, new_z, new_a, new_b = x, y, z, a, b
             circle_center = Point3D(0, 0, 0)
             axes = []
             for arg in args:
@@ -189,6 +197,12 @@ def read_text(text: str) -> list[Movement]:
                 elif ax == "Z":
                     new_z = pos
                     axes.append("Z")
+                elif ax == "A":
+                    new_a = pos
+                    axes.append("X")
+                elif ax == "B":
+                    new_b = pos
+                    axes.append("Y")
                 elif ax == "I":
                     # First axis
                     setattr(circle_center, axes[0], pos)
@@ -205,8 +219,8 @@ def read_text(text: str) -> list[Movement]:
                 movements.append(
                     ClockwiseMovement(
                         circle_center,
-                        Point3D(x, y, z),
-                        Point3D(new_x, new_y, new_z),
+                        Point3D(x + a, y + b, z),
+                        Point3D(new_x + new_a, new_y + new_b, new_z),
                         laser_on=laser_on
                     )
                 )
@@ -214,8 +228,8 @@ def read_text(text: str) -> list[Movement]:
                 movements.append(
                     CounterclockwiseMovement(
                         circle_center,
-                        Point3D(x, y, z),
-                        Point3D(new_x, new_y, new_z),
+                        Point3D(x + a, y + b, z),
+                        Point3D(new_x + new_a, new_y + new_b, new_z),
                         laser_on=laser_on
                     )
                 )
@@ -224,16 +238,17 @@ def read_text(text: str) -> list[Movement]:
         elif line.startswith("DWELL"):
             if laser_on:
                 movements.append(
-                    PointMovement(Point3D(x, y, z), laser_on=laser_on)
+                    PointMovement(Point3D(x + a, y + b, z), laser_on=laser_on)
                 )
-        x, y, z = new_x, new_y, new_z
+        x, y, z, a, b = new_x, new_y, new_z, new_a, new_b
 
     return movements
 
 
 def plot_movements(movements, *, use_mu_m=True):
     # TODO: Laser power als Farbe
-    fig = plt.figure()
+    fig = plt.figure(dpi=400)
+    plt.Figure
     ax1 = fig.add_subplot(121, projection='3d')
     ax2 = fig.add_subplot(122, projection='3d')
 

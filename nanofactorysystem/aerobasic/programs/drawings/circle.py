@@ -164,8 +164,8 @@ class LineCircle2D(DrawableCircle):
                 radius=big_radius
             )
             if n_outer == 1:
-                point_program = DrawablePoint(Point3D(*p_outer_1, Z=self.center.Z)).draw_on(coordinate_system)
-                program.add_programm(point_program)
+                # point_program = DrawablePoint(Point2D(*p_outer_1)).draw_on(coordinate_system)
+                # program.add_programm(point_program)
                 continue
             elif n_outer < 1:
                 continue
@@ -291,7 +291,7 @@ class Spiral2D(DrawableRoundCircle):
         else:
             # Printing Point in the middle of the spiral
             program.comment(f"\nDraw single point in the middle")
-            DrawablePoint(self.center).draw_on(coordinate_system)
+            program.add_programm(DrawablePoint(self.center).draw_on(coordinate_system))
 
         # Spiral
         for radius in np.arange(self.radius_start, self.radius_end, self.hatch_size):
@@ -337,7 +337,7 @@ class Spiral2D(DrawableRoundCircle):
         else:
             # Printing Point in the middle of the spiral
             program.comment(f"\nDraw single point in the middle")
-            DrawablePoint(self.center).draw_on(coordinate_system)
+            program.add_programm(DrawablePoint(self.center).draw_on(coordinate_system))
 
         return program
 

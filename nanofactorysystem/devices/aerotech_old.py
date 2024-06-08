@@ -200,7 +200,9 @@ class A3200(Parameter):
         line = self.socket.recv(4096).decode().strip()
         code, response = line[0], line[1:]
         if code != chr(self["cmdSuccessChar"]):
-            raise RuntimeError("Command failed!")
+            self.socket.send("~LASTERROR".encode())
+            line = self.socket.recv(4096).decode().strip()
+            raise RuntimeError(f"Command failed! {code}, {response} -> {line}")
         return response
 
     def version(self) -> str:

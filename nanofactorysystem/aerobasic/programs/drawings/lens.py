@@ -28,10 +28,13 @@ class SphericalLens(DrawableObject):
         self.center = center
         self.radius_of_curvature = radius_of_curvature
         self.layer_height = layer_height
-        self.N = int(np.ceil(radius_of_curvature / layer_height))
-
-        self.max_height = max_height
         self.offset = self.radius_of_curvature - max_height
+        self.max_height = max_height
+        self.N = int(np.ceil(max_height / layer_height))
+
+        # optimised hatching and slicing parameter
+        # self.hatch_size_opt = # TODO(Hannes) Implementierung von hatch size optimised mit abhängigkeit von max_height und RoC
+        self.slicing_height = self.max_height / self.N
 
     @property
     def center_point(self) -> Point2D:
@@ -45,8 +48,8 @@ class SphericalLens(DrawableObject):
                 f"Lens is not printable. Height of Offset ({self.offset}) exceeds the radius of curvature ({self.radius_of_curvature}).")
 
         for i in range(self.N + 1):
-            z_i = i * self.layer_height
-            if z_i <= self.radius_of_curvature:  # Ensure z_i does not exceed R
+            z_i = i * self.slicing_height
+            if (z_i + self.offset) <= self.radius_of_curvature:  # Ensure z_i does not exceed R
                 r_i = np.sqrt(self.radius_of_curvature ** 2 - (z_i + self.offset) ** 2)
             else:
                 r_i = 0  # If height exceeds R, radius is zero
@@ -56,6 +59,8 @@ class SphericalLens(DrawableObject):
             layer = self.circle_object_factory(point, r_i, hatch_size=self.hatch_size)
 
             program.add_programm(layer.draw_on(coordinate_system))
+
+        return program
 
 
 class AsphericalLens(DrawableObject):
@@ -165,50 +170,20 @@ class Cylinder(DrawableObject):
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
-    # lens = AsphericalLens(Point3D(X=0,Y=0,Z=0), 1030, 0.05,
-    #                       -2.3, alpha=0, hatch_size=0.1, velocity=40000)
-    # # Define the range of x and y values
-    # x = np.arange(-300, 300, 1)
-    # y = np.arange(-300, 300, 1)
-    # X, Y = np.meshgrid(x, y)
-    #
-    # # Calculate the corresponding z values
-    # Z = lens.sag(X, Y)
-    #
-    # # Plot the surface
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    # ax.plot_surface(X, Y, Z, cmap='viridis')
-    #
-    # ax.set_xlabel('X Label')
-    # ax.set_ylabel('Y Label')
-    # ax.set_zlabel('Z Label')
-    #
-    # plt.show()
+    lens = AsphericalLens(Point3D(X=0,Y=0,Z=0), 1030, 0.05,
+                          -2.3, alpha=0, hatch_size=0.1, velocity=40000)
+    # Define the range of x and y values
+    x = np.arange(-300, 300, 1)
+    y = np.arange(-300, 300, 1)
+    X, Y = np.meshgrid(x, y)
 
-    # Instantiate the AsphericalLens class
-    lens = AsphericalLens(Point3D(X=0, Y=0, Z=0), 1030, 0.05, -2.3, alpha=0, hatch_size=0.1, velocity=40000)
+    # Calculate the corresponding z values
+    Z = lens.sag(X, Y)
 
-    # Create 3D scatter plot data
-    x_points = []
-    y_points = []
-    z_points = []
-
-    for z in np.linspace(0, 300, 100):
-        x, y = lens.slice_at_height(z)
-        x_points.extend(x)
-        y_points.extend(y)
-        z_points.extend([z] * len(x))
-
-    # Convert to numpy arrays for plotting
-    x_points = np.array(x_points)
-    y_points = np.array(y_points)
-    z_points = np.array(z_points)
-
-    # Plot the 3D structure
+    # Plot the surface
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(x_points, y_points, z_points, marker='o')
+    ax.plot_surface(X, Y, Z, cmap='viridis')
 
     ax.set_xlabel('X Label')
     ax.set_ylabel('Y Label')

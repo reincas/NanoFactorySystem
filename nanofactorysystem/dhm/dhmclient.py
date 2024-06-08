@@ -146,7 +146,7 @@ class DhmClient(object):
         # Receive command code
         ans = struct.unpack("i", self.sock.recv(4))[0]
         if ans != cmd:
-            raise RuntimeError("Invalid server response!")
+            raise RuntimeError(f"Invalid server response! {ans} != {cmd}")
 
         # No return values
         if not outfmt:

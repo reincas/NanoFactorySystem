@@ -1,6 +1,6 @@
 import unittest
 
-from nanofactorysystem.aerobasic import Axis, SingleAxis
+from nanofactorysystem.aerobasic import Axis, SingleAxis, AxisStatusDataItem
 from nanofactorysystem.aerobasic.ascii import AerotechError
 from . import FemtikaTest
 
@@ -76,3 +76,10 @@ class TestFemtikaNoLaser(FemtikaTest):
 
     def test_homing(self):
         self.a3200.home()
+
+    def test_get_axis_ramp_rate(self):
+        for ax in SingleAxis.__members__.values():
+            if not ax.is_single_axis():
+                continue
+            acceleration_rate = self.a3200.api.AXISSTATUS(ax, AxisStatusDataItem.AccelerationRate)
+            print(f"{ax}: {acceleration_rate}")
