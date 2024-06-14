@@ -29,6 +29,12 @@ class Point2D:
             return Point2D(X=self.X + other.X, Y=self.Y + other.Y)
         return Point2D(X=self.X + other, Y=self.Y + other)
 
+    def __sub__(self, other):
+        return self.__add__(-other)
+
+    def __neg__(self):
+        return self.__class__(**{k: -v for k, v in self.as_dict().items()})
+
     def __mul__(self, other) -> "Point2D":
         return self.__class__(**{k: v * other for k, v in self.as_dict().items()})
 

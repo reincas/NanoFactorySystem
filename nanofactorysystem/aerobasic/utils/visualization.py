@@ -6,6 +6,7 @@ from typing import Optional
 import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib.ticker import FuncFormatter
+from mpl_toolkits.mplot3d.art3d import Line3DCollection
 
 from nanofactorysystem.devices.coordinate_system import Point3D
 
@@ -15,6 +16,13 @@ LASER_ON_PLOT_STYLE = {
 LASER_OFF_PLOT_STYLE = {
     "c": "red",
     "alpha": 0.2
+}
+LASER_ON_COLLECTION_STYLE = {
+    "colors": LASER_ON_PLOT_STYLE["c"]
+}
+LASER_OFF_COLLECTION_STYLE = {
+    "colors": LASER_OFF_PLOT_STYLE["c"],
+    "alpha": LASER_OFF_PLOT_STYLE["alpha"]
 }
 
 
@@ -29,14 +37,31 @@ class Movement(abc.ABC):
         return ax
 
     @abc.abstractmethod
-    def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
+    def as_line_segment(self):
         pass
+
+    def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
+        ax = self.get_ax(ax)
+
+        line_segment = self.as_line_segment()
+        xs = line_segment[:, 0]
+        ys = line_segment[:, 1]
+        zs = line_segment[:, 2]
+
+        # Plot the arc
+        if self.laser_on:
+            ax.plot(xs, ys, zs, **LASER_ON_PLOT_STYLE, **plot_kwargs)
+        else:
+            ax.plot(xs, ys, zs, **LASER_OFF_PLOT_STYLE, **plot_kwargs)
 
 
 class PointMovement(Movement):
     def __init__(self, location: Point3D, *, laser_on: bool):
         super().__init__(laser_on=laser_on)
         self.location = location
+
+    def as_line_segment(self) -> np.ndarray:
+        return np.asarray([self.location.as_tuple(), self.location.as_tuple()])
 
     def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
         ax = self.get_ax(ax)
@@ -52,17 +77,8 @@ class LinearMovement(Movement):
         self.start = start
         self.end = end
 
-    def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
-        ax = self.get_ax(ax)
-        args = [
-            (self.start.X, self.end.X),
-            (self.start.Y, self.end.Y),
-            (self.start.Z, self.end.Z),
-        ]
-        if self.laser_on:
-            ax.plot(*args, **LASER_ON_PLOT_STYLE, **plot_kwargs)
-        else:
-            ax.plot(*args, **LASER_OFF_PLOT_STYLE, **plot_kwargs)
+    def as_line_segment(self) -> np.ndarray:
+        return np.asarray([self.start.as_tuple(), self.end.as_tuple()])
 
 
 class ClockwiseMovement(Movement):
@@ -72,9 +88,7 @@ class ClockwiseMovement(Movement):
         self.start = start
         self.end = end
 
-    def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
-        ax = self.get_ax(ax)
-
+    def as_line_segment(self) -> np.ndarray:
         radius = np.sqrt((self.relative_center.X) ** 2 + (self.relative_center.Y) ** 2)
 
         # Compute angles for start and end points relative to the center
@@ -90,12 +104,7 @@ class ClockwiseMovement(Movement):
         arc_x = self.start.X + self.relative_center.X + radius * np.cos(theta)
         arc_y = self.start.Y + self.relative_center.Y + radius * np.sin(theta)
         arc_z = np.linspace(self.start.Z, self.end.Z, len(arc_x))
-
-        # Plot the arc
-        if self.laser_on:
-            ax.plot(arc_x, arc_y, arc_z, **LASER_ON_PLOT_STYLE, **plot_kwargs)
-        else:
-            ax.plot(arc_x, arc_y, arc_z, **LASER_OFF_PLOT_STYLE, **plot_kwargs)
+        return np.stack([arc_x, arc_y, arc_z], axis=0)
 
 
 class CounterclockwiseMovement(Movement):
@@ -105,8 +114,7 @@ class CounterclockwiseMovement(Movement):
         self.start = start
         self.end = end
 
-    def plot(self, ax: Optional[plt.Axes] = None, **plot_kwargs):
-        ax = self.get_ax(ax)
+    def as_line_segment(self):
         # Compute the radius from the center to the start point
         radius = np.sqrt((self.start.X - self.center.X) ** 2 + (self.start.Y - self.center.Y) ** 2)
 
@@ -123,12 +131,7 @@ class CounterclockwiseMovement(Movement):
         arc_x = self.center.X + radius * np.cos(theta)
         arc_y = self.center.Y + radius * np.sin(theta)
         arc_z = np.linspace(self.start.Z, self.end.Z, len(arc_x))
-
-        # Plot the arc
-        if self.laser_on:
-            ax.plot(arc_x, arc_y, arc_z, **LASER_ON_PLOT_STYLE, **plot_kwargs)
-        else:
-            ax.plot(arc_x, arc_y, arc_z, **LASER_OFF_PLOT_STYLE, **plot_kwargs)
+        return np.stack([arc_x, arc_y, arc_z], axis=0)
 
 
 def read_file(path) -> list[Movement]:
@@ -246,9 +249,12 @@ def read_text(text: str) -> list[Movement]:
 
 
 def plot_movements(movements, *, use_mu_m=True):
+    return plot_movements_fast(movements, use_mu_m=use_mu_m)
+
+
+def plot_movements_slow(movements, *, use_mu_m=True):
     # TODO: Laser power als Farbe
     fig = plt.figure(dpi=400)
-    plt.Figure
     ax1 = fig.add_subplot(121, projection='3d')
     ax2 = fig.add_subplot(122, projection='3d')
 
@@ -289,6 +295,67 @@ def plot_movements(movements, *, use_mu_m=True):
 
     fig.canvas.draw()
     xs, ys, zs = ax1.get_xlim(), ax1.get_ylim(), ax1.get_zlim()
+    ax1.set_box_aspect((np.ptp(xs), np.ptp(ys), np.ptp(zs)))
+    ax2.set_box_aspect((1, 1, 1))
+
+    return fig
+
+
+def plot_movements_fast(movements, *, use_mu_m=True):
+    # TODO: Laser power als Farbe
+    fig = plt.figure(dpi=400)
+    ax1 = fig.add_subplot(121, projection='3d')
+    ax2 = fig.add_subplot(122, projection='3d')
+
+    lines_laser_on = []
+    lines_laser_off = []
+    for movement in movements:
+        if movement.laser_on:
+            lines_laser_on.append(movement.as_line_segment())
+        else:
+            lines_laser_off.append(movement.as_line_segment())
+
+    all_lines = np.concatenate([lines_laser_on, lines_laser_off])
+    xs, ys, zs = np.stack((all_lines.min(axis=(0, 1)), all_lines.max(axis=(0, 1)))).T
+
+    mm_to_um_formatter = FuncFormatter(lambda x, pos: f"{x * 1000:.1f}")
+    for ax in [ax1, ax2]:
+        plt_lines_on = Line3DCollection(lines_laser_on, linewidths=1, **LASER_ON_COLLECTION_STYLE)
+        plt_lines_off = Line3DCollection(lines_laser_off, linewidths=1, **LASER_OFF_COLLECTION_STYLE)
+        ax.add_collection3d(plt_lines_on)
+        ax.add_collection3d(plt_lines_off)
+        ax.set_xlim(*xs)
+        ax.set_ylim(*ys)
+        ax.set_zlim(*zs)
+        if use_mu_m:
+            ax.xaxis.set_major_formatter(mm_to_um_formatter)
+            ax.yaxis.set_major_formatter(mm_to_um_formatter)
+            ax.zaxis.set_major_formatter(mm_to_um_formatter)
+            unit = "$\mu$m"
+        else:
+            unit = "mm"
+
+        ax.set_xlabel(f"X [{unit}]")
+        ax.set_ylabel(f"Y [{unit}]")
+        ax.set_zlabel(f"Z [{unit}]")
+        # TODO: Does not work
+        # ax.xaxis.get_major_formatter().set_scientific(False)
+        # ax.yaxis.get_major_formatter().set_scientific(False)
+        # ax.zaxis.get_major_formatter().set_scientific(False)
+    ax1.set_title("Real scale")
+    ax2.set_title("Uneven scale")
+
+    def on_move(event):
+        if event.inaxes == ax1:
+            azim, elev = ax1.azim, ax1.elev
+            ax2.view_init(elev=elev, azim=azim)
+        elif event.inaxes == ax2:
+            azim, elev = ax2.azim, ax2.elev
+            ax1.view_init(elev=elev, azim=azim)
+        fig.canvas.draw_idle()
+
+    fig.canvas.mpl_connect('motion_notify_event', on_move)
+
     ax1.set_box_aspect((np.ptp(xs), np.ptp(ys), np.ptp(zs)))
     ax2.set_box_aspect((1, 1, 1))
 

@@ -28,8 +28,9 @@ def on_close(event):
 
 def getImage(dhm):
 
-    holo, count = dhm.getimage()
+    #holo, count = dhm.getimage(opt=False)
     #return image.normcolor(holo)
+    holo, count = dhm.getimage()
     spectrum, fx, fy, weight = reconstruct.locateOrder(holo, 16)
     dhm.log.info(f"First order coordinates: {fx:d}, {fy:d} [{100 * weight:.1f}%]")
 
@@ -48,7 +49,7 @@ def getImage(dhm):
     
     rmax = np.sqrt(fx**2 + fy**2) - r0
     rmax = min(rmax, abs(fx), w//2-abs(fx), abs(fy), h//2-abs(fy))
-    dhm.log.info(f"Maximum radius: {rmax:d} pixels")
+    dhm.log.info(f"Maximum radius: {rmax:.0f} pixels")
     if rmax > 0:
         img = image.drawCircle(img, fx, fy, rmax, image.CV_RED, 1)
         img = image.drawCircle(img, -fx, -fy, rmax, image.CV_RED, 1)
@@ -96,8 +97,9 @@ if __name__ == "__main__":
     with Dhm(user, objective, logger, **args) as dhm:
 
         if opt:
-            logger.info("Run OPL Motor Scan...")
-            dhm.motorscan()
+            dhm.device.MotorPos = 5079
+            #logger.info("Run OPL Motor Scan...")
+            #dhm.motorscan()
             logger.info("Motor pos: %.1f µm" % dhm.device.MotorPos)
 
             logger.info("Optimize Camera Exposure Time...")
@@ -113,6 +115,7 @@ if __name__ == "__main__":
         while run:
             img = getImage(dhm)
             win = showImage(ax, img, win)
+            #print(np.mean(img))
             #plt.pause(0.1)
 
         logger.info("Done.")

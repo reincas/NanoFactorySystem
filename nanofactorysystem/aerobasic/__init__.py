@@ -35,7 +35,7 @@ class AeroBasicAPI(abc.ABC):
         # Acknowledge all errors and accept them
         return self.send("ACKNOWLEDGEALL")
 
-    def ERROR_DECODE(self, error_code:int,error_location:int):
+    def ERROR_DECODE(self, error_code: int, error_location: int):
         # Acknowledge all errors and accept them
         return self.send(f"ERRORDECODE {error_code:d}, {error_location:d}")
 
@@ -133,6 +133,15 @@ class AeroBasicAPI(abc.ABC):
 
         response = self.send(f"TASKSTATUS({task_id}{taskstatus_dataitem.as_dataitem}{additional_data})")
         return response
+
+    def REMOVE_PROGRAM(
+            self,
+            program_name: str | Path
+    ):
+        if isinstance(program_name, Path):
+            program_name = program_name.name
+
+        return self.send(f"REMOVEPROGRAM \"{program_name}\"")
 
     def APPLY_DEFAULTS_AXIS(self, axes: SingleAxis):
         return self.send(f"APPLYDEFAULTS AXIS {axes.parameter_name}")

@@ -4,6 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 import datetime
+import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,12 +17,10 @@ from scidatacontainer import Container
 
 from nanofactorysystem import System, ImageContainer, Plane, mkdir, getLogger
 from nanofactorysystem.aerobasic import SingleAxis, AxisStatusDataItem
-from nanofactorysystem.aerobasic.constants import TaskState
+from nanofactorysystem.aerobasic.ascii import AerotechError
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
 from nanofactorysystem.aerobasic.programs.drawings import DrawableObject
-from nanofactorysystem.aerobasic.programs.drawings.circle import FilledCircle2D, LineCircle2D, Spiral2D
-from nanofactorysystem.aerobasic.programs.drawings.lens import Cylinder, SphericalLens
-from nanofactorysystem.aerobasic.programs.drawings.lines import CornerRectangle, Rectangle3D
+from nanofactorysystem.aerobasic.programs.drawings.lines import CornerRectangle, Stair
 from nanofactorysystem.aerobasic.programs.setups import DefaultSetup, SetupIFOV
 from nanofactorysystem.aerobasic.utils.visualization import read_file, plot_movements
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, PlaneFit, DropDirection, Unit, \
@@ -124,7 +123,7 @@ class ExperimentConfiguration:
     fov_size: float
     margin: float
     padding: float
-    grid_center: tuple[float, float]
+    absolute_grid_center: tuple[float, float]
     grid: tuple[int, int]
 
     def iter_experiment_locations(self) -> Iterator[tuple[float, float]]:
@@ -147,8 +146,9 @@ class ExperimentConfiguration:
         return self.resin_corner_tr - self.resin_corner_bl
 
     @property
-    def absolute_grid_center(self) -> np.ndarray:
-        return np.asarray([self.grid_center[0] + self.center_point[0], self.grid_center[1] + self.center_point[1]])
+    def grid_center(self) -> np.ndarray:
+        return np.asarray(
+            [self.absolute_grid_center[0] - self.center_point[0], self.absolute_grid_center[1] - self.center_point[1]])
 
     @property
     def grid_width(self):
@@ -232,7 +232,7 @@ def sample_points_for_experiment_configuration(experiment_configuration: Experim
 
 
 def main():
-    user = "Reinhard"
+    user = "Hannes"
     objective = "Zeiss 20x"
 
     logger.info("Initialize system object...")
@@ -241,10 +241,10 @@ def main():
 
         # TODO: Determine automatically
 
-        right_edge = [0, 15640]
-        left_edge = [1000, 28810]
-        front_edge = [-5600, 21935]
-        far_edge = [6100, 21934]
+        right_edge = [0, 15650]
+        left_edge = [0, 29150]
+        front_edge = [-5300, 22400]
+        far_edge = [7200, 22400]
         edges = np.asarray([right_edge, left_edge, far_edge, front_edge])
 
         experiment_configuration = ExperimentConfiguration(
@@ -253,9 +253,9 @@ def main():
             fov_size=500,
             margin=200,
             padding=100,
-            grid_center=(2000, -1000),
+            absolute_grid_center=(975, 22400 + 2100),
             # grid_center=(-2000, -1000),
-            grid=(2, 3),  # Rows, Cols
+            grid=(4, 7),  # Rows, Cols
         )
         logger.info(experiment_configuration)
 
@@ -263,11 +263,13 @@ def main():
         system.controller.power(0.7)
         a3200_new = system.a3200_new
 
-        plane_fit_points = sample_points_for_experiment_configuration(experiment_configuration, n_mid_points=2)
+        plane_fit_points = sample_points_for_experiment_configuration(experiment_configuration, n_mid_points=3)
 
         # Visualize experiment
         experiment_configuration.plot(plane_fit_points)
+        plt.savefig(path / "experiment_configuration.png")
         plt.show()
+        # TODO: Comment in again maybe
         # if input("Continue with plane fitting? (y/n)") != "y":
         #     return
 
@@ -286,6 +288,7 @@ def main():
         plane_fit_function = PlaneFit.from_points(np.asarray(plane_points))  # in um
         logger.info(plane_fit_function)
 
+        # TODO: Comment in again maybe
         # if input("Plane fitting completed. Continue? (y/n)") != "y":
         #     return
 
@@ -302,12 +305,13 @@ def main():
             rectangle_width=experiment_configuration.grid_width,
             rectangle_height=experiment_configuration.grid_height,
             corner_width=50,
-            corner_length=300,
+            corner_length=400,
             height=7,
             hatch_size=0.5,
-            layer_height=0.75,
+            slice_height=0.75,
             F=5000
         )
+
         # Custom drawing on coordinate system specified for each point depending on plane fitting
         rectangle_program = AeroBasicProgram()
         rectangle_program(DefaultSetup())
@@ -366,107 +370,127 @@ def main():
 
         # Calibrate in center
         image_center = coordinate_system_grid_to_absolute.convert(rectangle.center_point.as_dict())
+
+        # TODO: Comment in again maybe
         # if input(f"Drive to image center: {image_center}? (y/n)") != "y":
         #     return
 
         # Calibrate DHM
         a3200_new.api.LINEAR(**image_center, F=2)  # Slower, as we also move in z direction and it is scary
 
-        optImageMedian(system.dhm, vmedian=32, logger=logger)
         # TODO: Comment in, but only once.
-        # m = system.dhm.motorscan()
-        # logger.info(f"Motor pos at {image_center}: {system.dhm.device.MotorPos:.1f} µm (set: {m:.1f} µm)")
+        optImageMedian(system.dhm, vmedian=32, logger=logger)
+        m = system.dhm.motorscan()
+        logger.info(f"Motor pos at {image_center}: {system.dhm.device.MotorPos:.1f} µm (set: {m:.1f} µm)")
 
         measure(system, image_center, "before", save_folder=path)
 
-        pgm_file = path / "rectangle.txt"
+        pgm_file = path / "programs" / "corners.txt"
 
         rectangle_program.write(pgm_file)
         movements = read_file(pgm_file)
-        # all_movements = movements[:]
         system.log.info("Plot corners")
+        # TODO: COrners wieder plotten
         plot_movements(movements)
-        plt.savefig(path / "corners.png")
-        if input("Execute movements (y/n):") == "y":
-            t1 = time.time()
-            task = a3200_new.run_program_as_task(pgm_file, task_id=1)
-            print("\n".join(map(str, a3200_new.api.history)))
-            task.wait_to_finish()
+        plt.savefig(path / "programs" / "corners.png")
+        plt.close()
+        # if input("Execute movements to draw corners (y/n): ") == "y":
+        # TODO: Make optional again
+        t1 = time.time()
+        task = a3200_new.run_program_as_task(pgm_file, task_id=1)
+        print("\n".join(map(str, a3200_new.api.history)))
+        task.wait_to_finish()
+        task.finish()
 
-            t2 = time.time()
-            logger.info(f"Making corner took {t2 - t1:.2f}s")
+        t2 = time.time()
+        logger.info(f"Making corner took {t2 - t1:.2f}s")
 
-        a_mm = float(a3200_new.api.AXISSTATUS(SingleAxis.X, AxisStatusDataItem.AccelerationRate).replace(",", "."))
-        a_um = a_mm / Unit.um.value
-        velocity = 2000
+        a_mm_x = float(a3200_new.api.AXISSTATUS(SingleAxis.X, AxisStatusDataItem.AccelerationRate).replace(",", "."))
+        a_mm_galvo = float(
+            a3200_new.api.AXISSTATUS(SingleAxis.A, AxisStatusDataItem.AccelerationRate).replace(",", "."))
+        a_um_x = a_mm_x / Unit.um.value
+        a_um_galvo = a_mm_galvo / Unit.um.value
+        velocity = 5000
 
         structures: list[DrawableObject] = [
-            SphericalLens(
-                Point3D(0, 0, -2),
-                5,
-                50,
-                0.2,
-                circle_object_factory=FilledCircle2D.as_circle_factory(velocity),
-                hatch_size=0.1,
-                velocity=velocity
-            ),
-            SphericalLens(
-                Point3D(0, 0, -2),
-                5,
-                50,
-                0.2,
-                circle_object_factory=LineCircle2D.as_circle_factory(acceleration=a_um, velocity=velocity),
-                hatch_size=0.1,
-                velocity=velocity
-            ),
-            Cylinder(
-                Point3D(0, 0, -2),
-                10,
-                3,
-                0.2,
-                circle_object_factory=LineCircle2D.as_circle_factory(acceleration=a_um, velocity=velocity),
-                hatch_size=0.1,
-                velocity=velocity
-            ),
-            Cylinder(
-                Point3D(0, 0, -2),
-                10,
-                3,
-                0.2,
-                circle_object_factory=FilledCircle2D.as_circle_factory(velocity),
-                hatch_size=0.1,
-                velocity=velocity
-            ),
+            # SphericalLens(
+            #     Point3D(0, 0, -2),
+            #     5,
+            #     50,
+            #     0.2,
+            #     circle_object_factory=FilledCircle2D.as_circle_factory(velocity),
+            #     hatch_size=0.1,
+            #     velocity=velocity
+            # ),
+            # SphericalLens(
+            #     Point3D(0, 0, -2),
+            #     5,
+            #     50,
+            #     0.2,
+            #     circle_object_factory=LineCircle2D.as_circle_factory(acceleration=a_um, velocity=velocity),
+            #     hatch_size=0.1,
+            #     velocity=velocity
+            # ),
             # Cylinder(
             #     Point3D(0, 0, -2),
             #     10,
             #     3,
             #     0.2,
-            #     circle_object_factory=Spiral2D.as_circle_factory(velocity),
+            #     circle_object_factory=LineCircle2D.as_circle_factory(acceleration=a_um, velocity=velocity),
             #     hatch_size=0.1,
             #     velocity=velocity
             # ),
-            Rectangle3D(
+            # Cylinder(
+            #     Point3D(0, 0, -2),
+            #     10,
+            #     3,
+            #     0.2,
+            #     circle_object_factory=FilledCircle2D.as_circle_factory(velocity),
+            #     hatch_size=0.1,
+            #     velocity=velocity
+            # ),
+            # # Cylinder(
+            # #     Point3D(0, 0, -2),
+            # #     10,
+            # #     3,
+            # #     0.2,
+            # #     circle_object_factory=Spiral2D.as_circle_factory(velocity),
+            # #     hatch_size=0.1,
+            # #     velocity=velocity
+            # # ),
+            Stair(
                 Point3D(0, 0, -2),
-                width=10,
-                length=40,
-                structure_height=5,
+                n_steps=6,
+                step_height=0.6,
+                step_length=20,
+                step_width=50,
                 hatch_size=0.125,
-                layer_height=0.3,
-                velocity=velocity
+                slice_size=0.3,
+                socket_height=7,
+                velocity=velocity,
+                acceleration=a_um_galvo
             )
         ]
 
-        with (path / "structures.txt").open("w") as f:
-            for i, ((x, y), structure) in enumerate(zip(experiment_configuration.iter_experiment_locations(), structures)):
-                f.write(f"Structure {i:02d} at {x, y}:\n    {structure}\n\n")
+        structures = [Stair(
+            Point3D(0, 0, -2),
+            n_steps=6,
+            step_height=0.6,
+            step_length=20,
+            step_width=50,
+            hatch_size=0.125,
+            slice_size=0.3,
+            socket_height=7,
+            velocity=velocity,
+            acceleration=a_um_galvo
+        )] * 28
 
-        # if input("Continue to print structures? (y/n)") != "y":
-        #     return
-
+        structure_programs = []
+        structure_configs = []
         for i, ((x, y), structure) in enumerate(zip(experiment_configuration.iter_experiment_locations(), structures)):
-            assert isinstance(structure, DrawableObject)
-            system.log.info(f"Printing structure {i:02d}: {structure}")
+            system.log.info(f"Creating program for structure {i:02d}: {structure}")
+
+            # Create program
             z_offset = plane_fit_function(x, y)
             structure_center_absolute_um = {
                 "X": x,
@@ -487,28 +511,53 @@ def main():
                 z_function=structure_center_absolute_um["Z"],
                 unit=Unit.um
             )
-            coordinate_system_galvo.axis_mapping = {"X":"A", "Y":"B"}
+            coordinate_system_galvo.axis_mapping = {"X": "A", "Y": "B"}
+
+            program = DefaultSetup() + structure.draw_on(coordinate_system_galvo)
+            structure_pgm_file = path / "programs" / f"structure_{i:02d}.txt"
+            program.write(structure_pgm_file)
+            structure_programs.append(structure_pgm_file)
+
+            # Create configs
+            assert isinstance(structure, DrawableObject)
+            structure_configs.append({
+                "index": i,
+                "x": x,
+                "y": y,
+                "structure": structure.to_json(),
+                "program_file": str(structure_pgm_file.absolute())
+            })
+
+            # Plot
+            # TODO: Add plotting again
+            movements = read_file(structure_pgm_file)
+            system.log.info(f"Plot structure {i:02d}")
+            plot_movements(movements)
+            plt.savefig(path / "programs" / f"structure {i:02d}.png")
+            plt.close()
+
+        (path / "structures.json").write_text(json.dumps(structure_configs, indent=4))
+
+        # if input("Continue to print structures? (y/n)") != "y":
+        #     return
+
+        for i, (structure_program, (x, y)) in enumerate(zip(
+                structure_programs,
+                experiment_configuration.iter_experiment_locations()
+        )):
+            system.log.info(f"Printing structure {i:02d}: {structure}")
+            structure_center_absolute_mm = {"X": x / 1000, "Y": y / 1000}
 
             measure(system, structure_center_absolute_mm, f"Structure_{i:02d}_before", save_folder=path)
-            program = DefaultSetup() + structure.draw_on(coordinate_system_galvo)
-            structure_pgm_file = path / f"struct{i:02d}.txt"
-            program.write(structure_pgm_file)
-            # movements = read_file(structure_pgm_file)
-            # all_movements += movements
-            # plot_movements(movements)
-            # plt.title(f"Structure {i:02d}")
-            # plt.show()
-
-            # if input(f"Print structure {i:02d} with program at {structure_pgm_file.absolute()}? (y/n)") != "y":
-            #     continue
-
             t1 = time.time()
-            task = a3200_new.run_program_as_task(structure_pgm_file, task_id=1)
-            task.wait_to_complete()
-            task.finish()
+            try:
+                task = a3200_new.run_program_as_task(structure_program, task_id=1)
+                task.wait_to_finish()
+                task.finish()
+            except AerotechError as e:
+                logger.error(f"Program failed for structure {i:02d}: {e}")
             t2 = time.time()
             logger.info(f"Making structure {i:02d} took {t2 - t1:.2f}s")
-
             measure(system, structure_center_absolute_mm, f"Structure_{i:02d}_after", save_folder=path)
 
         measure(system, image_center, "after", save_folder=path)

@@ -10,7 +10,7 @@ from nanofactorysystem.aerobasic.constants.tasks import TaskMode, TaskStatus0, T
 
 
 class Task:
-    def __init__(self, api: AerotechAsciiInterface, task_id: int,*,file_path:Optional[Path | str]=None):
+    def __init__(self, api: AerotechAsciiInterface, task_id: int, *, file_path: Optional[Path | str] = None):
         self.api = api
         self.task_id = task_id
 
@@ -54,7 +54,8 @@ class Task:
             (self.task_id, TaskStatusDataItem.ProgramLineNumber),
         )
         # TODO: How to get total lines?
-        pbar = tqdm(desc=f"Task {self.task_id} running... (filepath={self.file_path})", total=self.total_lines, unit="lines")
+        pbar = tqdm(desc=f"Task {self.task_id} running... (filepath={self.file_path})", total=self.total_lines,
+                    unit="lines")
         pbar.update(int(current_lines))
 
         while self.task_state == TaskState.program_running:
@@ -77,6 +78,14 @@ class Task:
             )
 
         pbar.close()
+
+    def finish(self):
+        self.api.PROGRAM_STOP(self.task_id)
+        while self.task_state != TaskState.idle:
+            time.sleep(0.1)
+            self.sync_all()
+        if self.file_path is not None:
+            self.api.REMOVE_PROGRAM(self.file_path)
 
     def reset(self):
         self._task_mode = None

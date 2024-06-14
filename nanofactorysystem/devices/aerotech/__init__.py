@@ -10,7 +10,8 @@ from typing import Optional
 from nanofactorysystem.aerobasic import AxisStatusDataItem, SingleAxis, SystemStatusDataItem, WaitMode, Axis
 from nanofactorysystem.aerobasic.ascii import AerotechAsciiInterface, DummyAsciiInterface
 from nanofactorysystem.aerobasic.constants import AxisStatus
-from nanofactorysystem.aerobasic.constants.tasks import ProgrammingMode, TaskState, TaskStatusDataItem, TaskMode, TaskStatus, \
+from nanofactorysystem.aerobasic.constants.tasks import ProgrammingMode, TaskState, TaskStatusDataItem, TaskMode, \
+    TaskStatus, \
     VelocityMode
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
 from nanofactorysystem.devices.aerotech.task import Task
@@ -33,6 +34,10 @@ class Aerotech3200:
         self.enabled_axes = SingleAxis._NO_AXIS
         self.tasks = tuple([Task(self.api, i) for i in range(Aerotech3200.MAX_NUMBER_OF_TASKS)])
 
+        self.init_time = datetime.datetime.now()
+        self.connect_time: Optional[datetime.datetime] = None
+        self.close_time: Optional[datetime.datetime] = None
+
     def __del__(self):
         self.close()
 
@@ -42,9 +47,11 @@ class Aerotech3200:
 
     def connect(self):
         self.api.connect()
+        self.connect_time = datetime.datetime.now()
 
     def close(self):
         self.api.close()
+        self.close_time = datetime.datetime.now()
 
     def initialize(self):
         """
@@ -60,6 +67,12 @@ class Aerotech3200:
         self.set_programming_mode(ProgrammingMode.ABSOLUTE)
         self.set_velocity_mode(VelocityMode.ON)
         self.set_wait_mode(WaitMode.AUTO)
+
+    def save_log(self, folder: Path | str = ".") -> str:
+        s = f"{self.__class__.__name__}:\nInitialized: {self.init_time}\nConnected: {self.connect_time}\nClosed: {self.close_time}\n\nCommands:\n"
+        s += "\n".join(map(str, self.api.history))
+        (Path(folder) / "A3200.log").write_text(s)
+        return s
 
     def sync_internal_state(self):
         for task in self.tasks:

@@ -14,7 +14,7 @@ class SphericalLens(DrawableObject):
             center: Point2D | Point3D,
             max_height,  # maximum thickness of lens
             radius_of_curvature: float,  # Radius of Curvature
-            layer_height: float,  # ToDo(@all): einheiten müssen noch definiert werden
+            slice_size: float,  # ToDo(@all): einheiten müssen noch definiert werden
             *,
             circle_object_factory: FilledCircleFactory,
             hatch_size: float,
@@ -27,10 +27,10 @@ class SphericalLens(DrawableObject):
 
         self.center = center
         self.radius_of_curvature = radius_of_curvature
-        self.layer_height = layer_height
+        self.slice_size = slice_size
         self.offset = self.radius_of_curvature - max_height
         self.max_height = max_height
-        self.N = int(np.ceil(max_height / layer_height))
+        self.N = int(np.ceil(max_height / slice_size))
 
         # optimised hatching and slicing parameter
         # self.hatch_size_opt = # TODO(Hannes) Implementierung von hatch size optimised mit abhängigkeit von max_height und RoC
@@ -69,7 +69,7 @@ class AsphericalLens(DrawableObject):
             self,
             center: Point2D | Point3D,
             radius_of_curvature: float,  # Radius of Curvature
-            layer_height: float,  # ToDo(@all): einheiten müssen noch definiert werden
+            slice_size: float,  # ToDo(@all): einheiten müssen noch definiert werden
             conic_constant_k: float,  # conic constant
             *,
             alpha: float,  # aspherical coefficient
@@ -86,8 +86,8 @@ class AsphericalLens(DrawableObject):
 
         self.center = center
         self.radius_of_curvature = radius_of_curvature
-        self.N = int(np.ceil(radius_of_curvature / layer_height))
-        self.layer_height = layer_height
+        self.N = int(np.ceil(radius_of_curvature / slice_size))
+        self.slice_size = slice_size
 
     @property
     def center_point(self) -> Point2D:
@@ -133,7 +133,7 @@ class Cylinder(DrawableObject):
             center: Point2D | Point3D,
             radius: float,  # ToDO einheiten
             total_height: float,
-            layer_height: float,  # ToDo(@all): einheiten müssen noch definiert werden
+            slice_size: float,  # ToDo(@all): einheiten müssen noch definiert werden
             *,
             circle_object_factory: FilledCircleFactory,
             hatch_size: float,
@@ -146,10 +146,10 @@ class Cylinder(DrawableObject):
 
         self.center = center
         self.radius = radius
-        self.layer_height = layer_height
+        self.slice_size = slice_size
         self.height = total_height
         # Number of layers to be printed
-        self.N = int(np.ceil(self.height / self.layer_height))
+        self.N = int(np.ceil(self.height / self.slice_size))
 
     @property
     def center_point(self) -> Point2D:
@@ -159,7 +159,7 @@ class Cylinder(DrawableObject):
         program = DrawableAeroBasicProgram(coordinate_system)
 
         for i in range(self.N + 1):
-            z_i = i * self.layer_height
+            z_i = i * self.slice_size
             point = self.center + Point3D(X=0, Y=0, Z=z_i)
             layer = self.circle_object_factory(point, self.radius, hatch_size=self.hatch_size)
 
