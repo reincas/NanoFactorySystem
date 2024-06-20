@@ -28,10 +28,14 @@ MANIFEST
 
 # Local
 .test/
+.output/
 
 
 # AeroBasic Programs
 *.pgm
 *.OGM
+
+logs
+*.log
 
 test/_programs/
