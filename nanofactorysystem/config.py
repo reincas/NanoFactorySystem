@@ -14,7 +14,7 @@
 import json
 import warnings
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator, Literal
 
 
 # def norm_orcid(orcid):

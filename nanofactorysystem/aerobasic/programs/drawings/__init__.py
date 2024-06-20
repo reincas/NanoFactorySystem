@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Any
+from typing import Optional, Any, Iterator
 
 from nanofactorysystem.aerobasic import SingleAxis, BezierMode, Axis, GalvoLaserOverrideMode
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
@@ -161,8 +161,14 @@ class DrawableObject(abc.ABC):
     def center_point(self) -> Point2D:
         pass
 
-    @abc.abstractmethod
     def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+        program = DrawableAeroBasicProgram(coordinate_system)
+        for layer in self.iterate_layers(coordinate_system):
+            program.add_programm(layer)
+        return program
+    
+    @abc.abstractmethod
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         pass
 
     def _init_args(self) -> dict[str, Any]:
@@ -199,8 +205,8 @@ class VoidStructure(DrawableObject):
     def center_point(self) -> Point2D:
         return Point2D(0, 0)
 
-    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
-        return DrawableAeroBasicProgram(coordinate_system)
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
+        yield DrawableAeroBasicProgram(coordinate_system)
 
 
 class DrawablePoint(DrawableObject):
@@ -220,10 +226,10 @@ class DrawablePoint(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         program.LINEAR(**self.center.as_dict())
         program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.ON)
         program.DWELL(self.duration)
         program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.OFF)
-        return program
+        yield program

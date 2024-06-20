@@ -6,7 +6,7 @@ from nanofactorysystem.aerobasic.programs.drawings.lens import SphericalLens
 from nanofactorysystem.aerobasic.programs.drawings.lines import Stair
 # from nanofactorysystem.aerobasic.programs.drawings.qr_code import QRCode
 from nanofactorysystem.aerobasic.programs.setups import DefaultSetup
-from nanofactorysystem.aerobasic.utils.visualization import read_text, plot_movements, plot_movements_fast
+from nanofactorysystem.utils.visualization import read_text, plot_movements, plot_movements_fast
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, DropDirection, Unit, Point3D
 
 program = AeroBasicProgram()

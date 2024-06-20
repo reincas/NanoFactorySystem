@@ -1,4 +1,4 @@
-from typing import Type
+from typing import Type, Iterator
 
 import numpy as np
 
@@ -40,7 +40,7 @@ class SphericalLens(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def draw_on(self, coordinate_system: CoordinateSystem):
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
 
         if self.offset >= self.radius_of_curvature:
@@ -58,7 +58,7 @@ class SphericalLens(DrawableObject):
             point = self.center + Point3D(X=0, Y=0, Z=z_i)
             layer = self.circle_object_factory(point, r_i, hatch_size=self.hatch_size)
 
-            program.add_programm(layer.draw_on(coordinate_system))
+            yield layer.draw_on(coordinate_system)
 
         return program
 
@@ -123,8 +123,9 @@ class AsphericalLens(DrawableObject):
         valid_indices = np.where(np.abs(calculated_z - z) < 1e-6)[0]
         return x[valid_indices], y[valid_indices]
 
-    def draw_on(self, coordinate_system: CoordinateSystem):
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
+        yield program
 
 
 class Cylinder(DrawableObject):
@@ -155,7 +156,7 @@ class Cylinder(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def draw_on(self, coordinate_system: CoordinateSystem):
+    def iterate_layers(self, coordinate_system: CoordinateSystem):
         program = DrawableAeroBasicProgram(coordinate_system)
 
         for i in range(self.N + 1):
@@ -163,7 +164,7 @@ class Cylinder(DrawableObject):
             point = self.center + Point3D(X=0, Y=0, Z=z_i)
             layer = self.circle_object_factory(point, self.radius, hatch_size=self.hatch_size)
 
-            program.add_programm(layer.draw_on(coordinate_system))
+            yield layer.draw_on(coordinate_system)
 
         return program
 

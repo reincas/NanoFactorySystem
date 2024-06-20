@@ -4,28 +4,10 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 import datetime
-import time
-from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
 
-import matplotlib.pyplot as plt
-import numpy as np
-from matplotlib.patches import Ellipse, Rectangle
-from scidatacontainer import Container
-
-from nanofactorysystem import System, ImageContainer, Plane, mkdir, getLogger
-from nanofactorysystem.aerobasic.constants import TaskState
-from nanofactorysystem.aerobasic.programs import AeroBasicProgram
-from nanofactorysystem.aerobasic.programs.drawings import DrawableObject
-from nanofactorysystem.aerobasic.programs.drawings.circle import FilledCircle2D, LineCircle2D
-from nanofactorysystem.aerobasic.programs.drawings.lens import Cylinder, SphericalLens
-from nanofactorysystem.aerobasic.programs.drawings.lines import CornerRectangle
-from nanofactorysystem.aerobasic.programs.setups import DefaultSetup, SetupIFOV
-from nanofactorysystem.aerobasic.utils.visualization import read_file, plot_movements
-from nanofactorysystem.devices.coordinate_system import CoordinateSystem, PlaneFit, DropDirection, Unit, \
-    Point3D, Coordinate
-from nanofactorysystem.dhm.optimage import optImageMedian
+from nanofactorysystem import System, mkdir, getLogger
+from nanofactorysystem.devices.coordinate_system import Unit
 
 args = {
     "attenuator": {

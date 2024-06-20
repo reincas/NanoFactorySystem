@@ -2,39 +2,6 @@ import math
 from typing import Optional
 
 
-# def circle_line_intersection1(
-#         p1: tuple[float, float],
-#         p2: tuple[float, float],
-#         circle_center: tuple[float, float],
-#         radius: float
-# ) -> tuple[Optional[tuple[float, float]], Optional[tuple[float, float]], float]:
-#     # https://mathworld.wolfram.com/Circle-LineIntersection.html
-#     circle_center = np.asarray(circle_center)
-#     x1, y1 = - np.asarray(circle_center) + p1
-#     x2, y2 = - np.asarray(circle_center) + p2
-#
-#     dx = x2 - x1
-#     dy = y2 - y1
-#     dr = math.sqrt(dx ** 2 + dy ** 2)
-#     determinant = x1 * y2 - x2 * y1
-#     discriminant = radius ** 2 * dr ** 2 - determinant ** 2
-#
-#     intersection_1 = None
-#     intersection_2 = None
-#     dr2 = dr ** 2
-#     prefactor_x, prefactor_y = (determinant * dy) / dr2, (- determinant * dx) / dr2
-#     if discriminant == 0:
-#         intersection_1 = prefactor_x, prefactor_y
-#     else:
-#         sqrt_part = math.sqrt((radius**2) * dr2 - (determinant ** 2))
-#         sgn = lambda x: -1 if x < 0 else 1
-#         x_part = sgn(dy) * dx * sqrt_part / dr2
-#         y_part = abs(dy) * sqrt_part / dr2
-#         intersection_1 = prefactor_x + x_part, prefactor_y + y_part
-#         intersection_2 = prefactor_x - x_part, prefactor_y - y_part
-#
-#     return intersection_1, intersection_2, discriminant
-
 def _line_circle_intersection(
         r: float, a: float, b: float, c: float
 ) -> tuple[int, Optional[tuple[float, float]], Optional[tuple[float, float]]]:
@@ -103,3 +70,20 @@ def line_circle_intersection(
         n -= 1
 
     return n, intersection_1, intersection_2
+
+
+def get_grid_coordinates(
+        x0: float,
+        y0: float,
+        dx: float = 80.0,
+        dy: float = 80.0,
+        nx: int = 2,
+        ny: int = 2,
+) -> list[tuple[float, float]]:
+    coordinates = []
+    for j in range(ny):
+        for i in range(nx):
+            x = x0 + i * dx
+            y = y0 + j * dy
+            coordinates.append((x, y))
+    return coordinates

@@ -109,10 +109,17 @@ class AeroBasicAPI(abc.ABC):
 
         return self.send(f"PROGRAM {task_id} LOAD \"{program_path}\"")
 
+    # ToDo(hrobben): programm associate muss überarbeitet werden, da die Syntax des befehls nicht korrekt ist
+    def PROGRAM_ASSOCIATE(self, task_id: int, program_path: Path | str) -> str:
+        program_name = Path(program_path).name
+        return self.send(f"PROGRAM {task_id} ASSOCIATE \"{program_name}\"")
+
     def PROGRAM_START(self, task_id: int) -> str:
         return self.send(f"PROGRAM {task_id} START")
 
-    def PROGRAM_STOP(self, task_id: int) -> str:
+    def PROGRAM_STOP(self, task_id: Optional[int]=None) -> str:
+        if task_id is None:
+            return self.send(f"PROGRAM STOP")
         return self.send(f"PROGRAM {task_id} STOP")
 
     def PROGRAM_STATUS(

@@ -175,7 +175,7 @@ def read_text(text: str) -> list[Movement]:
                     continue
                 else:
                     raise RuntimeError(f"Did not recognize axis: {ax}")
-            if (x + a) != 0 and (y + b) != 0:
+            if (x + a) != 0 and (y + b) != 0 and z != 0:
                 movements.append(LinearMovement(
                     Point3D(x + a, y + b, z),
                     Point3D(new_x + new_a, new_y + new_b, new_z),

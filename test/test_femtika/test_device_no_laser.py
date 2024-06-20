@@ -1,7 +1,7 @@
 import unittest
 
-from nanofactorysystem.aerobasic import Axis, SingleAxis, AxisStatusDataItem
-from nanofactorysystem.aerobasic.ascii import AerotechError
+from nanofactorysystem.aerobasic import SingleAxis, AxisStatusDataItem
+from nanofactorysystem.devices.aerotech import Task
 from . import FemtikaTest
 
 
@@ -54,14 +54,14 @@ class TestFemtikaNoLaser(FemtikaTest):
     def test_tasks_manual(self):
         for i in range(32):
             print(f"Task {i:02d}:")
-            task_state = self.a3200.get_task_state(i)
-            print(task_state)
-            task_status = self.a3200.get_task_status(i)
-            print(task_status)
-            task_mode = self.a3200.get_task_mode(i)
-            print(task_mode)
-            wait_mode = self.a3200.get_wait_mode(i)
-            print(wait_mode)
+            task = Task(self.api, task_id=i)
+            print("  Task State:", task.task_state)
+            print("  Task Status 0:", task.task_status0)
+            print("  Task Status 1:", task.task_status1)
+            print("  Task Status 2:", task.task_status2)
+            print("  Taskmode:", task.task_mode)
+            print("  Waitmode:", task.wait_mode)
+            print("  Current line:", task.current_line)
             print()
 
     def test_tasks(self):

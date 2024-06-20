@@ -8,7 +8,8 @@ import json
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Iterator
+from tkinter import messagebox
+from typing import Callable, Optional, Literal, Iterator
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -19,13 +20,13 @@ from nanofactorysystem import System, ImageContainer, Plane, mkdir, getLogger
 from nanofactorysystem.aerobasic import SingleAxis, AxisStatusDataItem
 from nanofactorysystem.aerobasic.ascii import AerotechError
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
-from nanofactorysystem.aerobasic.programs.drawings import DrawableObject
-from nanofactorysystem.aerobasic.programs.drawings.lines import CornerRectangle, Stair
-from nanofactorysystem.aerobasic.programs.setups import DefaultSetup, SetupIFOV
-from nanofactorysystem.aerobasic.utils.visualization import read_file, plot_movements
+from nanofactorysystem.aerobasic.programs.drawings import DrawableObject, DrawableAeroBasicProgram
+from nanofactorysystem.aerobasic.programs.drawings.lines import Stair, Corner  # , CornerRectangle
+from nanofactorysystem.aerobasic.programs.setups import DefaultSetup
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, PlaneFit, DropDirection, Unit, \
-    Point3D, Coordinate
+    Point2D, Point3D, Coordinate
 from nanofactorysystem.dhm.optimage import optImageMedian
+from nanofactorysystem.utils.visualization import read_file, plot_movements
 
 args = {
     "attenuator": {
@@ -50,71 +51,6 @@ args = {
 }
 
 
-def get_grid_coordinates(
-        x0: float,
-        y0: float,
-        dx: float = 80.0,
-        dy: float = 80.0,
-        nx: int = 2,
-        ny: int = 2,
-) -> list[tuple[float, float]]:
-    coordinates = []
-    for j in range(ny):
-        for i in range(nx):
-            x = x0 + i * dx
-            y = y0 + j * dy
-            coordinates.append((x, y))
-    return coordinates
-
-
-def find_and_log_plane(
-        system: System,
-        save_folder: Path,
-        *,
-        plane_coordinates: list[tuple[float, float]],
-) -> Container:
-    zlo = zup = system.z0
-
-    # Plane needs micrometer coordinates
-    plane = Plane(zlo, zup, system, logger, **args)
-
-    logger.info("Store background image...")
-    plane.layer.focus.imgBack.write(str(save_folder / f"back.zdc"))
-
-    logger.info("Run plane detection...")
-    for x, y in plane_coordinates:
-        plane.run(x, y, path=path)
-
-    logger.info("Store results...")
-    dc = plane.container()
-    dc.write(str(save_folder / f"plane.zdc"))
-    logger.info("Done.")
-    return dc
-
-
-def measure(system: System, coordinate: Coordinate, name: str, *, save_folder: Path) -> tuple[
-    Container, ImageContainer]:
-    """
-    Coordinate in mm in absolute coordinates
-    """
-    # DHM Image before
-    # if input(f"Measuring {name}. Drive to {coordinate}? (y,n)") != "y":
-    #     return None, None
-    system.a3200_new.api.LINEAR(**coordinate, F=20)
-    dhm_container = system.dhm.container(opt=True)
-    fn = save_folder / f"hologram_{name}.zdc"
-    logger.info(f"Store hologram container file '{fn}'")
-    dhm_container.write(fn)
-
-    # Camera Image before
-    system.a3200_new.api.LINEAR(**coordinate, F=20)
-    camera_container = system.getimage()
-    assert isinstance(camera_container, ImageContainer)
-    camera_container.write(str(path / f"camera_{name}.zdc"))
-    print(f"Location: {camera_container.location}")
-    return dhm_container, camera_container
-
-
 @dataclass
 class ExperimentConfiguration:
     resin_corner_tr: np.ndarray  # 2D
@@ -127,11 +63,31 @@ class ExperimentConfiguration:
     grid: tuple[int, int]
 
     def iter_experiment_locations(self) -> Iterator[tuple[float, float]]:
+        """ Return experiment locations in um """
         for i in range(self.grid[0]):
             for j in range(self.grid[1]):
                 rect_x = self.rectangle_tl[0] + self.margin + j * (self.fov_size + self.padding)
                 rect_y = self.rectangle_tl[1] + self.margin + i * (self.fov_size + self.padding)
                 yield rect_x + self.fov_size / 2, rect_y + self.fov_size / 2
+
+    def structure_location(self, index) -> Point2D:
+        i, j = divmod(index, self.grid[0])
+        rect_x = self.rectangle_tl[0] + self.margin + j * (self.fov_size + self.padding)
+        rect_y = self.rectangle_tl[1] + self.margin + i * (self.fov_size + self.padding)
+        return Point2D(rect_x + self.fov_size / 2, rect_y + self.fov_size / 2)
+
+    def corner_location(self, position: Literal["tl", "tr", "bl", "br"]) -> Point2D:
+        if position == "tl":
+            point = self.rectangle_tl
+        elif position == "tr":
+            point = self.rectangle_tr
+        elif position == "bl":
+            point = self.rectangle_bl
+        elif position == "br":
+            point = self.rectangle_br
+        else:
+            raise ValueError(f'Unknown position string "{position}"')
+        return Point2D(*point)
 
     def __post_init__(self):
         self.resin_corner_tr = np.asarray(self.resin_corner_tr)
@@ -147,24 +103,35 @@ class ExperimentConfiguration:
 
     @property
     def grid_center(self) -> np.ndarray:
-        return np.asarray(
-            [self.absolute_grid_center[0] - self.center_point[0], self.absolute_grid_center[1] - self.center_point[1]])
+        return np.asarray([
+            self.absolute_grid_center[0] - self.center_point[0],
+            self.absolute_grid_center[1] - self.center_point[1]
+        ]
+        )
 
     @property
-    def grid_width(self):
+    def grid_width(self) -> float:
         return self.grid[1] * (self.fov_size + self.padding) - self.padding + 2 * self.margin
 
     @property
-    def grid_height(self):
+    def grid_height(self) -> float:
         return self.grid[0] * (self.fov_size + self.padding) - self.padding + 2 * self.margin
 
     @property
-    def rectangle_tl(self):
+    def rectangle_tl(self) -> np.ndarray:
         return self.center_point + self.grid_center - [self.grid_width / 2, self.grid_height / 2]
 
     @property
-    def rectangle_br(self):
+    def rectangle_br(self) -> np.ndarray:
         return self.center_point + self.grid_center + [self.grid_width / 2, self.grid_height / 2]
+
+    @property
+    def rectangle_tr(self) -> np.ndarray:
+        return self.center_point + self.grid_center + [self.grid_width / 2, -self.grid_height / 2]
+
+    @property
+    def rectangle_bl(self) -> np.ndarray:
+        return self.center_point + self.grid_center + [-self.grid_width / 2, self.grid_height / 2]
 
     def plot(self, plane_fit_points=None):
         # Visualize experiment
@@ -214,107 +181,453 @@ class ExperimentConfiguration:
         plt.legend()
         plt.tight_layout()
 
+    def sample_points_for_plane_fitting(self, n_mid_points: 2) -> list[tuple[float, float]]:
+        tl = self.rectangle_tl + self.margin / 2
+        br = self.rectangle_br - self.margin / 2
+        points = set()
+        for x in np.linspace(tl[0], br[0], n_mid_points + 2):
+            points.add((x, tl[1]))
+            points.add((x, br[1]))
 
-def sample_points_for_experiment_configuration(experiment_configuration: ExperimentConfiguration, n_mid_points: 2) -> \
-        list[tuple[float, float]]:
-    tl = experiment_configuration.rectangle_tl + experiment_configuration.margin / 2
-    br = experiment_configuration.rectangle_br - experiment_configuration.margin / 2
-    points = set()
-    for x in np.linspace(tl[0], br[0], n_mid_points + 2):
-        points.add((x, tl[1]))
-        points.add((x, br[1]))
+        for y in np.linspace(tl[1], br[1], n_mid_points + 2):
+            points.add((tl[0], y))
+            points.add((br[0], y))
 
-    for y in np.linspace(tl[1], br[1], n_mid_points + 2):
-        points.add((tl[0], y))
-        points.add((br[0], y))
-
-    return list(points)
+        return list(points)
 
 
-def main():
+def find_and_log_plane(
+        system: System,
+        path: Path,
+        *,
+        plane_coordinates: list[tuple[float, float]],
+        drop_direction: DropDirection,
+        force: bool = False
+) -> PlaneFit:
+    logger = system.log
+    plane_path = Path(path) / "plane.zdc"
+
+    if not force and plane_path.exists():
+        logger.info("Load plane detection results...")
+        dc = Container(file=str(plane_path))
+
+    else:
+        # Plane needs micrometer coordinates
+        zlo = zup = system.z0
+        plane = Plane(zlo, zup, system, logger, **args)
+
+        logger.info("Store background image...")
+        plane.layer.focus.imgBack.write(str(path / "back.zdc"))
+
+        logger.info("Run plane detection...")
+        for x, y in plane_coordinates:
+            plane.run(x, y, path=path)
+
+        logger.info("Store plane detection results...")
+        dc = plane.container()
+        dc.write(str(path / "plane.zdc"))
+
+    if drop_direction == DropDirection.DOWN:
+        plane_points = dc["meas/result.json"]["lower"]["points"]
+    else:
+        plane_points = dc["meas/result.json"]["upper"]["points"]
+    plane_fit_function = PlaneFit.from_points(np.asarray(plane_points))  # in um
+    logger.info(str(plane_fit_function))
+    logger.info("Done.")
+    return plane_fit_function
+
+
+def find_and_log_opl(
+        system: System,
+        image_center: Point2D,
+        path: Path,
+        *,
+        m0: float = None,
+        force: bool = False):
+    logger = system.log
+    opl_path = Path(path) / "opl.txt"
+    if not force and opl_path.exists():
+        with open(opl_path, "r") as fp:
+            m0 = float(fp.readline())
+        logger.info(f"Retrieved OPL motor pos {m0:.1f} µm")
+    else:
+        m0 = system.dhm.motorscan(m0)
+        logger.info(f"OPL motor pos at {image_center}: {system.dhm.device.MotorPos:.1f} µm (set: {m0:.1f} µm)")
+        with open(opl_path, "w") as fp:
+            fp.write(str(m0))
+    return m0
+
+
+def corner_list(
+        center: Point2D | Point3D,
+        corner_length: float,
+        corner_width: float,
+        height: float,
+        slice_height: float,
+        hatch_size: float,
+        *,
+        F: Optional[float] = None,
+        E: Optional[float] = None,
+        power: Optional[float] = None,
+) -> list[dict]:
+
+    # Top-right corner (marked)
+    corner_tr = {
+        "name": "corner_tr",
+        "corner": "tr",
+        "axes": "ABZ",
+        "power": power,
+        "structure": Corner(
+            center,
+            length=corner_length,
+            width=corner_width,
+            height=height,
+            slice_size=slice_height,
+            hatch_size=hatch_size,
+            rotation_degree=90,
+            E=E,
+            F=F,
+            mark=True,
+        )}
+
+    # Top-left corner
+    corner_tl = {
+        "name": "corner_tl",
+        "corner": "tl",
+        "axes": "ABZ",
+        "power": power,
+        "structure": Corner(
+            center,
+            length=corner_length,
+            width=corner_width,
+            height=height,
+            slice_size=slice_height,
+            hatch_size=hatch_size,
+            rotation_degree=0,
+            E=E,
+            F=F,
+            mark=False,
+        )}
+
+    # Bottom-left corner
+    corner_bl = {
+        "name": "corner_bl",
+        "corner": "bl",
+        "axes": "ABZ",
+        "power": power,
+        "structure": Corner(
+            center,
+            length=corner_length,
+            width=corner_width,
+            height=height,
+            slice_size=slice_height,
+            hatch_size=hatch_size,
+            rotation_degree=270,
+            E=E,
+            F=F,
+            mark=False,
+        )}
+
+    # Bottom-right corner
+    corner_br = {
+        "name": "corner_br",
+        "corner": "br",
+        "axes": "ABZ",
+        "power": power,
+        "structure": Corner(
+            center,
+            length=corner_length,
+            width=corner_width,
+            height=height,
+            slice_size=slice_height,
+            hatch_size=hatch_size,
+            rotation_degree=180,
+            E=E,
+            F=F,
+            mark=False,
+        )}
+
+    return [corner_tr, corner_tl, corner_bl, corner_br]
+
+
+def structure_list(low_speed_um, accel_x_um, high_speed_um, accel_a_um) -> list[dict]:
+
+    stair_0 = {
+        "name": "stair_0",
+        "axes": "ABZ",
+        "power": 0.7,
+        "structure": Stair(
+            Point3D(0, 0, -2),
+           n_steps=6,
+           step_height=0.6,
+           step_length=20,
+           step_width=50,
+           hatch_size=0.125,
+           slice_size=0.3,
+           socket_height=7,
+           velocity=2000,
+           acceleration=accel_a_um,
+        )}
+
+    stair_1 = {
+        "name": "stair_1",
+        "axes": "XYZ",
+        "power": 0.7,
+        "structure": Stair(
+            Point3D(0, 0, -2),
+           n_steps=6,
+           step_height=0.6,
+           step_length=20,
+           step_width=50,
+           hatch_size=0.125,
+           slice_size=0.3,
+           socket_height=7,
+           velocity=300,
+           acceleration=accel_x_um,
+        )}
+
+    return [stair_0, stair_1]
+
+
+def measure(
+        system: System,
+        coordinate: Coordinate,
+        *,
+        path: Path,
+        name: str
+) -> tuple[Container, ImageContainer]:
+    """
+    Coordinate in mm in absolute coordinates
+    """
+    logger = system.log
+
+    # Move to given coordinate
+    system.a3200_new.api.LINEAR(**coordinate, F=20)
+
+    # Take DHM image
+    dhm_container = system.dhm.container(opt=True)
+    fn = path / "dhm" / f"hologram_{name}.zdc"
+    dhm_container.write(fn)
+    logger.info(f"Hologram image: '{fn}'")
+
+    # Take camera image
+    camera_container = system.getimage()
+    fn = path / "camera" / f"camera_{name}.zdc"
+    camera_container.write(fn)
+    logger.info(f"Camera image: '{fn}'")
+    return dhm_container, camera_container
+
+
+def measurement_factory(
+        system: System,
+        coordinate: Coordinate,
+        name: str,
+        *,
+        save_folder: Path
+) -> Callable[[int], None]:
+    """
+    Coordinate in mm in absolute coordinates
+    """
+
+    def do_measurement(layer_id: int):
+        # DHM Image before
+        system.a3200_new.api.LINEAR(**coordinate, F=20)
+        dhm_container = system.dhm.container(opt=True)
+        fn = save_folder / f"hologram_{name}.{layer_id}.zdc"
+        logger.info(f"Store hologram container file '{fn}'")
+        dhm_container.write(fn)
+
+        # Camera Image before
+        system.a3200_new.api.LINEAR(**coordinate, F=20)
+        camera_container = system.getimage()
+        assert isinstance(camera_container, ImageContainer)
+        camera_container.write(str(path / f"camera_{name}.{layer_id}.zdc"))
+        print(f"Location: {camera_container.location}")
+        return None
+
+    return do_measurement
+
+
+def structure_program(
+        logger,
+        x: float,
+        y: float,
+        structure: DrawableObject,
+        name: str,
+        printing_axes: str,
+        power: float,
+        plane_fit_function):
+    logger.info(f"Creating layer programs for {name}: {structure}")
+    assert isinstance(structure, DrawableObject)
+
+    # Make sure that power is not None
+    power = float(power)
+
+    # Absolute center coordinates
+    offset_x = structure.center_point.X
+    offset_y = structure.center_point.Y
+    z = plane_fit_function(x, y)
+    structure_center_absolute_um = {
+        "X": x + offset_x,
+        "Y": y + offset_y,
+        "Z": z,
+    }
+    structure_center_absolute_mm = {k: v * Unit.um.value for k, v in structure_center_absolute_um.items()}
+
+    # Coordinate systems of stages and galvo scanner
+    coordinate_system_stage = CoordinateSystem(
+        offset_x=structure_center_absolute_um["X"],
+        offset_y=structure_center_absolute_um["Y"],
+        z_function=structure_center_absolute_um["Z"],
+        unit=Unit.um
+    )
+    coordinate_system_galvo = CoordinateSystem(
+        offset_x=-offset_x,
+        offset_y=-offset_y,
+        z_function=structure_center_absolute_um["Z"],
+        unit=Unit.um
+    )
+    coordinate_system_galvo.axis_mapping = {"X": "A", "Y": "B"}
+
+    # Generate structure and layer programs
+    if printing_axes == "ABZ":
+        coordinate_system = coordinate_system_galvo
+    else:
+        coordinate_system = coordinate_system_stage
+    structure_pgm = DrawableAeroBasicProgram(coordinate_system)
+    layer_pgm_paths = []
+    x_center = structure_center_absolute_mm["X"]
+    y_center = structure_center_absolute_mm["Y"]
+    for layer_id, layer in enumerate(structure.iterate_layers(coordinate_system)):
+        # AeroBasic program for given layer
+        layer_pgm = AeroBasicProgram()
+        layer_pgm.LINEAR(X=x_center, Y=y_center)  # move to reference point for galvo scanner
+        layer_pgm.add_programm(layer)
+
+        # Store layer program file
+        layer_pgm_path = path / "programs" / f"{name}_layers" / f"{name}.{layer_id:03d}.txt"
+        layer_pgm.write(layer_pgm_path)
+        layer_pgm_paths.append(str(layer_pgm_path))
+
+        # Add layer program to structure program
+        structure_pgm.add_programm(layer_pgm)
+
+    # Store structure program file
+    structure_pgm_path = path / "programs" / f"{name}.full.txt"
+    structure_pgm.write(structure_pgm_path)
+
+    # Structure configuration
+    structure_config = {
+        "name": name,
+        "axes": printing_axes,
+        "power": power,
+        "center_x": structure_center_absolute_um["X"],
+        "center_y": structure_center_absolute_um["Y"],
+        "center_z": structure_center_absolute_um["Z"],
+        "structure": structure.to_json(),
+        "program_file": str(structure_pgm_path),
+        "layer_files": layer_pgm_paths,
+    }
+
+    # Plot structure to image file
+    logger.info(f"Plotting {name}")
+    movements = read_file(structure_pgm_path)
+    plot_movements(movements)
+    plt.savefig(path / "programs" / f"{name}.png")
+    plt.close()
+
+    # Done
+    return layer_pgm_paths, structure_config
+
+
+def print_structure(
+        system,
+        pgm_files_list: list[Path],
+        x: float,  # um
+        y: float,  # um
+        name: str,
+        power: float
+):
+    logger = system.log
+    logger.info(f"Printing {name}")
+    structure_center_absolute_mm = {"X": x / 1000, "Y": y / 1000}
+
+    # Set laser power
+    system.controller.power(power)
+
+    # Images before structure writing
+    measure(system, structure_center_absolute_mm, path=path, name=f"{name}_before")
+
+    t1 = time.time()
+    for layer_id, layer_pgm_path in enumerate(pgm_files_list):
+        try:
+            task = system.a3200_new.run_program_as_task(layer_pgm_path, task_id=1)
+            task.wait_to_finish()
+            task.finish()
+            measure(system, structure_center_absolute_mm, path=path, name=name)
+        except AerotechError as e:
+            logger.error(f"Program failed for {name}: {e}")
+    t2 = time.time()
+    logger.info(f"Making {name} took {t2 - t1:.2f}s")
+
+    # Images after structure writing
+    measure(system, structure_center_absolute_mm, path=path, name=f"{name}_after")
+
+
+def main(logger, path):
     user = "Hannes"
     objective = "Zeiss 20x"
 
     logger.info("Initialize system object...")
-    with System(user, objective, logger, **args) as system:
+    with (System(user, objective, logger, **args) as system):
         logger.info("Initialize plane object...")
 
+        # Size of (oval) resin drop
         # TODO: Determine automatically
-
-        right_edge = [0, 15650]
-        left_edge = [0, 29150]
-        front_edge = [-5300, 22400]
-        far_edge = [7200, 22400]
+        right_edge = [-600, 10850]
+        left_edge = [200, 26900]
+        front_edge = [-6500, 17750]
+        far_edge = [6400, 19550]
         edges = np.asarray([right_edge, left_edge, far_edge, front_edge])
 
+        # Configure experiment
+        grid_center = Point2D(-3000, 14500)
         experiment_configuration = ExperimentConfiguration(
             resin_corner_bl=np.min(edges, axis=0),  # um
             resin_corner_tr=np.max(edges, axis=0),  # um
             fov_size=500,
             margin=200,
             padding=100,
-            absolute_grid_center=(975, 22400 + 2100),
-            # grid_center=(-2000, -1000),
-            grid=(4, 7),  # Rows, Cols
+            absolute_grid_center=grid_center.as_tuple(),
+            grid=(2, 3),  # (4, 7) # Rows, Cols
         )
+        plane_fit_points = experiment_configuration.sample_points_for_plane_fitting(n_mid_points=0)
         logger.info(experiment_configuration)
 
-        # Set laser power
-        system.controller.power(0.7)
-        a3200_new = system.a3200_new
+        # Set default laser power
+        default_power = 0.7
+        system.controller.power(default_power)
 
-        plane_fit_points = sample_points_for_experiment_configuration(experiment_configuration, n_mid_points=3)
+        # Setup system for drawing
+        a3200_new = system.a3200_new
+        a3200_new.api(DefaultSetup())
 
         # Visualize experiment
         experiment_configuration.plot(plane_fit_points)
         plt.savefig(path / "experiment_configuration.png")
         plt.show()
-        # TODO: Comment in again maybe
-        # if input("Continue with plane fitting? (y/n)") != "y":
-        #     return
 
-        # Old Plane-Fitting
-        plane_path = path / "plane.zdc"
-        if Path(plane_path).exists():
-            dc = Container(file=str(plane_path))
-        else:
-            dc = find_and_log_plane(
-                system,
-                save_folder=path,
-                plane_coordinates=plane_fit_points
-            )
-
-        plane_points = dc["meas/result.json"]["lower"]["points"]
-        plane_fit_function = PlaneFit.from_points(np.asarray(plane_points))  # in um
-        logger.info(plane_fit_function)
-
-        # TODO: Comment in again maybe
-        # if input("Plane fitting completed. Continue? (y/n)") != "y":
-        #     return
-
-        # Setup system for drawing
-        ifov_setup = SetupIFOV()
-        system.a3200_new.api(DefaultSetup())
-        # system.a3200_new.api(ifov_setup)  # IFOV Setup currently does not work correctly
-
-        # TODO: Make full image of whole scene
-
-        # Define rectangle
-        rectangle = CornerRectangle(
-            Point3D(0, 0, -2),
-            rectangle_width=experiment_configuration.grid_width,
-            rectangle_height=experiment_configuration.grid_height,
-            corner_width=50,
-            corner_length=400,
-            height=7,
-            hatch_size=0.5,
-            slice_height=0.75,
-            F=5000
+        # Get substrate surface plane
+        if not messagebox.askyesno(message="Run plane fitting?"): return
+        plane_fit_function = find_and_log_plane(
+            system,
+            path,
+            plane_coordinates=plane_fit_points,
+            drop_direction=DropDirection.DOWN,
+            force=False
         )
 
-        # Custom drawing on coordinate system specified for each point depending on plane fitting
-        rectangle_program = AeroBasicProgram()
-        rectangle_program(DefaultSetup())
+        # Global coordinate system
         coordinate_system_grid_to_absolute = CoordinateSystem(
             offset_x=experiment_configuration.absolute_grid_center[0],
             offset_y=experiment_configuration.absolute_grid_center[1],
@@ -323,249 +636,108 @@ def main():
             unit=Unit.um
         )
 
-        for corner in [rectangle.tl_corner, rectangle.bl_corner, rectangle.br_corner, rectangle.tr_corner]:
-            corner_center = corner.center_point
-            z_offset = coordinate_system_grid_to_absolute.convert(corner_center.as_dict())["Z"]
-
-            coordinate_system = CoordinateSystem(
-                offset_x=experiment_configuration.absolute_grid_center[0],
-                offset_y=experiment_configuration.absolute_grid_center[1],
-                z_function=z_offset / Unit.um.value,
-                drop_direction=DropDirection.DOWN,
-                unit=Unit.um
-            )
-            coordinate_system_galvo = CoordinateSystem(
-                offset_x=-corner_center.X,
-                offset_y=-corner_center.Y,
-                z_function=z_offset / Unit.um.value,
-                drop_direction=DropDirection.DOWN,
-                unit=Unit.um
-            )
-            coordinate_system_galvo.axis_mapping = {"X": "A", "Y": "B"}
-            rectangle_program.LINEAR(**coordinate_system.convert(corner_center.as_dict()))
-            rectangle_program.add_programm(corner.draw_on(coordinate_system_galvo))
-
-        # Make tr corner thicker
-        corner = rectangle.tr_corner
-        z_offset = coordinate_system_grid_to_absolute.convert(corner.center_point.as_dict())["Z"]
-        coordinate_system = CoordinateSystem(
-            offset_x=experiment_configuration.absolute_grid_center[0] + corner.width * 2,
-            offset_y=experiment_configuration.absolute_grid_center[1] - corner.width * 2,
-            z_function=z_offset / Unit.um.value,
-            drop_direction=DropDirection.DOWN,
-            unit=Unit.um
-        )
-
-        coordinate_system_galvo = CoordinateSystem(
-            offset_x=-corner.center_point.X,
-            offset_y=-corner.center_point.Y,
-            z_function=z_offset / Unit.um.value,
-            drop_direction=DropDirection.DOWN,
-            unit=Unit.um
-        )
-        coordinate_system_galvo.axis_mapping = {"X": "A", "Y": "B"}
-        rectangle_program.LINEAR(**coordinate_system.convert(corner.center_point.as_dict()))
-
-        rectangle_program.add_programm(corner.draw_on(coordinate_system_galvo))
-
-        # Calibrate in center
-        image_center = coordinate_system_grid_to_absolute.convert(rectangle.center_point.as_dict())
-
-        # TODO: Comment in again maybe
-        # if input(f"Drive to image center: {image_center}? (y/n)") != "y":
-        #     return
-
-        # Calibrate DHM
+        # Optical path length for DHM
+        if not messagebox.askyesno(message="Run OPL motor scan?"): return
+        image_center = coordinate_system_grid_to_absolute.convert({"X": 0, "Y": 0, "Z": 0})
         a3200_new.api.LINEAR(**image_center, F=2)  # Slower, as we also move in z direction and it is scary
+        m0 = 3847.0
+        m0 = find_and_log_opl(system, grid_center, path, m0=m0, force=False)
+        system.dhm.device.MotorPos = m0
 
-        # TODO: Comment in, but only once.
-        optImageMedian(system.dhm, vmedian=32, logger=logger)
-        m = system.dhm.motorscan()
-        logger.info(f"Motor pos at {image_center}: {system.dhm.device.MotorPos:.1f} µm (set: {m:.1f} µm)")
+        # TODO: Make full image of whole scene
+        # measure(system, image_center, "before", save_folder=path)
 
-        measure(system, image_center, "before", save_folder=path)
-
-        pgm_file = path / "programs" / "corners.txt"
-
-        rectangle_program.write(pgm_file)
-        movements = read_file(pgm_file)
-        system.log.info("Plot corners")
-        # TODO: COrners wieder plotten
-        plot_movements(movements)
-        plt.savefig(path / "programs" / "corners.png")
-        plt.close()
-        # if input("Execute movements to draw corners (y/n): ") == "y":
-        # TODO: Make optional again
-        t1 = time.time()
-        task = a3200_new.run_program_as_task(pgm_file, task_id=1)
-        print("\n".join(map(str, a3200_new.api.history)))
-        task.wait_to_finish()
-        task.finish()
-
-        t2 = time.time()
-        logger.info(f"Making corner took {t2 - t1:.2f}s")
-
-        a_mm_x = float(a3200_new.api.AXISSTATUS(SingleAxis.X, AxisStatusDataItem.AccelerationRate).replace(",", "."))
-        a_mm_galvo = float(
+        # Acceleration rates of stages and galvanometer
+        accel_x_mm = float(
+            a3200_new.api.AXISSTATUS(SingleAxis.X, AxisStatusDataItem.AccelerationRate).replace(",", "."))
+        accel_a_mm = float(
             a3200_new.api.AXISSTATUS(SingleAxis.A, AxisStatusDataItem.AccelerationRate).replace(",", "."))
-        a_um_x = a_mm_x / Unit.um.value
-        a_um_galvo = a_mm_galvo / Unit.um.value
-        velocity = 5000
+        accel_x_um = accel_x_mm / Unit.um.value
+        accel_a_um = accel_a_mm / Unit.um.value
 
-        structures: list[DrawableObject] = [
-            # SphericalLens(
-            #     Point3D(0, 0, -2),
-            #     5,
-            #     50,
-            #     0.2,
-            #     circle_object_factory=FilledCircle2D.as_circle_factory(velocity),
-            #     hatch_size=0.1,
-            #     velocity=velocity
-            # ),
-            # SphericalLens(
-            #     Point3D(0, 0, -2),
-            #     5,
-            #     50,
-            #     0.2,
-            #     circle_object_factory=LineCircle2D.as_circle_factory(acceleration=a_um, velocity=velocity),
-            #     hatch_size=0.1,
-            #     velocity=velocity
-            # ),
-            # Cylinder(
-            #     Point3D(0, 0, -2),
-            #     10,
-            #     3,
-            #     0.2,
-            #     circle_object_factory=LineCircle2D.as_circle_factory(acceleration=a_um, velocity=velocity),
-            #     hatch_size=0.1,
-            #     velocity=velocity
-            # ),
-            # Cylinder(
-            #     Point3D(0, 0, -2),
-            #     10,
-            #     3,
-            #     0.2,
-            #     circle_object_factory=FilledCircle2D.as_circle_factory(velocity),
-            #     hatch_size=0.1,
-            #     velocity=velocity
-            # ),
-            # # Cylinder(
-            # #     Point3D(0, 0, -2),
-            # #     10,
-            # #     3,
-            # #     0.2,
-            # #     circle_object_factory=Spiral2D.as_circle_factory(velocity),
-            # #     hatch_size=0.1,
-            # #     velocity=velocity
-            # # ),
-            Stair(
-                Point3D(0, 0, -2),
-                n_steps=6,
-                step_height=0.6,
-                step_length=20,
-                step_width=50,
-                hatch_size=0.125,
-                slice_size=0.3,
-                socket_height=7,
-                velocity=velocity,
-                acceleration=a_um_galvo
-            )
-        ]
+        # Writing speeds
+        low_speed_um = 1000
+        high_speed_um = 5000
 
-        structures = [Stair(
+        # List of drawable objects of corners and structures
+        structures = corner_list(
             Point3D(0, 0, -2),
-            n_steps=6,
-            step_height=0.6,
-            step_length=20,
-            step_width=50,
-            hatch_size=0.125,
-            slice_size=0.3,
-            socket_height=7,
-            velocity=velocity,
-            acceleration=a_um_galvo
-        )] * 28
+            corner_width=50,
+            corner_length=400,
+            height=7,
+            hatch_size=0.5,
+            slice_height=0.75,
+            F=high_speed_um,
+            power=default_power
+        )
+        structures += structure_list(low_speed_um, accel_x_um, high_speed_um, accel_a_um)
 
+        # Build corner and structure programs
+        if not messagebox.askyesno(message="Create corner and structure programs?"): return
         structure_programs = []
         structure_configs = []
-        for i, ((x, y), structure) in enumerate(zip(experiment_configuration.iter_experiment_locations(), structures)):
-            system.log.info(f"Creating program for structure {i:02d}: {structure}")
+        names = []
+        structure_id = 0
+        for structure_dict in structures:
 
-            # Create program
-            z_offset = plane_fit_function(x, y)
-            structure_center_absolute_um = {
-                "X": x,
-                "Y": y,
-                "Z": z_offset
-            }
-            structure_center_absolute_mm = {k: v * Unit.um.value for k, v in structure_center_absolute_um.items()}
+            # Make sure that each structure has an individual name
+            name = structure_dict["name"]
+            if name in names:
+                i = 1
+                while f"{name}_({i})" in names:
+                    i += 1
+                name = f"{name}_({i})"
+            names.append(name)
 
-            coordinate_system = CoordinateSystem(
-                offset_x=structure_center_absolute_um["X"],
-                offset_y=structure_center_absolute_um["Y"],
-                z_function=structure_center_absolute_um["Z"],
-                unit=Unit.um
+            # Optional corner position
+            corner_pos = structure_dict.get("corner", None)
+
+            # Printing axes with default
+            printing_axes = structure_dict.get("axes", "ABZ")
+
+            # Laser power with default
+            power = structure_dict.get("power", default_power)
+
+            # Drawable object of structure
+            structure = structure_dict["structure"]
+
+            system.log.info(f"Creating program for {name}: {structure}")
+            if corner_pos is not None:
+                x, y = experiment_configuration.corner_location(corner_pos).as_tuple()
+            else:
+                x, y = experiment_configuration.structure_location(structure_id).as_tuple()
+                structure_id += 1
+
+            paths, config = structure_program(
+                system.log,
+                x, y,
+                structure, name, printing_axes, power,
+                plane_fit_function)
+            structure_programs.append(paths)
+            structure_configs.append(config)
+        structure_configs_path = path / "structures.json"
+        structure_configs_path.write_text(json.dumps(structure_configs, indent=4))
+
+        # Print corners and structures
+        if not messagebox.askyesno(message="Print corners and structures?"): return
+        for structure_config in structure_configs:
+            layer_pgm_paths = [Path(p) for p in structure_config["layer_files"][::-1]]
+            print_structure(
+                system,
+                layer_pgm_paths,
+                x=structure_config["center_x"],
+                y=structure_config["center_y"],
+                name=structure_config["name"],
+                power=structure_config["power"]
             )
-            coordinate_system_galvo = CoordinateSystem(
-                offset_x=0,
-                offset_y=0,
-                z_function=structure_center_absolute_um["Z"],
-                unit=Unit.um
-            )
-            coordinate_system_galvo.axis_mapping = {"X": "A", "Y": "B"}
 
-            program = DefaultSetup() + structure.draw_on(coordinate_system_galvo)
-            structure_pgm_file = path / "programs" / f"structure_{i:02d}.txt"
-            program.write(structure_pgm_file)
-            structure_programs.append(structure_pgm_file)
-
-            # Create configs
-            assert isinstance(structure, DrawableObject)
-            structure_configs.append({
-                "index": i,
-                "x": x,
-                "y": y,
-                "structure": structure.to_json(),
-                "program_file": str(structure_pgm_file.absolute())
-            })
-
-            # Plot
-            # TODO: Add plotting again
-            movements = read_file(structure_pgm_file)
-            system.log.info(f"Plot structure {i:02d}")
-            plot_movements(movements)
-            plt.savefig(path / "programs" / f"structure {i:02d}.png")
-            plt.close()
-
-        (path / "structures.json").write_text(json.dumps(structure_configs, indent=4))
-
-        # if input("Continue to print structures? (y/n)") != "y":
-        #     return
-
-        for i, (structure_program, (x, y)) in enumerate(zip(
-                structure_programs,
-                experiment_configuration.iter_experiment_locations()
-        )):
-            system.log.info(f"Printing structure {i:02d}: {structure}")
-            structure_center_absolute_mm = {"X": x / 1000, "Y": y / 1000}
-
-            measure(system, structure_center_absolute_mm, f"Structure_{i:02d}_before", save_folder=path)
-            t1 = time.time()
-            try:
-                task = a3200_new.run_program_as_task(structure_program, task_id=1)
-                task.wait_to_finish()
-                task.finish()
-            except AerotechError as e:
-                logger.error(f"Program failed for structure {i:02d}: {e}")
-            t2 = time.time()
-            logger.info(f"Making structure {i:02d} took {t2 - t1:.2f}s")
-            measure(system, structure_center_absolute_mm, f"Structure_{i:02d}_after", save_folder=path)
-
-        measure(system, image_center, "after", save_folder=path)
+        # TODO: Make full image of whole scene
+        # measure(system, image_center, "after", save_folder=path)
 
 
 if __name__ == '__main__':
     # path = Path(mkdir(f".output/dhm_paper/{datetime.datetime.now():%Y%m%d_%H%M%S}", clean=False))
-    path = Path(mkdir(f".output/dhm_paper/{datetime.datetime.now():%Y%m%d}", clean=False))
+    path = Path(mkdir(f".output/dhm_paper/{datetime.datetime.now():%Y%m%d}_second_try", clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
-    main()
+    main(logger, path)

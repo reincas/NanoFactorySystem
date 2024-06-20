@@ -1,3 +1,5 @@
+from typing import Iterator
+
 import qrcode
 
 from nanofactorysystem.aerobasic.programs.drawings import DrawableObject, DrawableAeroBasicProgram
@@ -17,7 +19,7 @@ class QRCode(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         qr = qrcode.make(self.text, border=0, box_size=1)
         modules = qr.modules
@@ -36,7 +38,7 @@ class QRCode(DrawableObject):
                     program.add_programm(v_line.draw_on(coordinate_system))
                     z1, z2 = z2, z1
 
-        return program
+        yield program
 
 
 if __name__ == '__main__':

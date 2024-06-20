@@ -2,6 +2,7 @@ import datetime
 import hashlib
 import random
 import time
+import shutil
 from functools import cached_property
 from os import PathLike
 from pathlib import Path
@@ -10,9 +11,7 @@ from typing import Optional
 from nanofactorysystem.aerobasic import AxisStatusDataItem, SingleAxis, SystemStatusDataItem, WaitMode, Axis
 from nanofactorysystem.aerobasic.ascii import AerotechAsciiInterface, DummyAsciiInterface
 from nanofactorysystem.aerobasic.constants import AxisStatus
-from nanofactorysystem.aerobasic.constants.tasks import ProgrammingMode, TaskState, TaskStatusDataItem, TaskMode, \
-    TaskStatus, \
-    VelocityMode
+from nanofactorysystem.aerobasic.constants.tasks import ProgrammingMode, TaskState, VelocityMode
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
 from nanofactorysystem.devices.aerotech.task import Task
 from nanofactorysystem.devices.coordinate_system import Point3D
@@ -76,7 +75,7 @@ class Aerotech3200:
 
     def sync_internal_state(self):
         for task in self.tasks:
-            task.sync_all()
+            task.update()
 
     @cached_property
     def version(self):
@@ -135,25 +134,6 @@ class Aerotech3200:
         self.api.WAIT_MODE(wait_mode)
         self.wait_mode = wait_mode
 
-    def get_task_state(self, task_id: int) -> TaskState:
-        return TaskState(int(self.api.PROGRAM_STATUS(task_id, TaskStatusDataItem.TaskState)))
-
-    def get_task_status(self, task_id: int) -> TaskState:
-        response = (self.api.STATUS(
-            (task_id, TaskStatusDataItem.TaskStatus0),
-            (task_id, TaskStatusDataItem.TaskStatus1),
-            (task_id, TaskStatusDataItem.TaskStatus2)
-        )).split(" ")
-        return TaskStatus.from_strings(*response)
-        # return TaskStatus.from_strings(response[0],response[1],response[2])
-
-    def get_task_mode(self, task_id: int) -> TaskMode:
-        return TaskMode(int(self.api.PROGRAM_STATUS(task_id, TaskStatusDataItem.TaskMode)))
-
-    def get_wait_mode(self, task_id: int) -> WaitMode:
-        task_mode = self.get_task_mode(task_id)
-        return WaitMode.from_task_mode(task_mode)
-
     def run_program_as_task(
             self,
             program: PathLike | AeroBasicProgram,
@@ -162,6 +142,7 @@ class Aerotech3200:
             program_ready_timeout=10,  # Seconds
             program_start_running_timeout=10,  # Seconds
     ) -> Task:
+        # TODO(dwoiwode): Delete function
         # Either use path as program or convert AeroBasicProgram to temporary file
         if isinstance(program, AeroBasicProgram):
             now = datetime.datetime.now()
@@ -172,21 +153,26 @@ class Aerotech3200:
         else:
             path = Path(program)
 
+        # Copy program to uniform name for execution to avoid loading too many programs on controller.
+        exec_path = Path.home() / "python_aerobasic_program.pgm"
+        exec_path.write_bytes(path.read_bytes())
+
         # Load program
         if task_id is None:
             # TODO: Better algorithm to determine task_id
             task_id = 2
-        self.api.PROGRAM_LOAD(task_id, path)
+        self.api.PROGRAM_LOAD(task_id, exec_path)
 
         # Wait for program to be ready
         task = Task(self.api, task_id, file_path=path)
         query_delay = 0.1
         for i in range(int(program_ready_timeout / query_delay)):
-            task.sync_all()
-            if task.task_state == TaskState.program_ready:
+            task.update()
+            if task.task_state == TaskState.program_ready or task.task_state == TaskState.program_complete:
                 break
             time.sleep(query_delay)
         else:
+            # path is the individual filename of the layer. exec_path is the universal path which is loaded and printed
             raise RuntimeError(f"Could not load program {path} after {program_ready_timeout} seconds!")
 
         # Start program
@@ -194,8 +180,8 @@ class Aerotech3200:
 
         # Wait for program to run
         for i in range(int(program_start_running_timeout / query_delay)):
-            task.sync_all()
-            if task.task_state == TaskState.program_running:
+            task.update()
+            if task.task_state == TaskState.program_running or task.task_state == TaskState.program_complete:
                 break
             time.sleep(query_delay)
         else:

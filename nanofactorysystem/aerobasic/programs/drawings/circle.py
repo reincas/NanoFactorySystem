@@ -1,13 +1,13 @@
 import abc
 from enum import Enum
-from typing import Optional, Protocol
+from typing import Optional, Protocol, Iterator
 
 import numpy as np
 
 from nanofactorysystem.aerobasic import SingleAxis, GalvoLaserOverrideMode, VelocityMode
 from nanofactorysystem.aerobasic.programs.drawings import DrawableAeroBasicProgram, DrawableObject, DrawablePoint
 from nanofactorysystem.aerobasic.programs.drawings.lines import YLines
-from nanofactorysystem.aerobasic.utils.geometry import line_circle_intersection
+from nanofactorysystem.utils.geometry import line_circle_intersection
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, Point3D, Point2D
 
 
@@ -46,7 +46,7 @@ class Circle2D(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         start_point = self.center + Point2D(X=self.radius, Y=0)
         program.comment(f"\nDraw circle with radius {self.radius} at {self.center}")
@@ -69,7 +69,7 @@ class Circle2D(DrawableObject):
         else:
             raise ValueError(f"Could not identify circle direction {self.circle_direction}")
         program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.OFF)
-        return program
+        yield program
 
 class DrawableCircle(DrawableObject, abc.ABC):
     def __init__(
@@ -137,7 +137,7 @@ class LineCircle2D(DrawableCircle):
 
         return circle_factory
 
-    def draw_on(self, coordinate_system: CoordinateSystem):
+    def iterate_layers(self, coordinate_system: CoordinateSystem):
         """
         Draw circle
         """
@@ -193,7 +193,7 @@ class LineCircle2D(DrawableCircle):
             program.add_programm(y_lines.draw_on(coordinate_system))
             order *= -1
 
-        return program
+        yield program
 
 
 class DrawableRoundCircle(DrawableCircle, abc.ABC):
@@ -243,7 +243,7 @@ class DrawableRoundCircle(DrawableCircle, abc.ABC):
 
 
 class FilledCircle2D(DrawableRoundCircle):
-    def draw_on(self, coordinate_system: CoordinateSystem):
+    def iterate_layers(self, coordinate_system: CoordinateSystem):
         program = DrawableAeroBasicProgram(coordinate_system)
 
         for r in np.arange(self.radius_start, self.radius_end, self.hatch_size):
@@ -255,11 +255,11 @@ class FilledCircle2D(DrawableRoundCircle):
             )
             program.add_programm(circle.draw_on(coordinate_system))
 
-        return program
+        yield program
 
 
 class Spiral2D(DrawableRoundCircle):
-    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         if self.circle_direction == CircleDirection.Clockwise:
             circle_function = program.CW
@@ -339,6 +339,6 @@ class Spiral2D(DrawableRoundCircle):
             program.comment(f"\nDraw single point in the middle")
             program.add_programm(DrawablePoint(self.center).draw_on(coordinate_system))
 
-        return program
+        yield program
 
 
