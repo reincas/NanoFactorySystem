@@ -97,6 +97,7 @@ class System(Parameter):
 
         self.dhm.close()
         self.camera["AcquisitionMode"] = "Continuous"
+        self.a3200_new.save_log()
         self.camera.close()
 
         try:

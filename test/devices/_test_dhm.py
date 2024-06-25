@@ -58,6 +58,7 @@ with Dhm(user, objective, logger, **args) as dhm:
     # cv2.imwrite("hist.png", normcolor(hist))
     # #cv2.waitKey(0)
 
+    dhm.device.MotorPos = 5500
     logger.info("Motor scan.")
     m = dhm.motorscan()
     logger.info(f"Motor pos: {dhm.device.MotorPos:.1f} µm (set: {m:.1f} µm)")

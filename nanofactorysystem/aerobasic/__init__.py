@@ -35,7 +35,7 @@ class AeroBasicAPI(abc.ABC):
         # Acknowledge all errors and accept them
         return self.send("ACKNOWLEDGEALL")
 
-    def ERROR_DECODE(self, error_code:int,error_location:int):
+    def ERROR_DECODE(self, error_code: int, error_location: int):
         # Acknowledge all errors and accept them
         return self.send(f"ERRORDECODE {error_code:d}, {error_location:d}")
 
@@ -109,10 +109,17 @@ class AeroBasicAPI(abc.ABC):
 
         return self.send(f"PROGRAM {task_id} LOAD \"{program_path}\"")
 
+    # ToDo(hrobben): programm associate muss überarbeitet werden, da die Syntax des befehls nicht korrekt ist
+    def PROGRAM_ASSOCIATE(self, task_id: int, program_path: Path | str) -> str:
+        program_name = Path(program_path).name
+        return self.send(f"PROGRAM {task_id} ASSOCIATE \"{program_name}\"")
+
     def PROGRAM_START(self, task_id: int) -> str:
         return self.send(f"PROGRAM {task_id} START")
 
-    def PROGRAM_STOP(self, task_id: int) -> str:
+    def PROGRAM_STOP(self, task_id: Optional[int]=None) -> str:
+        if task_id is None:
+            return self.send(f"PROGRAM STOP")
         return self.send(f"PROGRAM {task_id} STOP")
 
     def PROGRAM_STATUS(
@@ -133,6 +140,15 @@ class AeroBasicAPI(abc.ABC):
 
         response = self.send(f"TASKSTATUS({task_id}{taskstatus_dataitem.as_dataitem}{additional_data})")
         return response
+
+    def REMOVE_PROGRAM(
+            self,
+            program_name: str | Path
+    ):
+        if isinstance(program_name, Path):
+            program_name = program_name.name
+
+        return self.send(f"REMOVEPROGRAM \"{program_name}\"")
 
     def APPLY_DEFAULTS_AXIS(self, axes: SingleAxis):
         return self.send(f"APPLYDEFAULTS AXIS {axes.parameter_name}")

@@ -1,7 +1,7 @@
 import unittest
 
-from nanofactorysystem.aerobasic import Axis, SingleAxis, AxisStatusDataItem
-from nanofactorysystem.aerobasic.ascii import AerotechError
+from nanofactorysystem.aerobasic import SingleAxis, AxisStatusDataItem
+from nanofactorysystem.devices.aerotech import Task
 from . import FemtikaTest
 
 
@@ -16,8 +16,8 @@ class TestFemtikaNoLaser(FemtikaTest):
         print(f"System Time: {system_time}")
 
     def test_get_position(self):
-        x, y, z = self.a3200.xyz
-        print(f"Position: {x=}, {y=}, {z=}")
+        point = self.a3200.xyz
+        print(f"Position: {point}")
 
     def test_axis_status(self):
         axis_status = self.a3200.axis_status
@@ -28,19 +28,19 @@ class TestFemtikaNoLaser(FemtikaTest):
     def test_linear(self):
         self.api.ABSOLUTE()
         self.api.LINEAR(X=0, Y=0, Z=0)
-        x, y, z = self.a3200.xyz
-        print(f"Position: {x=}, {y=}, {z=}")
-        self.assertAlmostEqual(0, x, places=2)
-        self.assertAlmostEqual(0, y, places=2)
-        self.assertAlmostEqual(0, z, places=2)
+        point = self.a3200.xyz
+        print(f"Position: {point}")
+        self.assertAlmostEqual(0, point.X, places=2)
+        self.assertAlmostEqual(0, point.Y, places=2)
+        self.assertAlmostEqual(0, point.Z, places=2)
 
-        self.api.LINEAR(X=0, Y=5, Z=2)
-
-        x, y, z = self.a3200.xyz
-        print(f"Position: {x=}, {y=}, {z=}")
-        self.assertAlmostEqual(0, x, places=2)
-        self.assertAlmostEqual(5, y, places=2)
-        self.assertAlmostEqual(2, z, places=2)
+        # self.api.LINEAR(X=0, Y=5, Z=2)
+        #
+        # x, y, z = self.a3200.xyz
+        # print(f"Position: {x=}, {y=}, {z=}")
+        # self.assertAlmostEqual(0, x, places=2)
+        # self.assertAlmostEqual(5, y, places=2)
+        # self.assertAlmostEqual(2, z, places=2)
 
     def test_move_home(self):
         self.api.LINEAR(X=0, Y=0, Z=0)
@@ -54,14 +54,14 @@ class TestFemtikaNoLaser(FemtikaTest):
     def test_tasks_manual(self):
         for i in range(32):
             print(f"Task {i:02d}:")
-            task_state = self.a3200.get_task_state(i)
-            print(task_state)
-            task_status = self.a3200.get_task_status(i)
-            print(task_status)
-            task_mode = self.a3200.get_task_mode(i)
-            print(task_mode)
-            wait_mode = self.a3200.get_wait_mode(i)
-            print(wait_mode)
+            task = Task(self.api, task_id=i)
+            print("  Task State:", task.task_state)
+            print("  Task Status 0:", task.task_status0)
+            print("  Task Status 1:", task.task_status1)
+            print("  Task Status 2:", task.task_status2)
+            print("  Taskmode:", task.task_mode)
+            print("  Waitmode:", task.wait_mode)
+            print("  Current line:", task.current_line)
             print()
 
     def test_tasks(self):

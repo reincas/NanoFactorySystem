@@ -4,7 +4,7 @@ from unittest import TestCase
 
 from nanofactorysystem.aerobasic import Axis
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
-from nanofactorysystem.aerobasic.utils.visualization import read_file, plot_movements
+from nanofactorysystem.utils.visualization import read_file, plot_movements
 
 FOLDER = Path(__file__).parent.parent / "_programs"
 

@@ -23,7 +23,7 @@ class TestCorners(AeroBasicProgramTest):
             width=20,
             height=7,
             hatch_size=0.5,
-            layer_height=0.75,
+            slice_size=0.75,
             F=2000
         )
         self.program(corner.draw_on(coordinate_system))
@@ -45,7 +45,7 @@ class TestCorners(AeroBasicProgramTest):
             width=20,
             height=7,
             hatch_size=0.5,
-            layer_height=0.75,
+            slice_size=0.75,
             rotation_degree=45,
             F=2000
         )
@@ -72,7 +72,7 @@ class TestCorners(AeroBasicProgramTest):
             corner_width=20,
             height=7,
             hatch_size=0.5,
-            layer_height=0.75,
+            slice_height=0.75,
             F=2000
         )
         self.program(markers.draw_on(coordinate_system))

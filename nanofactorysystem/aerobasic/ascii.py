@@ -4,7 +4,7 @@ from typing import Optional
 
 from nanofactorysystem.aerobasic import AeroBasicAPI, SingleAxis
 from nanofactorysystem.aerobasic.constants import ReturnCode, Version, DataItemEnum
-from nanofactorysystem.aerobasic.utils.typing import StatusQueryType
+from nanofactorysystem.utils.typing import StatusQueryType
 
 
 class AerotechError(Exception):

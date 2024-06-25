@@ -214,9 +214,3 @@ class TaskStatus:
             task_status_1=TaskStatus1(int(task_status_1_str)),
             task_status_2=TaskStatus2(int(task_status_2_str)),
         )
-
-@dataclass
-class Task:
-    task_status_0: TaskStatus0
-    task_status_1: TaskStatus1
-    task_status_2: TaskStatus2

@@ -110,8 +110,10 @@ class AeroBasicProgram(AeroBasicAPI):
 
         return s
 
-    def write(self, file: Path | str, *, compact=False) -> str:
+    def write(self, file: Path | str, *, compact=False, create_folder=True) -> str:
         s = self.to_text(compact=compact, add_timestamp=True)
+        if create_folder:
+            Path(file).parent.mkdir(exist_ok=True, parents=True)
         Path(file).write_text(s)
         return s
 

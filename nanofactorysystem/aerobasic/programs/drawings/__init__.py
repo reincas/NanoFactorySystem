@@ -1,5 +1,5 @@
 import abc
-from typing import Optional
+from typing import Optional, Any, Iterator
 
 from nanofactorysystem.aerobasic import SingleAxis, BezierMode, Axis, GalvoLaserOverrideMode
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
@@ -161,20 +161,33 @@ class DrawableObject(abc.ABC):
     def center_point(self) -> Point2D:
         pass
 
-    @abc.abstractmethod
     def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+        program = DrawableAeroBasicProgram(coordinate_system)
+        for layer in self.iterate_layers(coordinate_system):
+            program.add_programm(layer)
+        return program
+    
+    @abc.abstractmethod
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         pass
 
-    def _init_args(self):
+    def _init_args(self) -> dict[str, Any]:
         code = self.__init__.__code__
-        start_idx = self.__init__.__code__.co_names.index("__init__") + 1
+        if "__init__" not in code.co_names:
+            return {}
+
+        start_idx = code.co_names.index("__init__") + 1
         kwargs = {}
-        for name in code.co_names[start_idx:start_idx + code.co_argcount]:
+        # for name in code.co_names[start_idx:start_idx + code.co_argcount]: # here is a mistake - co_argcount is 5 but should be higher
+        for name in code.co_names[start_idx:]:
             attr = getattr(self, name, "[NOT FOUND]")
             if attr == "[NOT FOUND]":
                 continue
             if hasattr(attr, "to_json"):
                 attr = attr.to_json()
+            elif not isinstance(attr, (str, int, float, dict, list)) or attr is not None:
+                attr = str(attr)
+
             kwargs[name] = attr
         return kwargs
 
@@ -184,6 +197,17 @@ class DrawableObject(abc.ABC):
             "center_point": self.center_point.as_tuple(),
             "__init__": self._init_args()
         }
+
+
+class VoidStructure(DrawableObject):
+    """ Structure that does nothing """
+
+    @property
+    def center_point(self) -> Point2D:
+        return Point2D(0, 0)
+
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
+        yield DrawableAeroBasicProgram(coordinate_system)
 
 
 class DrawablePoint(DrawableObject):
@@ -203,10 +227,10 @@ class DrawablePoint(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         program.LINEAR(**self.center.as_dict())
         program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.ON)
         program.DWELL(self.duration)
         program.GALVO_LASER_OVERRIDE(GalvoLaserOverrideMode.OFF)
-        return program
+        yield program
