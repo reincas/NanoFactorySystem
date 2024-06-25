@@ -4,6 +4,7 @@ from enum import Enum
 from typing import Optional, Literal, Iterator
 
 import numpy as np
+import qrcode
 
 from nanofactorysystem.aerobasic import GalvoLaserOverrideMode, SingleAxis
 from nanofactorysystem.aerobasic.programs.drawings import DrawableAeroBasicProgram, DrawableObject
@@ -87,7 +88,7 @@ class XLines(_Lines):
         self.y = y
         self.z = z
 
-    def center_point(self) -> Point2D:
+    def center_point(self) -> Point3D:
         return Point3D((self.lines[0][0] + self.lines[-1][1]) / 2, self.y, self.z)
 
 
@@ -107,9 +108,28 @@ class YLines(_Lines):
         self.x = x
         self.z = z
 
-    def center_point(self) -> Point2D:
+    def center_point(self) -> Point3D:
         return Point3D(self.x, (self.lines[0][0] + self.lines[-1][1]) / 2, self.z)
 
+
+class ZLines(_Lines):
+    line_axis = SingleAxis.Z
+
+    def __init__(
+            self,
+            x: float,
+            y: float,
+            lines: list[tuple[float, float]],
+            *,
+            velocity: float,
+            acceleration: float
+    ):
+        super().__init__(lines, {"X": x, "Y": y}, velocity=velocity, acceleration=acceleration)
+        self.x = x
+        self.y = y
+
+    def center_point(self) -> Point3D:
+        return Point3D(self.x, self.y, (self.lines[0][0] + self.lines[-1][1]) / 2)
 
 class PolyLine(DrawableObject):
 
@@ -265,47 +285,6 @@ class Corner(DrawableObject):
             program.add_programm(poly_lines.draw_on(coordinate_system))
             yield program
 
-    # def single_layer_old(
-    #         self,
-    #         corner_center: Point2D | Point3D,
-    #         length: float,
-    #         width: float,
-    #         n_hatch: int,
-    #         hatch_size: float,
-    #         *,
-    #         E: Optional[float] = None,
-    #         F: Optional[float] = None,
-    #         rotation_rad: float = 0,
-    #         mark: bool = False,
-    # ) -> PolyLines:
-    #     lines = []
-    #     order = 1
-    #     for i in range(n_hatch):
-    #         center_diagonal = -(i - n_hatch / 2) * hatch_size
-    #         offset = length - width / 2
-    #         center_diagonal = Point2D(center_diagonal, center_diagonal)
-    #         offset = Point2D(offset, offset)
-    #         if mark:
-    #             p1 = corner_center + Point2D(X=offset.X, Y=center_diagonal.Y).rotate2D(rotation_rad)
-    #             p1a = corner_center + Point2D(X=offset.X - width, Y=center_diagonal.Y).rotate2D(rotation_rad)
-    #             p1b = corner_center + Point2D(X=offset.X - 2 * width, Y=center_diagonal.Y).rotate2D(rotation_rad)
-    #             p2 = corner_center + Point2D(X=center_diagonal.X, Y=center_diagonal.Y).rotate2D(rotation_rad)
-    #             p3 = corner_center + Point2D(X=center_diagonal.X, Y=offset.Y).rotate2D(rotation_rad)
-    #             if order > 0:
-    #                 lines.append([p1.as_dict(), p1a.as_dict()])
-    #                 lines.append([p1b.as_dict(), p2.as_dict(), p3.as_dict()])
-    #             else:
-    #                 lines.append([p3.as_dict(), p2.as_dict(), p1b.as_dict()])
-    #                 lines.append([p1a.as_dict(), p1.as_dict()])
-    #         else:
-    #             p1 = corner_center + Point2D(X=offset.X, Y=center_diagonal.Y).rotate2D(rotation_rad)
-    #             p2 = corner_center + Point2D(X=center_diagonal.X, Y=center_diagonal.Y).rotate2D(rotation_rad)
-    #             p3 = corner_center + Point2D(X=center_diagonal.X, Y=offset.Y).rotate2D(rotation_rad)
-    #             lines.append([p1.as_dict(), p2.as_dict(), p3.as_dict()][::order])
-    #         order *= -1
-    #     return PolyLines(lines, F=F, E=E)
-
-
     def single_layer(
             self,
             corner_center: Point2D | Point3D,
@@ -336,10 +315,10 @@ class Corner(DrawableObject):
             p1, p2, p3 = [p1, p2, p3][::order]
             lines.append([p1.as_dict(), p2.as_dict(), p3.as_dict()])
             if mark:
-                p1_mark = corner_center + (p1_raw + Point2D(0, 2*width)).rotate2D(rotation_rad)
-                p2a_mark = corner_center + (p2_raw + Point2D(0, 2*width)).rotate2D(rotation_rad)
-                p2b_mark = corner_center + (p2_raw + Point2D(2*width, 0)).rotate2D(rotation_rad)
-                p3_mark = corner_center + (p3_raw + Point2D(2*width, 0)).rotate2D(rotation_rad)
+                p1_mark = corner_center + (p1_raw - Point2D(0, 2*width)).rotate2D(rotation_rad)
+                p2a_mark = corner_center + (p2_raw - Point2D(0, 2*width)).rotate2D(rotation_rad)
+                p2b_mark = corner_center + (p2_raw - Point2D(2*width, 0)).rotate2D(rotation_rad)
+                p3_mark = corner_center + (p3_raw - Point2D(2*width, 0)).rotate2D(rotation_rad)
                 p1_mark, p2a_mark, p2b_mark, p3_mark = [p1_mark, p2a_mark, p2b_mark, p3_mark][::order]
                 lines_mark.append([p1_mark.as_dict(), p2a_mark.as_dict()])
                 lines_mark.append([p2b_mark.as_dict(), p3_mark.as_dict()])
@@ -347,105 +326,6 @@ class Corner(DrawableObject):
         lines += lines_mark
         return PolyLines(lines, F=F, E=E)
 
-
-# class CornerRectangle(DrawableObject):
-#     def __init__(
-#             self,
-#             center: Point2D | Point3D,
-#             rectangle_width: float,
-#             rectangle_height: float,
-#             corner_length: float,
-#             corner_width: float,
-#             height: float,
-#             slice_height: float = 0.75,
-#             hatch_size: float = 0.5,
-#             # rotation_degree: float,
-#             *,
-#             F: Optional[float] = None,
-#             E: Optional[float] = None,
-#     ):
-#         super().__init__()
-#         self.center = center
-#         self.rectangle_width = rectangle_width
-#         self.rectangle_height = rectangle_height
-#         self.corner_length = corner_length
-#         self.corner_width = corner_width
-#         self.height = height
-#         self.slice_size = slice_height
-#         self.hatch_size = hatch_size
-#         self.F = F
-#         self.E = E
-#
-#         self.tl_corner = Corner(
-#             center + Point2D(-rectangle_width / 2, -rectangle_height / 2),
-#             length=corner_length,
-#             width=corner_width,
-#             height=height,
-#             slice_size=slice_height,
-#             hatch_size=hatch_size,
-#             rotation_degree=0,
-#             E=E,
-#             F=F,
-#         )
-#         self.tr_corner = Corner(
-#             center + Point2D(rectangle_width / 2, -rectangle_height / 2),
-#             length=corner_length,
-#             width=corner_width,
-#             height=height,
-#             slice_size=slice_height,
-#             hatch_size=hatch_size,
-#             rotation_degree=90,
-#             E=E,
-#             F=F,
-#         )
-#         self.bl_corner = Corner(
-#             center + Point2D(-rectangle_width / 2, rectangle_height / 2),
-#             length=corner_length,
-#             width=corner_width,
-#             height=height,
-#             slice_size=slice_height,
-#             hatch_size=hatch_size,
-#             rotation_degree=270,
-#             E=E,
-#             F=F,
-#         )
-#         self.br_corner = Corner(
-#             center + Point2D(rectangle_width / 2, rectangle_height / 2),
-#             length=corner_length,
-#             width=corner_width,
-#             height=height,
-#             slice_size=slice_height,
-#             hatch_size=hatch_size,
-#             rotation_degree=180,
-#             E=E,
-#             F=F,
-#         )
-#
-#     @property
-#     def center_point(self) -> Point2D:
-#         return self.center
-#
-#     def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
-#         program = DrawableAeroBasicProgram(coordinate_system)
-#         program.comment("\nDrawing Top Left corner")
-#         program.add_programm(self.tl_corner.draw_on(coordinate_system))
-#         yield program
-#
-#         program = DrawableAeroBasicProgram(coordinate_system)
-#         program.comment("\nDrawing Top Right corner")
-#         program.add_programm(self.tr_corner.draw_on(coordinate_system))
-#         yield program
-#
-#         program = DrawableAeroBasicProgram(coordinate_system)
-#         program.comment("\nDrawing Bottom Right corner")
-#         program.add_programm(self.br_corner.draw_on(coordinate_system))
-#         yield program
-#
-#         program = DrawableAeroBasicProgram(coordinate_system)
-#         program.comment("\nDrawing Bottom Left corner")
-#         program.add_programm(self.bl_corner.draw_on(coordinate_system))
-#         yield program
-#
 
 class VerticalLine(DrawableObject):
     def __init__(self, position: Point2D, z_min: float, z_max: float, *, F: Optional[float] = None):
@@ -474,6 +354,7 @@ class VerticalLine(DrawableObject):
 class HatchingDirection(Enum):
     X = "X"
     Y = "Y"
+    Z = "Z"
 
     def flip(self):
         if self == HatchingDirection.X:
@@ -617,7 +498,7 @@ class Stair(DrawableObject):
             hatch_size: float,
             slice_size: float,
             velocity: float,
-            acceleration: float,
+            acceleration: float
     ):
         super().__init__()
         self.center = center
@@ -683,4 +564,164 @@ class Stair(DrawableObject):
 
             yield from step_rectangle.iterate_layers(coordinate_system)
 
+        return program
+
+
+class QrErrorCorrection(Enum):
+    L = 0
+    M = 1
+    Q = 2
+    H = 3
+
+
+class QRCode(DrawableObject):
+    def __init__(
+            self,
+            center: Point3D,
+            text: str,
+            *,
+            version: Optional[int] = None,
+            error_correction: Optional[QrErrorCorrection] = None,
+            pixel_pitch: float,
+            base_height: float,
+            anchor_height: float,
+            pixel_height: float,
+            hatch_size: float,
+            slice_size: float,
+            horizontal_velocity: float,
+            horizontal_acceleration: float,
+            vertical_velocity: float,
+            vertical_acceleration: float,
+    ):
+        super().__init__()
+        self.center = center
+        self.text = str(text)
+        assert version is None or (1 <= version <= 40)
+        self.version = version
+        self.error_correction = error_correction or QrErrorCorrection.M
+        self.pixel_pitch = float(pixel_pitch)
+        self.base_height = float(base_height)
+        self.anchor_height = float(anchor_height)
+        self.pixel_height = float(pixel_height)
+
+        self.hatch_size = hatch_size
+        self.slice_size = slice_size
+        self.horizontal_velocity = horizontal_velocity
+        self.horizontal_acceleration = horizontal_acceleration
+        self.vertical_velocity = vertical_velocity
+        self.vertical_acceleration = vertical_acceleration
+
+        if self.error_correction == QrErrorCorrection.L:
+            corr = qrcode.constants.ERROR_CORRECT_L
+        elif self.error_correction == QrErrorCorrection.M:
+            corr = qrcode.constants.ERROR_CORRECT_M
+        elif self.error_correction == QrErrorCorrection.Q:
+            corr = qrcode.constants.ERROR_CORRECT_Q
+        elif self.error_correction == QrErrorCorrection.H:
+            corr = qrcode.constants.ERROR_CORRECT_H
+        else:
+            raise ValueError(f"Unknown error correction {self.error_correction}!")
+        qr = qrcode.QRCode(version=self.version, error_correction=corr)
+        qr.add_data(self.text)
+        qr.make(fit=self.version is None)
+        self.data = np.array(qr.modules, dtype=bool)
+
+        self.n_layer = round(self.base_height / self.slice_size) + 1
+        self.slice_size_opt = self.base_height / (self.n_layer - 1)
+
+    @property
+    def structure_length(self) -> float:
+        return self.pixel_pitch * (self.data.shape[1] + 2)
+
+    @property
+    def structure_width(self) -> float:
+        return self.pixel_pitch * (self.data.shape[0] + 2)
+
+    @property
+    def structure_height(self) -> float:
+        return self.base_height + self.pixel_height
+
+    @property
+    def center_point(self) -> Point2D:
+        return self.center
+
+    def layer_to_z(self, layer_id: int) -> float:
+
+        assert layer_id >= 0 and layer_id < self.n_layer
+        if layer_id == self.n_layer-1:
+            return self.base_height - self.anchor_height + (self.anchor_height + self.pixel_height)/2
+        return self.slice_size_opt * layer_id
+
+    def pixel_program(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+
+        """
+        Special layer. Draw a vertical line for each True pixel. Note: drawing must take place in the
+        same direction (negative z direction in global coordinate system) for all lines to minimise
+        disturbing effects of exposed resin.
+        """
+
+        program = DrawableAeroBasicProgram(coordinate_system)
+
+        # TODO(RC) Take DropDirection into account
+        # Note: z is relative to substrate surface
+        z_start = self.base_height + self.pixel_height
+        z_end = self.base_height - self.anchor_height
+        lines = [[z_start, z_end]]
+
+        h, w = self.data.shape
+        order = 1
+        for j in range(h):
+            y = self.pixel_pitch * (j - (w - 1) / 2)
+            for i in range(w)[::order]:
+                x = self.pixel_pitch * (i - (w - 1) / 2)
+                if self.data[j, i]:
+                    line = ZLines(
+                        x=x,
+                        y=y,
+                        lines=lines,
+                        velocity=self.vertical_velocity,
+                        acceleration=self.vertical_acceleration)
+                    program.add_programm(line.draw_on(coordinate_system))
+            order *= -1
+        return program
+
+    def layer_program(self, coordinate_system: CoordinateSystem, layer_id: int) -> DrawableAeroBasicProgram:
+
+        assert layer_id >= 0 and layer_id < self.n_layer
+        if layer_id == self.n_layer - 1:
+            return self.pixel_program(coordinate_system)
+
+        program = DrawableAeroBasicProgram(coordinate_system)
+        z = self.layer_to_z(layer_id)
+        hatching_direction = [HatchingDirection.X, HatchingDirection.Y][layer_id % 2]
+
+        if hatching_direction == HatchingDirection.X:
+            line_program = XLines
+        elif hatching_direction == HatchingDirection.Y:
+            line_program = YLines
+        else:
+            raise ValueError(f"HatchingDirection not found: {self.hatching_direction}")
+
+        size = self.structure_length
+        n_hatch = round(size / self.hatch_size) + 1
+        hatch_size_opt = size / (n_hatch - 1)
+        order = 1
+        for i in range(n_hatch):
+            line_position = hatch_size_opt * (i - n_hatch/2 + 0.5)
+            line_start = size / 2
+            lines = [[-line_start, line_start][::order]]
+            line = line_program(
+                line_position,
+                z=z,
+                lines=lines,
+                velocity=self.horizontal_velocity,
+                acceleration=self.horizontal_acceleration)
+            program.add_programm(line.draw_on(coordinate_system))
+            order *= -1
+        return program
+
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
+        program = DrawableAeroBasicProgram(coordinate_system)
+        for layer_id in range(self.n_layer):
+            yield self.layer_program(coordinate_system, layer_id)
         return program

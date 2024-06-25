@@ -171,6 +171,8 @@ def read_text(text: str) -> list[Movement]:
                     new_a = pos
                 elif ax == "B":
                     new_b = pos
+                elif ax == "E":
+                    continue
                 elif ax == "F":
                     continue
                 else:
@@ -212,6 +214,8 @@ def read_text(text: str) -> list[Movement]:
                 elif ax == "J":
                     # Second axis
                     setattr(circle_center, axes[1], pos)
+                elif ax == "E":
+                    continue  # Speed doesnt matter atm
                 elif ax == "F":
                     continue  # Speed doesnt matter atm
                 elif ax == "R":

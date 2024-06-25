@@ -178,7 +178,8 @@ class DrawableObject(abc.ABC):
 
         start_idx = code.co_names.index("__init__") + 1
         kwargs = {}
-        for name in code.co_names[start_idx:start_idx + code.co_argcount]:
+        # for name in code.co_names[start_idx:start_idx + code.co_argcount]: # here is a mistake - co_argcount is 5 but should be higher
+        for name in code.co_names[start_idx:]:
             attr = getattr(self, name, "[NOT FOUND]")
             if attr == "[NOT FOUND]":
                 continue

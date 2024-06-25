@@ -1,44 +1,172 @@
-from typing import Iterator
+from typing import Iterator, Optional
 
+from enum import Enum
+
+import numpy as np
 import qrcode
 
 from nanofactorysystem.aerobasic.programs.drawings import DrawableObject, DrawableAeroBasicProgram
-from nanofactorysystem.aerobasic.programs.drawings.lines import VerticalLine
+from nanofactorysystem.aerobasic.programs.drawings.lines import ZLines, HatchingDirection, XLines, YLines
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, Point2D, Point3D
 
 
+class QrErrorCorrection(Enum):
+    L = 0
+    M = 1
+    Q = 2
+    H = 3
+
 class QRCode(DrawableObject):
-    def __init__(self, center: Point3D, text: str, width: float, height: float):
+    def __init__(
+            self,
+            center: Point3D,
+            text: str,
+            *,
+            version: Optional[int] = None,
+            error_correction: Optional[QrErrorCorrection] = None,
+            pixel_pitch: float,
+            base_height: float,
+            anchor_height: float,
+            pixel_height: float,
+            hatch_size: float,
+            slice_size: float,
+            horizontal_velocity: float,
+            horizontal_acceleration: float,
+            vertical_velocity: float,
+            vertical_acceleration: float,
+    ):
         super().__init__()
         self.center = center
         self.text = str(text)
-        self.width = width
-        self.height = height
+        assert version is None or (version >= 1 and version <= 40)
+        self.version = version
+        self.error_correction = error_correction or QrErrorCorrection.M
+        self.pixel_pitch = float(pixel_pitch)
+        self.base_height = float(base_height)
+        self.anchor_height = float(anchor_height)
+        self.pixel_height = float(pixel_height)
+
+        self.hatch_size = hatch_size
+        self.slice_size = slice_size
+        self.horizontal_velocity = horizontal_velocity
+        self.horizontal_acceleration = horizontal_acceleration
+        self.vertical_velocity = vertical_velocity
+        self.vertical_acceleration = vertical_acceleration
+
+        if self.error_correction == QrErrorCorrection.L:
+            corr = qrcode.constants.ERROR_CORRECT_L
+        elif self.error_correction == QrErrorCorrection.M:
+            corr = qrcode.constants.ERROR_CORRECT_M
+        elif self.error_correction == QrErrorCorrection.Q:
+            corr = qrcode.constants.ERROR_CORRECT_Q
+        elif self.error_correction == QrErrorCorrection.H:
+            corr = qrcode.constants.ERROR_CORRECT_H
+        else:
+            raise ValueError(f"Unknown error correction {self.error_correction}!")
+        qr = qrcode.QRCode(version=self.version, error_correction=corr)
+        qr.add_data(self.text)
+        qr.make(fit=self.version is None)
+        self.data = np.array(qr.modules, dtype=bool)
+
+        self.n_layer = round(self.base_height / self.slice_size) + 1
+        self.slice_size_opt = self.base_height / (self.n_layer - 1)
+
+    @property
+    def structure_length(self) -> float:
+        return self.pixel_pitch * (self.data.shape[1] + 2)
+
+    @property
+    def structure_width(self) -> float:
+        return self.pixel_pitch * (self.data.shape[0] + 2)
+
+    @property
+    def structure_height(self) -> float:
+        return self.base_height + self.pixel_height
 
     @property
     def center_point(self) -> Point2D:
         return self.center
 
+    def layer_to_z(self, layer_id: int) -> float:
+
+        assert layer_id >= 0 and layer_id < self.n_layer
+        if layer_id == self.n_layer-1:
+            return self.base_height - self.anchor_height + (self.anchor_height + self.pixel_height)/2
+        return self.slice_size_opt * layer_id
+
+    def pixel_program(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+
+        """
+        Special layer. Draw a vertical line for each True pixel. Note: drawing must take place in the
+        same direction (negative z direction in global coordinate system) for all lines to minimise
+        disturbing effects of exposed resin.
+        """
+
+        program = DrawableAeroBasicProgram(coordinate_system)
+
+        # TODO(RC) Take DropDirection into account
+        # Note: z is relative to substrate surface
+        z_start = self.base_height + self.pixel_height
+        z_end = self.base_height - self.anchor_height
+        lines = [[z_start, z_end]]
+
+        h, w = self.data.shape
+        order = 1
+        for j in range(h):
+            y = self.pixel_pitch * (j - (w - 1) / 2)
+            for i in range(w)[::order]:
+                x = self.pixel_pitch * (i - (w - 1) / 2)
+                if self.data[j, i]:
+                    line = ZLines(
+                        x=x,
+                        y=y,
+                        lines=lines,
+                        velocity=self.vertical_velocity,
+                        acceleration=self.vertical_acceleration)
+                    program.add_programm(line.draw_on(coordinate_system))
+            order *= -1
+        return program
+
+    def layer_program(self, coordinate_system: CoordinateSystem, layer_id: int) -> DrawableAeroBasicProgram:
+
+        assert layer_id >= 0 and layer_id < self.n_layer
+        if layer_id == self.n_layer - 1:
+            return self.pixel_program(coordinate_system)
+
+        program = DrawableAeroBasicProgram(coordinate_system)
+        z = self.layer_to_z(layer_id)
+        hatching_direction = [HatchingDirection.X, HatchingDirection.Y][layer_id % 2]
+
+        if hatching_direction == HatchingDirection.X:
+            line_program = XLines
+        elif hatching_direction == HatchingDirection.Y:
+            line_program = YLines
+        else:
+            raise ValueError(f"HatchingDirection not found: {hatching_direction}")
+
+        size = self.structure_length
+        n_hatch = round(size / self.hatch_size) + 1
+        hatch_size_opt = size / (n_hatch - 1)
+        order = 1
+        for i in range(n_hatch):
+            line_position = hatch_size_opt * (i - n_hatch/2 + 0.5)
+            line_start = size / 2
+            lines = [[-line_start, line_start][::order]]
+            line = line_program(
+                line_position,
+                z=z,
+                lines=lines,
+                velocity=self.horizontal_velocity,
+                acceleration=self.horizontal_acceleration)
+            program.add_programm(line.draw_on(coordinate_system))
+            order *= -1
+        return program
+
     def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
-        qr = qrcode.make(self.text, border=0, box_size=1)
-        modules = qr.modules
-        pixel_size = self.width / len(modules)
-
-        z1 = self.center.Z
-        z2 = self.center.Z + self.height
-        for i in range(len(modules)):
-            for j in range(len(modules)):
-                if modules[i][j]:
-                    v_line = VerticalLine(
-                        Point2D(i * pixel_size + pixel_size / 2, j * pixel_size + pixel_size / 2),
-                        z_min=z1,
-                        z_max=z2
-                    )
-                    program.add_programm(v_line.draw_on(coordinate_system))
-                    z1, z2 = z2, z1
-
-        yield program
+        for layer_id in range(self.n_layer):
+            yield self.layer_program(coordinate_system, layer_id)
+        return program
 
 
 if __name__ == '__main__':

@@ -76,7 +76,6 @@ class DropDirection(Enum):
     UP = -1
     DOWN = 1
 
-
 class ZFunction(abc.ABC):
     @abc.abstractmethod
     def __call__(self, x: float, y: float) -> float:
