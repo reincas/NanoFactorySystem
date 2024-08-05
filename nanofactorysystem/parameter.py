@@ -10,10 +10,34 @@
 ##########################################################################
 import abc
 import logging
+from enum import Enum, Flag, auto
+
 from scidatacontainer import load_config
 
 from .config import sysConfig
 
+class Orientation(Enum):
+    UP = auto()
+    DOWN = auto()
+
+class Interface(Flag):
+    LOW = auto()
+    HIGH = auto()
+    BOTH = LOW | HIGH
+
+class Result(Enum):
+    AMBIGUOUS = auto()
+    MISS = auto()
+    HIT = auto()
+
+def flex_round(value, uncertainty):
+
+    """ Round the given uncertainty value to 3 digits if its mantissa is
+    in the range 1.0...2.9 and 2 digits in the range 3.0...9.9. Round
+    the value to the same number of decimals as the uncertainty. """
+
+    digits = 1-math.floor(math.log10(uncertainty/3.0))
+    return round(value, digits), round(uncertainty, digits)
 
 class Parameter(abc.ABC):
 
