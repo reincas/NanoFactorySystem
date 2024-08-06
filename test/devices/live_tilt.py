@@ -28,8 +28,9 @@ def on_close(event):
 
 def getImage(dhm):
 
-    holo, count = dhm.getimage(opt=False)
-    return image.normcolor(holo)
+    #holo, count = dhm.getimage(opt=False)
+    #return image.normcolor(holo)
+    holo, count = dhm.getimage()
     spectrum, fx, fy, weight = reconstruct.locateOrder(holo, 16)
     dhm.log.info(f"First order coordinates: {fx:d}, {fy:d} [{100 * weight:.1f}%]")
 
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     fig.canvas.mpl_connect("close_event", on_close)
 
     logger = getLogger()
-    logger.setLevel(logging.DEBUG)
+    logger.setLevel(logging.INFO)
     with Dhm(user, objective, logger, **args) as dhm:
 
         if opt:
@@ -114,6 +115,7 @@ if __name__ == "__main__":
         while run:
             img = getImage(dhm)
             win = showImage(ax, img, win)
+            #print(np.mean(img))
             #plt.pause(0.1)
 
         logger.info("Done.")
