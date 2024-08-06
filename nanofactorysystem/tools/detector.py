@@ -4,7 +4,9 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 #
-# The class Scanner.
+# The class Scanner which is used for a coarse detection of one or both
+# interfaces of the photoresin layer on a sample substrate in the Laser
+# Nanofactory system.
 #
 ##########################################################################
 
@@ -16,13 +18,21 @@ from .ranges import Range, RangeSet
 
 class Scanner:
 
-    """ Coarse photo resin layer scanner class. """
+    """ Coarse photo resin layer scanner class. This iterator class will deliver parameter
+    tuples z,dz for external laser scan and focus detection. The result (hit, miss, or ambiguous)
+    of each focus detection must be registered using the method register(). The detection starts
+    at a given initial z position and expands to both directions, until a focus will be detected.
+    Then the total scan range will be exceeded until an undisputed no-focus range (no overlap
+    with focus range) of given size is detected beside each requested interface (low, and/or high). """
 
     def __init__(self, z0, dz, zmin, zmax, orientation, interface, stretch, overlap, jitter, logger=None):
+
+        """ Initialize a Scanner object. """
 
         # Store logger
         self.log = logger or logging
 
+        # Initial scanning parameters and scan range limits
         self.z0 = float(z0)
         self.dz = abs(float(dz))
         self.zmin = float(zmin)
@@ -31,25 +41,34 @@ class Scanner:
         assert (self.z0 > self.zmin and self.z0 < self.zmax)
         assert (self.dz < self.zmax - self.zmin)
 
+        # Sample orientation
         assert (isinstance(orientation, Orientation))
         self.orientation = orientation
+
+        # Resin layer interfaces to be detected (low and/or high)
         assert (isinstance(interface, Interface))
         self.interface = interface
 
+        # Minimum size of undisputed no-focus ranges (no overlap with focus range)
         stretch = abs(float(stretch))
         assert (stretch >= 1.0)
         self.minsize = stretch * self.dz
 
+        # Overlapping factor for scanning adjacent ranges
         overlap = abs(float(overlap))
         assert (overlap >= 0 and overlap < 1.0)
         self.overlap = overlap * self.dz
 
+        # Jitter factor for scanning positions relative to overlap
         jitter = abs(float(jitter))
         assert (jitter >= 0 and jitter < 1.0)
         self.jitter = jitter * self.overlap
 
-        self.miss = RangeSet()
+        # Initialize ranges of focus detection. Will never contain more than one range.
         self.hit = RangeSet()
+
+        # Initialize ranges of no focus detection. Will contain up to two ranges.
+        self.miss = RangeSet()
 
     def clip(self, z):
 
@@ -110,7 +129,7 @@ class Scanner:
                 z_low = self.clip(full.max + jitter - self.overlap)
                 z_high = self.clip(full.min + jitter - self.overlap + self.dz)
 
-        # Yield next scan parameters
+        # Yield the next scan parameters
         z = 0.5 * (z_high + z_low)
         dz = z_high - z_low
         if dz <= 0.0:
@@ -126,14 +145,16 @@ class Scanner:
         dz = abs(float(dz))
         assert (isinstance(result, Result))
 
-        # Merge result into either self.miss or self.hit
+        # Merge result into either self.miss or self.hit. Ambiguous results are discarded.
         range_item = Range((z - 0.5 * dz, z + 0.5 * dz))
         if result == Result.MISS:
             self.miss.add(range_item)
         elif result == Result.HIT:
             self.hit.add(range_item)
+        else:
+            return
 
-        # Skip second layer (e.g. immersion oil layer)
+        # Skip second layer (e.g. immersion oil layer) by adjusting zmin and zmax.
         if len(self.hit) > 1:
             assert (len(self.hit) == 2)
             if self.orientation == Orientation.UP:
@@ -222,7 +243,7 @@ class Scanner:
             miss_range = self.miss.lowest
 
         # Return True, if lower interface position was detected
-        return hit_range.low - miss_range.low >= self.minsize
+        return hit_range.low - miss_range.low >= self.minsize or miss_range.low <= self.zmin
 
     @property
     def low_edge(self):
@@ -254,7 +275,7 @@ class Scanner:
             miss_range = self.miss.highest
 
         # Return True, if higher interface position was detected
-        return miss_range.high - hit_range.high >= self.minsize
+        return miss_range.high - hit_range.high >= self.minsize or miss_range.low >= self.zmax
 
     @property
     def high_edge(self):
@@ -272,7 +293,7 @@ class Scanner:
     @property
     def finished(self):
 
-        """ Return True, if all requested interfaces have been detected. """
+        """ True, if all requested interfaces have been detected. """
 
         # Lower interface requested, but not yet detected
         if Interface.LOW in self.interface and not self.low_detected:
