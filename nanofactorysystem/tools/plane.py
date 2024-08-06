@@ -9,19 +9,19 @@
 #
 ##########################################################################
 from functools import cached_property
-from typing import Any
 
 import numpy as np
 from scidatacontainer import Container
 
-from .layer import Layer
-from ..config import popargs
 from ..parameter import Parameter
+from ..config import popargs
 from ..runtime import mkdir
+from .layer import Layer
 
 
 ##########################################################################
 class PlaneFit(object):
+
     """ Fit a plane to the given list of x,y,z values by least squares
     fitting of the z values. """
 
@@ -31,8 +31,8 @@ class PlaneFit(object):
 
         # Least squares plane fitting
         A = np.array(points, dtype=float)
-        b = np.array(A[:, -1])
-        A[:, -1] = 1.0
+        b = np.array(A[:,-1])
+        A[:,-1] = 1.0
         if params is None:
             params = np.linalg.lstsq(A, b, rcond=None)[0]
 
@@ -40,7 +40,7 @@ class PlaneFit(object):
 
         # Average z deviation
         self.dev = np.dot(A, self.params) - b
-        self.avg = np.sqrt(sum(self.dev * self.dev)) / len(self.dev)
+        self.avg = np.sqrt(sum(self.dev*self.dev))/len(self.dev)
 
         # Surface normal vector
         p0 = self.getvec(0, 0)
@@ -50,7 +50,7 @@ class PlaneFit(object):
 
         # Length of y projection and length of vector
         rxy = np.hypot(x, y)
-        # r = np.hypot(rxy, z)
+        #r = np.hypot(rxy, z)
 
         # Plane slope and polar angle
         self.slope = rxy / z
@@ -90,12 +90,14 @@ class PlaneFit(object):
                 line = f"{name} {line}"
             func(line)
 
+
     def getz(self, x: float, y: float) -> float:
 
         """ Return z value of the plane at the given lateral xy
         position. """
 
         return np.dot(self.params, [x, y, 1])
+
 
     def getvec(self, x: float, y: float) -> np.ndarray:
 
@@ -110,6 +112,7 @@ class PlaneFit(object):
 class zPlane(object):
 
     def __init__(self, plane, key):
+
         """ Store plane parameters. """
 
         params = plane["meas/result.json"][key]
@@ -118,7 +121,9 @@ class zPlane(object):
         z0 = params["z0"]
         self.params = np.asarray([sx, sy, z0], dtype=float)
 
+
     def getz(self, x, y):
+
         """ Return z value of the plane at the given lateral xy
         position. """
 
@@ -127,14 +132,13 @@ class zPlane(object):
 
 ##########################################################################
 class Plane(Parameter):
+
     """ Layer plane class. """
 
     _defaults = {
-        "dzCoarseDefault": 100.0,
-        "dzFineDefault": 10.0,
-    }
+        }
 
-    def __init__(self, zlo, zup, system, logger=None, **kwargs):
+    def __init__(self, z_low, z_high, system, logger=None, **kwargs):
 
         """ Initialize the layer scan object. """
 
@@ -152,12 +156,13 @@ class Plane(Parameter):
         self.layer = Layer(system, logger, **args)
 
         # Store initial values
-        self.zlo = float(zlo)
-        self.zup = float(zup)
+        self.z_low = z_low
+        self.z_high = z_high
 
         # No results yet
-        self.steps: list[dict[str, Any]] = []
+        self.steps = []
         self.log.info("Initialized plane detector.")
+
 
     def run(self, x, y, path=None, home=False):
 
@@ -169,55 +174,65 @@ class Plane(Parameter):
         x0, y0, z0 = self.system.position("XYZ")
 
         # Detect layer interfaces
-        if self.zlo == self.zup:
-            dz = self["dzCoarseDefault"]
-        else:
-            dz = self["dzFineDefault"]
-        self.layer.run(x, y, self.zlo, self.zup, dz, path, home=False)
-        l = self.layer.container()
-        l.write(f"{path}/layer.zdc")
-        result = l["meas/result.json"]
+        coarse = len(self.steps) == 0
+        self.layer.run(x, y, self.z_low, self.z_high, coarse, None, path, home=False)
+        layer_dc = self.layer.container()
+        layer_dc.write(f"{path}/layer.zdc")
+        result = layer_dc["meas/result.json"]
 
-        # Append results of this step
-        self.steps.append({
+        # Results of this step
+        step = {
             "scan": pos,
             "x": x,
             "y": y,
-            "zLowerInit": self.zlo,
-            "zLower": result["zLower"],
-            "dzLower": result["dzLower"],
-            "zUpperInit": self.zup,
-            "zUpper": result["zUpper"],
-            "dzUpper": result["dzUpper"],
-            "dzInit": dz,
-            "layerUuid": l.uuid,
-        })
+            "layerUuid": layer_dc.uuid,
+            }
 
-        # Store results as estimates for the next scan
-        self.zlo = result["zLower"]
-        self.zup = result["zUpper"]
+        # Add results for low interface
+        if self.z_low is not None:
+            step.update({
+                "zLowInit": self.z_low,
+                "zLow": result["low"]["z"],
+                "dzLow": result["low"]["dz"],
+            })
+            self.z_low = result["low"]["z"]
+
+        # Add results for high interface
+        if self.z_high is not None:
+            step.update({
+                "zHighInit": self.z_high,
+                "zHigh": result["high"]["z"],
+                "dzHigh": result["high"]["dz"],
+            })
+            self.z_high = result["high"]["z"]
+
+        # Append all results to the steps list
+        self.steps.append(step)
 
         # Move stages back to initial position
         if home:
             delay = self.system["delay"]
             self.system.moveabs(wait=delay, x=x0, y=y0, z=z0)
 
-    def _pop_results(self) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+
+    def _pop_results(self):
 
         steps = list(self.steps)
-        points = [[s["x"], s["y"], s["zLower"], s["zUpper"]] for s in steps]
-        points = np.array(points, dtype=float)
-        lower = points[:, (0, 1, 2)]
-        upper = points[:, (0, 1, 3)]
-
         result = {}
-        for key, points, name in [
-            ("lower", lower, "Lower"),
-            ("upper", upper, "Upper")
+
+        for z, key, name in [
+            (self.z_low, "zLow", "Low"),
+            (self.z_high, "zHigh", "High")
         ]:
+            if z is None:
+                continue
+
+            points = [[s["x"], s["y"], s[key]] for s in steps]
+            points = np.array(points, dtype=float)
             plane = PlaneFit(points)
             plane.log_results(self.log.info, name)
-            result[key] = {
+
+            result[name.lower()] = {
                 "xSlope": plane.params[0],
                 "ySlope": plane.params[1],
                 "z0": plane.params[2],
@@ -227,12 +242,13 @@ class Plane(Parameter):
                 "polarAngle": plane.theta,
                 "azimuthAngle": plane.phi,
                 "points": points.tolist(),
-            }
+                }
 
         self.steps = []
         return result, steps
 
-    def container(self, config=None, **kwargs) -> Container:
+
+    def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """
 
@@ -250,11 +266,11 @@ class Plane(Parameter):
         # General metadata
         content = {
             "containerType": {"name": "LayerPlane", "version": 1.1},
-        }
+            }
         meta = {
             "title": "Plane Detection Data",
             "description": "Detection of upper and lower photoresin interface planes.",
-        }
+            }
 
         # Container dictionary
         items = self.system.items() | {
@@ -264,7 +280,7 @@ class Plane(Parameter):
             "data/plane.json": self.parameters(),
             "meas/steps.json": steps,
             "meas/result.json": result,
-        }
+            }
 
         # Return container object
         config = config or self.config
