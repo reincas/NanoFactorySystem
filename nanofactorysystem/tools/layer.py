@@ -139,6 +139,7 @@ class Layer(Parameter):
 
         """ Return focus result as either Result.HIT, Result.MISS or Result.AMBIGUOUS. """
 
+        ## TODO(RC): Merge with Dominik's result object
         status = self.focus.result["status"]
         if status == focusStatus.focus:
             result = Result.HIT
@@ -178,8 +179,8 @@ class Layer(Parameter):
     def run(self, x, y, z_low=None, z_high=None, coarse=False, dz=None, path=None, home=True):
 
         """ Main method of the layer detector. Find the z coordinates of the low and/or high interface
-        of the photoresist layer. Start with a coarse scan, if requested. Return results as layer
-        container object. """
+        of the photoresist layer for the interfaces with given start value z_low or z_high. Start with
+        a coarse scan, if requested. Return results as layer container object. """
 
         self.log.info("Photoresist layer detection started.")
 

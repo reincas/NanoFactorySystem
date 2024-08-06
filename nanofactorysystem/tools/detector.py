@@ -113,7 +113,7 @@ class Scanner:
 
             # Increase scan range alternating at both ends until a focus spot is detected
             if len(self.hit) == 0:
-                edge = (Interface.LOW, Interface.HIGH)[(len(self.miss) + len(self.hit)) % 2]
+                edge = (Interface.LOW, Interface.HIGH)[len(self.miss) % 2]
             # Proceed with lower interface detection
             elif Interface.LOW in self.interface and not self.low_detected:
                 edge = Interface.LOW
@@ -127,7 +127,7 @@ class Scanner:
                 z_high = self.clip(full.min + jitter + self.overlap)
             else:
                 z_low = self.clip(full.max + jitter - self.overlap)
-                z_high = self.clip(full.min + jitter - self.overlap + self.dz)
+                z_high = self.clip(full.max + jitter - self.overlap + self.dz)
 
         # Yield the next scan parameters
         z = 0.5 * (z_high + z_low)

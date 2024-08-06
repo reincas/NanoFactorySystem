@@ -136,11 +136,9 @@ class Plane(Parameter):
     """ Layer plane class. """
 
     _defaults = {
-        "dzCoarseDefault": 100.0,
-        "dzFineDefault": 10.0,
         }
 
-    def __init__(self, zlo, zup, system, logger=None, **kwargs):
+    def __init__(self, z_low, z_high, system, logger=None, **kwargs):
 
         """ Initialize the layer scan object. """
 
@@ -158,8 +156,8 @@ class Plane(Parameter):
         self.layer = Layer(system, logger, **args)
 
         # Store initial values
-        self.zlo = float(zlo)
-        self.zup = float(zup)
+        self.z_low = z_low
+        self.z_high = z_high
 
         # No results yet
         self.steps = []
@@ -176,33 +174,40 @@ class Plane(Parameter):
         x0, y0, z0 = self.system.position("XYZ")
 
         # Detect layer interfaces
-        if self.zlo == self.zup:
-            dz = self["dzCoarseDefault"]
-        else:
-            dz = self["dzFineDefault"]
-        self.layer.run(x, y, self.zlo, self.zup, dz, path, home=False)
-        l = self.layer.container()
-        l.write(f"{path}/layer.zdc")
-        result = l["meas/result.json"]
+        coarse = len(self.steps) == 0
+        self.layer.run(x, y, self.z_low, self.z_high, coarse, None, path, home=False)
+        layer_dc = self.layer.container()
+        layer_dc.write(f"{path}/layer.zdc")
+        result = layer_dc["meas/result.json"]
 
-        # Append results of this step
-        self.steps.append({
+        # Results of this step
+        step = {
             "scan": pos,
             "x": x,
             "y": y,
-            "zLowerInit": self.zlo,
-            "zLower": result["zLower"],
-            "dzLower": result["dzLower"],
-            "zUpperInit": self.zup,
-            "zUpper": result["zUpper"],
-            "dzUpper": result["dzUpper"],
-            "dzInit": dz,
-            "layerUuid": l.uuid,
-            })
+            "layerUuid": layer_dc.uuid,
+            }
 
-        # Store results as estimates for the next scan
-        self.zlo = result["zLower"]
-        self.zup = result["zUpper"]
+        # Add results for low interface
+        if self.z_low is not None:
+            step.update({
+                "zLowInit": self.z_low,
+                "zLow": result["low"]["z"],
+                "dzLow": result["low"]["dz"],
+            })
+            self.z_low = result["low"]["z"]
+
+        # Add results for high interface
+        if self.z_high is not None:
+            step.update({
+                "zHighInit": self.z_high,
+                "zHigh": result["high"]["z"],
+                "dzHigh": result["high"]["dz"],
+            })
+            self.z_high = result["high"]["z"]
+
+        # Append all results to the steps list
+        self.steps.append(step)
 
         # Move stages back to initial position
         if home:
@@ -213,19 +218,21 @@ class Plane(Parameter):
     def _pop_results(self):
 
         steps = list(self.steps)
-        points = [[s["x"], s["y"], s["zLower"], s["zUpper"]] for s in steps]
-        points = np.array(points, dtype=float)
-        lower = points[:,(0,1,2)]
-        upper = points[:,(0,1,3)]
-
         result = {}
-        for key, points, name in [
-            ("lower", lower, "Lower"),
-            ("upper", upper, "Upper")
+
+        for z, key, name in [
+            (self.z_low, "zLow", "Low"),
+            (self.z_high, "zHigh", "High")
         ]:
+            if z is None:
+                continue
+
+            points = [[s["x"], s["y"], s[key]] for s in steps]
+            points = np.array(points, dtype=float)
             plane = PlaneFit(points)
             plane.log_results(self.log.info, name)
-            result[key] = {
+
+            result[name.lower()] = {
                 "xSlope": plane.params[0],
                 "ySlope": plane.params[1],
                 "z0": plane.params[2],
