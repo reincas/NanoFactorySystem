@@ -36,6 +36,7 @@ class CornerPosition(Enum):
     BR = 2
     BL = 3
 
+# test für merge
 
 class StructureType(Enum):
     DUMMY = 0
