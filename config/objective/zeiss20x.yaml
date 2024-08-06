@@ -1,0 +1,10 @@
+manufacturer: Zeiss
+magnification: 20.0
+numerical_aperture: 0.8
+immersion: false
+tube_length: infinity
+cover_thickness: 0.17
+dhm_id: 178
+camera_focus: -6.0
+camera_pith: [[0.2, 0.0], [0.0, -0.2]]
+dc_radius: 304

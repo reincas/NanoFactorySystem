@@ -1,0 +1,36 @@
+defaults:
+  - objective: Zeiss20x
+  - _self_
+  - override hydra/job_logging: custom
+
+system:
+  manufacturer: Femtika
+  model: Laser Nanofactory
+  description: Multi-purpose laser direct writing system
+  laser_wavelength: 0.515
+
+attenuator:
+  calibration_file: C:/Software/3DPoli Fabrication/Calibration/Calibration.dat
+
+dhm:
+  host: 192.168.22.2
+  port: 27182
+
+controller:
+  manufacturer: Aerotech
+  model: A3200
+  description: Multi-axis motion controller system
+  host: 127.0.0.1
+  port: 8000
+
+user:
+  name: null
+  email: null
+  organization: null
+
+
+hydra:
+  job:
+    chdir: true
+  run:
+    dir: output/${hydra:job_name}/${now:%Y-%m-%d}_${now:%H-%M-%S}

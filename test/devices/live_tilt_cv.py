@@ -69,7 +69,7 @@ if __name__ == "__main__":
     objective = sysConfig.objective(objective)
     # path = mkdir(".test/tilt")
     opt = True
-    scan = False
+    scan = True
     spectrum = False
 
     logger = getLogger()

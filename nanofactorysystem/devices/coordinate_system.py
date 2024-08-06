@@ -45,7 +45,7 @@ class Point2D:
         return self.as_dict()
 
     def as_dict(self) -> Coordinate:
-        return dataclasses.asdict(self)
+        return dataclasses.asdict(self)  # dataclasses have been imported as dataclass --> mistake??
 
     def as_tuple(self):
         return dataclasses.astuple(self)

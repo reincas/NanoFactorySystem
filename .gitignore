@@ -1,8 +1,10 @@
 # Local
 .test/
 .output/
+attic/
 mains/
-
+*.png
+*.zdc
 
 # AeroBasic Programs
 *.pgm

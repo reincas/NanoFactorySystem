@@ -314,6 +314,7 @@ class Experiment(object):
 
         else:
             # Plane needs micrometer coordinates
+            # ToDo(Hannes) Aufpassen, dass man das ändert zlo darf nicht zup sein, wenn man nur eine seite detektieren möchte
             zlo = zup = self.system.z0
             plane = Plane(zlo, zup, self.system, self.log, **self.sys_args)
 
@@ -322,7 +323,10 @@ class Experiment(object):
 
             self.log.info("Run plane detection...")
             for x, y in self.sample_points_for_plane_fitting():
-                plane.run(x, y, path=path)
+                if self.system.objective['magnification'] == 63.0:
+                    plane.run(x, y, path=path, only_substrate_boundary=False)
+                else:
+                    plane.run(x, y, path=path)
 
             self.log.info("Store plane detection results...")
             dc = plane.container()

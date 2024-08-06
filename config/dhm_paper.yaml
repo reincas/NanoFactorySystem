@@ -1,0 +1,20 @@
+defaults:
+  - base
+  - user: dwoiwode
+  - _self_
+
+attenuator:
+  fitKind: quadratic
+  
+controller:
+  zMax: 25700.0
+
+sample:
+    name: "#1"
+    orientation: top
+    substrate: boro-silicate glass
+    substrateThickness: 700.0
+    material: SZ2080
+    materialThickness: 75.0
+layer:
+  beta: 0.7
