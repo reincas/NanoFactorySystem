@@ -2,7 +2,7 @@
 .test/
 .output/
 attic/
-mains/
+
 *.png
 *.zdc
 
