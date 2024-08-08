@@ -5,6 +5,7 @@
 ##########################################################################
 
 import datetime
+import os
 from pathlib import Path
 from tkinter import messagebox
 import numpy as np
@@ -38,27 +39,28 @@ sys_args = {
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
 def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
                   objective="Zeiss 20x", user="Hannes"):
-    # ToDo: DropDirection noch mit übergeben und testen ob das funktioniert
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
-                [[left edge],   Example:    [[100, 18550],
-                [right edge],               [200, 26300],
-                [far edge],                 [-3500, 22400],
-                [near edge]]                [4000, 22400]]
+                [[right edge],   Example:   [[100, 18550],
+                [left edge],                [200, 26300],
+                [near edge],                [-3500, 22400],
+                [far edge]]                 [4000, 22400]]
         ask_continue_box: bool -> controls the asking box
         path: Path argument for root directory where the experimental data will be safe in a subdirectory called ...
                 If nothing is given, the export_path will be in the subdirectory .output
     """
+    # ToDo: DropDirection noch mit übergeben und testen ob das funktioniert
+
     # ToDo: Has to be changed in future in order to allow more prints of the same experiment on one substrate without
     # deleting all the different data of previous prints
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
         path = Path(mkdir(f".output/dhm_paper/testprint{datetime.datetime.now():%Y%m%d}", clean=False))
     else:
+        # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.join(path, "testprint_dhm")))
-    logger = getLogger(logfile=f"{path}/console.log")
+        path = Path(mkdir(os.path.join(path, "testprint_dhm")))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -143,7 +145,23 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
         # Add structures
-
+        # experiment.skip_structure()
+        # experiment.add_structure(
+        #     structure_type=StructureType.NORMAL,
+        #     name="stair_galvo",
+        #     axes="ABZ",
+        #     power=power,
+        #     structure=Stair(
+        #         Point3D(0, 0, -2),
+        #         n_steps=6,
+        #         step_height=0.6,
+        #         step_length=20,
+        #         step_width=50,
+        #         hatch_size=0.125,
+        #         slice_size=0.3,
+        #         socket_height=7,
+        #         velocity=5000,
+        #         acceleration=experiment.accel_a_um))
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
 

@@ -13,7 +13,7 @@
 import logging
 import random
 
-from ..parameter import Interface, Result, flex_round
+from nanofactorysystem.parameter import Interface, Result, flex_round
 
 class Locator:
 
@@ -104,7 +104,7 @@ class Locator:
         # Yield the next scan parameters
         z = 0.5 * (z_high + z_low)
         dz = z_high - z_low
-        yield z, dz
+        return z, dz
 
     def other_range(self, z, dz):
 

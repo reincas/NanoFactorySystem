@@ -17,8 +17,8 @@ from nanofactorysystem.experiment import Experiment, StructureType
 
 
 def main():
-    ask_continue_box = True
-    path = Path(mkdir(f".output/dhm_paper/{datetime.datetime.now():%Y%m%d}_pillow_63", clean=False))
+    ask_continue_box = False
+    path = Path(mkdir(f".output/test/{datetime.datetime.now():%Y%m%d}_planefit63", clean=False))
     # path = Path(mkdir(f".output/dhm_paper/20240624_pillow", clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
@@ -47,10 +47,11 @@ def main():
     # Size of (oval) resin drop in micrometres
     # TODO: Determine automatically
     edges = np.asarray([
-        [100, 18550],
-        [200, 26300],
-        [-3500, 22400],
-        [4000, 22400]])
+        [-250, 18500],  # right edge
+        [0, 27850],  # left edge
+        [-4300, 23000],  # near edge
+        [4800, 23300],  # far edge
+    ])
     resin_corner_tr = Point2D(*np.max(edges, axis=0))
     resin_corner_bl = Point2D(*np.min(edges, axis=0))
     absolute_grid_center = Point2D(0, 20000)
@@ -70,7 +71,7 @@ def main():
             margin=100,
             padding=50,
             absolute_grid_center=absolute_grid_center,
-            grid=(2, 6),
+            grid=(3, 3),
             n_mid_points=0,
             drop_direction=DropDirection.DOWN,
             corner_z=-2,
@@ -96,17 +97,102 @@ def main():
         # center = experiment.coordinate_system_grid_to_absolute.convert({"X": 0, "Y": 0, "Z": 0})
         # experiment.measure(coordinate=center, name="before")
 
+        # ----------------------------------------------------------------------------------------------------------------------
+        # ----------------------------------------------------------------------------------------------------------------------
         # Add structures
         experiment.add_structure(
             structure_type=StructureType.NORMAL,
-            name="rect_v5000_p07_100",
+            name="stair_galvo1",
             axes="ABZ",
-            power=0.7,
-            structure=Rectangle3D(
+            power=0.4,
+            structure=Stair(
                 Point3D(0, 0, -2),
-                height=5,
+                n_steps=6,
+                step_height=0.6,
+                step_length=20,
+                step_width=50,
+                hatch_size=0.125,
+                slice_size=0.3,
+                socket_height=7,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="stair_galvo2",
+            axes="ABZ",
+            power=0.4,
+            structure=Stair(
+                Point3D(0, 0, -2),
+                n_steps=6,
+                step_height=0.6,
+                step_length=20,
+                step_width=50,
+                hatch_size=0.125,
+                slice_size=0.3,
+                socket_height=7,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="stair_galvo3",
+            axes="ABZ",
+            power=0.4,
+            structure=Stair(
+                Point3D(0, 0, -2),
+                n_steps=6,
+                step_height=0.6,
+                step_length=20,
+                step_width=50,
+                hatch_size=0.125,
+                slice_size=0.3,
+                socket_height=7,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="lens_galvo1",
+            axes="ABZ",
+            power=0.4,
+            structure=AsphericalLens(
+                Point3D(0, 0, -2),
+                height=7,
                 length=100,
-                width=100,
+                width=75,
+                sphere_radius=1030,
+                conic_constant=-2.3,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="lens_galvo2",
+            axes="ABZ",
+            power=0.4,
+            structure=AsphericalLens(
+                Point3D(0, 0, -2),
+                height=7,
+                length=100,
+                width=75,
+                sphere_radius=1030,
+                conic_constant=-2.3,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="lens_galvo3",
+            axes="ABZ",
+            power=0.4,
+            structure=AsphericalLens(
+                Point3D(0, 0, -2),
+                height=7,
+                length=100,
+                width=75,
+                sphere_radius=1030,
+                conic_constant=-2.3,
                 hatch_size=0.125,
                 slice_size=0.15,
                 velocity=5000,
@@ -114,184 +200,50 @@ def main():
 
         experiment.add_structure(
             structure_type=StructureType.NORMAL,
-            name="rect_v5000_p07_50",
+            name="rect_galvo1",
             axes="ABZ",
-            power=0.7,
+            power=0.4,
             structure=Rectangle3D(
-                Point3D(0, 0, -2),
-                height=5,
-                length=50,
+                center=Point3D(0, 0, -2),
                 width=50,
+                length=125,
+                height=7,
                 hatch_size=0.125,
                 slice_size=0.15,
                 velocity=5000,
                 acceleration=experiment.accel_a_um))
-
         experiment.add_structure(
             structure_type=StructureType.NORMAL,
-            name="rect_v5000_p07_20",
+            name="rect_galvo2",
             axes="ABZ",
-            power=0.7,
+            power=0.4,
             structure=Rectangle3D(
-                Point3D(0, 0, -2),
-                height=5,
-                length=20,
-                width=20,
+                center=Point3D(0, 0, -2),
+                width=50,
+                length=125,
+                height=7,
                 hatch_size=0.125,
                 slice_size=0.15,
                 velocity=5000,
                 acceleration=experiment.accel_a_um))
-
         experiment.add_structure(
             structure_type=StructureType.NORMAL,
-            name="rect_v5000_p07_10",
+            name="rect_galvo3",
             axes="ABZ",
-            power=0.7,
+            power=0.4,
             structure=Rectangle3D(
-                Point3D(0, 0, -2),
-                height=5,
-                length=10,
-                width=10,
+                center=Point3D(0, 0, -2),
+                width=50,
+                length=125,
+                height=7,
                 hatch_size=0.125,
                 slice_size=0.15,
                 velocity=5000,
                 acceleration=experiment.accel_a_um))
 
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="rect_v5000_p07_5",
-            axes="ABZ",
-            power=0.7,
-            structure=Rectangle3D(
-                Point3D(0, 0, -2),
-                height=5,
-                length=5,
-                width=5,
-                hatch_size=0.125,
-                slice_size=0.15,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
+        # ----------------------------------------------------------------------------------------------------------------------
+        # ----------------------------------------------------------------------------------------------------------------------
 
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="rect_v5000_p07_1",
-            axes="ABZ",
-            power=0.7,
-            structure=Rectangle3D(
-                Point3D(0, 0, -2),
-                height=5,
-                length=1,
-                width=1,
-                hatch_size=0.125,
-                slice_size=0.15,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
-
-        # -----------------------------------------------------------------------------------
-        # -----------------------------------------------------------------------------------
-        # -----------------------------------------------------------------------------------
-
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="stair_v5000_p07_7um_1",
-            axes="ABZ",
-            power=0.7,
-            structure=Stair(
-                Point3D(0, 0, -2),
-                n_steps=6,
-                step_height=0.6,
-                step_length=20,
-                step_width=50,
-                hatch_size=0.125,
-                slice_size=0.1,
-                socket_height=7,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
-
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="stair_v5000_p07_7um_2",
-            axes="ABZ",
-            power=0.7,
-            structure=Stair(
-                Point3D(0, 0, -2),
-                n_steps=6,
-                step_height=0.6,
-                step_length=20,
-                step_width=50,
-                hatch_size=0.125,
-                slice_size=0.1,
-                socket_height=7,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
-
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="stair_v5000_p07_7um_slice_high_1",
-            axes="ABZ",
-            power=0.7,
-            structure=Stair(
-                Point3D(0, 0, -2),
-                n_steps=6,
-                step_height=0.6,
-                step_length=20,
-                step_width=50,
-                hatch_size=0.125,
-                slice_size=0.2,
-                socket_height=7,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
-
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="stair_v5000_p07_7um_slice_high_2",
-            axes="ABZ",
-            power=0.7,
-            structure=Stair(
-                Point3D(0, 0, -2),
-                n_steps=6,
-                step_height=0.6,
-                step_length=20,
-                step_width=50,
-                hatch_size=0.125,
-                slice_size=0.2,
-                socket_height=7,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
-
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="lens_v5000_p07_5um",
-            axes="ABZ",
-            power=0.7,
-            structure=AsphericalLens(
-                Point3D(0, 0, -2),
-                height=5,
-                length=100,
-                width=60,
-                sphere_radius=1030,
-                conic_constant=-2.3,
-                hatch_size=0.100,
-                slice_size=0.05,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
-
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="lens_v5000_p07_5um_2",
-            axes="ABZ",
-            power=0.7,
-            structure=AsphericalLens(
-                Point3D(0, 0, -2),
-                height=5,
-                length=100,
-                width=60,
-                sphere_radius=1030,
-                conic_constant=-2.3,
-                hatch_size=0.100,
-                slice_size=0.1,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
 
         # Build corner and structure programs
         if ask_continue_box:

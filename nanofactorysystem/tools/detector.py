@@ -105,7 +105,6 @@ class Scanner:
 
         # Next scan parameters
         else:
-
             # No further scan space left
             full = self.miss | self.hit
             if full.max >= self.zmax and full.min <= self.zmin:
@@ -134,7 +133,7 @@ class Scanner:
         dz = z_high - z_low
         if dz <= 0.0:
             raise StopIteration
-        yield z, dz
+        return z, dz
 
     def register(self, z, dz, result):
 

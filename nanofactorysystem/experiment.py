@@ -315,8 +315,13 @@ class Experiment(object):
 
         else:
             # Plane needs micrometer coordinates
-            # ToDo(Hannes) Aufpassen, dass man das ändert zlo darf nicht zup sein, wenn man nur eine seite detektieren möchte
-            zlo = zup = self.system.z0
+            # ToDo(HR): Implement a controllable variable to access single plane fit outside if experiment.py
+            if self.system.objective['magnification'] == 63.0:
+                zlo = self.system.z0
+                zup = None
+            else:
+                zlo = zup = self.system.z0
+
             plane = Plane(zlo, zup, self.system, self.log, **self.sys_args)
 
             self.log.info("Store background image...")
@@ -324,19 +329,16 @@ class Experiment(object):
 
             self.log.info("Run plane detection...")
             for x, y in self.sample_points_for_plane_fitting():
-                if self.system.objective['magnification'] == 63.0:
-                    plane.run(x, y, path=path, only_substrate_boundary=False)
-                else:
-                    plane.run(x, y, path=path)
+                plane.run(x, y, path=path)
 
             self.log.info("Store plane detection results...")
             dc = plane.container()
             dc.write(str(plane_dc_path))
 
         if self.drop_direction == DropDirection.DOWN:
-            plane_points = dc["meas/result.json"]["lower"]["points"]
+            plane_points = dc["meas/result.json"]["low"]["points"]
         else:
-            plane_points = dc["meas/result.json"]["upper"]["points"]
+            plane_points = dc["meas/result.json"]["high"]["points"]
         plane_fit_function = PlaneFit.from_points(np.asarray(plane_points))  # in um
         self.plane_fit_function = plane_fit_function
         self.log.info(str(plane_fit_function))

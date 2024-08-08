@@ -117,12 +117,14 @@ class RangeSet:
         # Data conversion
         if data is None:
             data = set()
+            # data = {}
         elif isinstance(data, RangeSet):
             data = data.data
         elif isinstance(data, set):
             pass
         elif isinstance(data, list):
             data = set(data)
+            # data =
         elif isinstance(data, (Range, tuple)):
             data = {data}
         else:
@@ -191,7 +193,7 @@ class RangeSet:
             raise TypeError(f"Unknown data type '{type(item)}'!")
 
         # Add new range to the current set
-        self.data |= item
+        self.data |= {item}
 
         # Merge all overlapping ranges
         self._reduce()
@@ -271,8 +273,10 @@ class RangeSet:
 if __name__ == "__main__":
     
     item = Range((4,6))
+    item1 = Range((2,3))
     print(item)
-    ranges = RangeSet([item, (2,3.3)])
+    ranges = RangeSet(data = item)
+    ranges.add(item1)
     print(len(ranges.data))
     print(ranges)
     print(ranges.sorted)

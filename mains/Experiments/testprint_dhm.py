@@ -5,6 +5,7 @@
 ##########################################################################
 
 import datetime
+import os
 from pathlib import Path
 from tkinter import messagebox
 import numpy as np
@@ -15,34 +16,51 @@ from nanofactorysystem.aerobasic.programs.drawings.lens import AsphericalLens
 from nanofactorysystem.devices.coordinate_system import DropDirection, Point2D, Point3D
 from nanofactorysystem.experiment import Experiment, StructureType
 
+sys_args = {
+    "attenuator": {
+        "fitKind": "quadratic",
+    },
+    "sample": {
+        "name": "#1",
+        "orientation": "top",
+        "substrate": "boro-silicate glass",
+        "substrateThickness": 700.0,
+        "material": "SZ2080",
+        "materialThickness": 75.0,
+    },
+    "focus": {},
+    "layer": {
+        "beta": 0.7,
+    },
+    "plane": {},
+}
+
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
-def dhm_testprint(absolute_center: Point2D, resin_dimension: list, sys_args, ask_continue_box=False, path=None):
+def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
+                  objective="Zeiss 20x", user="Hannes"):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
-                [[left edge],   Example:    [[100, 18550],
-                [right edge],               [200, 26300],
-                [far edge],                 [-3500, 22400],
-                [near edge]]                [4000, 22400]]
+                [[right edge],   Example:   [[100, 18550],
+                [left edge],                [200, 26300],
+                [near edge],                [-3500, 22400],
+                [far edge]]                 [4000, 22400]]
         ask_continue_box: bool -> controls the asking box
-        path: Path argument for root directory where the experimental data will be safe in a subdirectory called
-                testprint_dhm
+        path: Path argument for root directory where the experimental data will be safe in a subdirectory called ...
                 If nothing is given, the export_path will be in the subdirectory .output
     """
+    # ToDo: DropDirection noch mit übergeben und testen ob das funktioniert
 
+    # ToDo: Has to be changed in future in order to allow more prints of the same experiment on one substrate without
+    # deleting all the different data of previous prints
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
         path = Path(mkdir(f".output/dhm_paper/testprint{datetime.datetime.now():%Y%m%d}", clean=False))
     else:
         assert (path, Path)
-        path = Path(mkdir(os.join(path, "testprint_dhm")))
+        path = Path(mkdir(os.path.join(path, "testprint_dhm")))
     logger = getLogger(logfile=f"{path}/console.log")
-
-    # ToDo: zu übergebende variablen so gering wie möglich halten und abhängigkeiten schaffen
-    objective = "Zeiss 20x"
-    user = "Hannes"
-    # ToDo: DropDirection übergeben und testen ob das funktioniert
 
     # Size of (oval) resin drop in micrometres
     edges = np.asarray(resin_dimension)
@@ -52,7 +70,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, sys_args, ask
 
     if objective == "Zeiss 20x":
         fov = 500
-        zmax = 25700.0  # ToDo: Noch anpassen in den sys_args
+        zmax = 25700.0
         # Corner settings
         c_width = 50
         c_length = 300
@@ -62,6 +80,8 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, sys_args, ask
         # printing area settings
         margin = 200
         padding = 100
+        # printing settings
+        power = 0.7
 
     elif objective == "Zeiss 63x":
         fov = 150
@@ -75,12 +95,15 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, sys_args, ask
         # printing area settings
         margin = 50
         padding = 100
+        # printing settings
+        power = 0.5
+
     else:
         raise Exception(f"No implemented objective {objective}! Possible objectives are 'Zeiss 20x' and 'Zeiss 63x'.")
 
     sys_args.update({"controller": {
-                    "zMax": zmax,}
-                    })
+        "zMax": zmax, }
+    })
 
     with Experiment(
             path=path,
@@ -97,7 +120,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, sys_args, ask
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=(2, 3),  # ToDo: changing depending on experiment
+            grid=(3, 3),
             n_mid_points=0,  # ToDo changing depending on experiment
             drop_direction=DropDirection.DOWN,
             corner_z=-2,
@@ -125,6 +148,146 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, sys_args, ask
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
         # Add structures
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="stair_galvo1",
+            axes="ABZ",
+            power=power,
+            structure=Stair(
+                Point3D(0, 0, -2),
+                n_steps=6,
+                step_height=0.6,
+                step_length=20,
+                step_width=50,
+                hatch_size=0.125,
+                slice_size=0.3,
+                socket_height=7,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="stair_galvo2",
+            axes="ABZ",
+            power=power,
+            structure=Stair(
+                Point3D(0, 0, -2),
+                n_steps=6,
+                step_height=0.6,
+                step_length=20,
+                step_width=50,
+                hatch_size=0.125,
+                slice_size=0.3,
+                socket_height=7,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="stair_galvo3",
+            axes="ABZ",
+            power=power,
+            structure=Stair(
+                Point3D(0, 0, -2),
+                n_steps=6,
+                step_height=0.6,
+                step_length=20,
+                step_width=50,
+                hatch_size=0.125,
+                slice_size=0.3,
+                socket_height=7,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="lens_galvo1",
+            axes="ABZ",
+            power=power,
+            structure=AsphericalLens(
+                Point3D(0, 0, -2),
+                height=7,
+                length=100,
+                width=75,
+                sphere_radius=1030,
+                conic_constant=-2.3,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="lens_galvo2",
+            axes="ABZ",
+            power=power,
+            structure=AsphericalLens(
+                Point3D(0, 0, -2),
+                height=7,
+                length=100,
+                width=75,
+                sphere_radius=1030,
+                conic_constant=-2.3,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="lens_galvo3",
+            axes="ABZ",
+            power=power,
+            structure=AsphericalLens(
+                Point3D(0, 0, -2),
+                height=7,
+                length=100,
+                width=75,
+                sphere_radius=1030,
+                conic_constant=-2.3,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="rect_galvo1",
+            axes="ABZ",
+            power=power,
+            structure=Rectangle3D(
+                center=Point3D(0, 0, -2),
+                width=50,
+                length=125,
+                height=7,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="rect_galvo2",
+            axes="ABZ",
+            power=power,
+            structure=Rectangle3D(
+                center=Point3D(0, 0, -2),
+                width=50,
+                length=125,
+                height=7,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
+        experiment.add_structure(
+            structure_type=StructureType.NORMAL,
+            name="rect_galvo3",
+            axes="ABZ",
+            power=power,
+            structure=Rectangle3D(
+                center=Point3D(0, 0, -2),
+                width=50,
+                length=125,
+                height=7,
+                hatch_size=0.125,
+                slice_size=0.15,
+                velocity=5000,
+                acceleration=experiment.accel_a_um))
 
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------

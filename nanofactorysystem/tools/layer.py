@@ -116,7 +116,10 @@ class Layer(Parameter):
         # Store system object
         self.system = system
         user = self.system.user["key"]
-        self["sampleOrientation"] = self.system.sample["orientation"]
+        # ToDo(HR) self.device in parameter is not existing. So this line throws an error
+        # ToDo 2 (HR) check if there is an error or a wrong implementation of dictionary sample (dict in dict atm)
+        # ToDo 3 (HR) Orientation MUST be "UP" or "DOWN", but it is 'Top'
+        # self["sampleOrientation"] = self.system.sample['sample']["orientation"]
         
         # Initialize parameter class
         args = popargs(kwargs, "layer")
@@ -204,7 +207,10 @@ class Layer(Parameter):
         if coarse:
             if dz is None:
                 dz = self["dzCoarseDefault"]
-            orientation = Orientation[self["sampleOrientation"].upper()]
+
+            # ToDo (HR) Hotfix beseitigen! Orientation in dieser Datei ändern und in Scanner ändern und abhängig von DropDirection machen. dazu dropdirection ins system dict rein
+            # orientation = Orientation[self["sampleOrientation"].upper()]
+            orientation = Orientation["DOWN"]
             scanner = Scanner(z_guess, dz, self.zmin, self.zmax, orientation, interface, self["stretch"], self["overlap"], self["jitter"], self.log)
             self.result["coarse"] = self.scan(spiral, scanner, "coarse", path)
             if z_low is not None:
