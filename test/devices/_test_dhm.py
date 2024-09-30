@@ -20,7 +20,7 @@ args = {
     }
 
 user = "Reinhard"
-objective = "Zeiss 20x"
+objective = "Zeiss 63x"
 objective = sysConfig.objective(objective)
 path = mkdir(".test/dhm")
 logger = getLogger(logfile=f"{path}/console.log")
@@ -43,9 +43,9 @@ with Dhm(user, objective, logger, **args) as dhm:
 
     optImageMedian(dhm, vmedian=32, logger=logger)
 
-    m0 = 5500.0
+    # m0 = 500.0
     # hist = []
-    # for i, m in enumerate(np.arange(m0 - 400, m0 + 400, 10)):
+    # for i, m in enumerate(np.arange(m0 - 500, m0 + 500, 10)):
     #     dhm.device.MotorPos = m
     #     img, _ = dhm.getimage(opt=False)
     #     hist.append(cv2.calcHist(img, [0], None, [256], (0, 255)))
@@ -58,7 +58,7 @@ with Dhm(user, objective, logger, **args) as dhm:
     # cv2.imwrite("hist.png", normcolor(hist))
     # #cv2.waitKey(0)
 
-    dhm.device.MotorPos = 5500
+    dhm.device.MotorPos = 1500.0
     logger.info("Motor scan.")
     m = dhm.motorscan()
     logger.info(f"Motor pos: {dhm.device.MotorPos:.1f} µm (set: {m:.1f} µm)")

@@ -181,6 +181,8 @@ class DrawableObject(abc.ABC):
         # for name in code.co_names[start_idx:start_idx + code.co_argcount]: # here is a mistake - co_argcount is 5 but should be higher
         for name in code.co_names[start_idx:]:
             attr = getattr(self, name, "[NOT FOUND]")
+            if name == "data" or name == "height_profile":
+                continue        # ToDo(HR) Delete Hotfix and change this - if not attr == "data": if attr == "[NOT FOUND]": continue else: irgendwie die daten abspeichern
             if attr == "[NOT FOUND]":
                 continue
             if hasattr(attr, "to_json"):

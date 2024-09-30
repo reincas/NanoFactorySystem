@@ -50,7 +50,7 @@ class HoloContainer(Container):
         items["meta.json"] = meta
 
         # Hologram image
-        holo = self.kwargs.pop("holo")
+        holo = self.kwargs.pop("holo_get")
         if not isinstance(holo, np.ndarray) or len(holo.shape) != 2:
             raise RuntimeError("Hologram image expected!")
         items["meas/image.png"] = holo

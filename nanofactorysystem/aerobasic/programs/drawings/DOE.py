@@ -6,6 +6,95 @@ from nanofactorysystem.aerobasic.programs.drawings.lines import HatchingDirectio
 from nanofactorysystem.devices.coordinate_system import Point2D, Point3D, CoordinateSystem
 
 
+class DOEstep(DrawableObject):
+    """ Step DOE consisting of rectangle with dimensions of 'feature size'. """
+
+    def __init__(
+            self,
+            center: Point3D,
+            feature_size: float | list[float],
+            height_profile: np.array,
+            socket_height: float = 0.0,
+            *,
+            hatch_size: float,
+            slice_size: float,
+            velocity: float,
+            acceleration: float
+    ):
+        super().__init__()
+        self.center = center
+        if isinstance(feature_size, float):
+            self.feature_width = feature_size
+            self.feature_length = feature_size
+        elif isinstance(feature_size, list) and len(feature_size) == 2:
+            self.feature_width, self.feature_length = feature_size
+        else:
+            raise ValueError("Feature size has to be a float number or a list of float numbers with the length of 2!")
+        self.y_steps, self.x_steps = height_profile.shape
+        self.socket_height = socket_height
+        self.height_profile = height_profile
+
+        self.hatch_size = hatch_size
+        self.slice_size = slice_size
+        self.velocity = velocity
+        self.acceleration = acceleration
+
+    @property
+    def structure_length(self) -> float:
+        return self.feature_length * self.y_steps
+
+    @property
+    def structure_width(self) -> float:
+        return self.feature_width * self.x_steps
+
+    @property
+    def structure_height(self) -> np.array:
+        return self.height_profile + self.socket_height
+
+    @property
+    def center_point(self) -> Point2D:
+        return self.center
+
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
+        program = DrawableAeroBasicProgram(coordinate_system)
+        if self.socket_height > 0:
+            socket = Rectangle3D(
+                center=self.center,
+                width=self.structure_width,
+                length=self.structure_length,
+                height=self.socket_height,
+                hatch_size=self.hatch_size,
+                slice_size=self.slice_size,
+                velocity=self.velocity,
+                acceleration=self.acceleration
+            )
+            yield from socket.iterate_layers(coordinate_system)
+
+        # Add steps
+        z_step_offset = self.socket_height
+        for step_x in range(self.x_steps):
+            for step_y in range(self.y_steps):
+                x_offset = -self.x_steps / 2 * self.feature_width + step_x * self.feature_width + self.feature_width / 2
+                y_offset = -self.y_steps / 2 * self.feature_length + step_y * self.feature_length + self.feature_length / 2
+                slice_size_opt = self.height_profile[step_y][step_x] / round(
+                    self.height_profile[step_y][step_x] / self.slice_size)
+
+                step_rectangle = Rectangle3D(
+                    center=self.center + Point3D(x_offset, y_offset, z_step_offset),
+                    width=self.feature_width,
+                    length=self.feature_length,
+                    height=self.height_profile[step_y][step_x],
+                    hatch_size=self.hatch_size,
+                    slice_size=slice_size_opt,
+                    velocity=self.velocity,
+                    acceleration=self.acceleration
+                )
+
+                yield from step_rectangle.iterate_layers(coordinate_system)
+
+        return program
+
+
 class Simple_DOE(DrawableObject):
     def __init__(self,
                  center: Point2D | Point3D,
@@ -68,12 +157,12 @@ class Simple_DOE(DrawableObject):
         program = DrawableAeroBasicProgram(coordinate_system)
         for i in range(self.rows):
             # iterating over rows
-            x_offset = self.feature_size * (i - np.ceil(self.rows/2))
+            x_offset = self.feature_size * (i - np.ceil(self.rows / 2))
 
             for j in range(self.columns):
                 height = self.z_profile[i][j]
-                y_offset = self.feature_size * (j - np.ceil(self.columns/2))
-                slice_size_opt = height / round(height/ self.slice_size)
+                y_offset = self.feature_size * (j - np.ceil(self.columns / 2))
+                slice_size_opt = height / round(height / self.slice_size)
 
                 DOE_pixel = Rectangle3D(
                     center=self.center + Point3D(X=x_offset, Y=y_offset, Z=0),

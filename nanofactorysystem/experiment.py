@@ -315,7 +315,7 @@ class Experiment(object):
 
         else:
             # Plane needs micrometer coordinates
-            # ToDo(HR): Implement a controllable variable to access single plane fit outside if experiment.py
+            # ToDo(HR): Implement a controllable variable to access single plane fit outside of experiment.py
             if self.system.objective['magnification'] == 63.0:
                 zlo = self.system.z0
                 zup = None

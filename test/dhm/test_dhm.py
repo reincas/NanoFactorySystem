@@ -9,6 +9,8 @@ import numpy as np
 import cv2 as cv
 from nanofactorysystem import getLogger, mkdir
 from nanofactorysystem.dhm import DhmClient
+
+
 class TestDHM(TestCase):
     HOST = "192.168.22.2"
     PORT = 27182
@@ -39,6 +41,13 @@ class TestDHM(TestCase):
             fn = f"{path}/hologram.png"
             logger.info(f"Store hologram image file '{fn}'")
             cv.imwrite(fn, img)
+
+            # doesnt work
+            # img1 = client.OptCameraImage
+            # fn = f"{path}/hologram_opt.png"
+            # logger.info(f"Store hologram_opt image file '{fn}'")
+            # cv.imwrite(fn, img1)
+
 
             imin = np.min(img)
             imax = np.max(img)

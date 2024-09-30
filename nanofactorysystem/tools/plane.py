@@ -247,7 +247,6 @@ class Plane(Parameter):
         self.steps = []
         return result, steps
 
-
     def container(self, config=None, **kwargs):
 
         """ Return results as SciDataContainer. """

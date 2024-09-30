@@ -146,7 +146,7 @@ class Dhm(Parameter):
 
         # Hologram image
         holo, count = self.getimage(opt=opt)
-        kwargs["holo"] = holo
+        kwargs["holo_get"] = holo
 
         # Median values
         q = [self["contrastQuantile"], 0.5, 1.0 - self["contrastQuantile"]]

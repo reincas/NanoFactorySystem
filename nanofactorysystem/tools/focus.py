@@ -112,6 +112,7 @@ class Focus(Parameter):
     _defaults = {
         "shape": (512, 512),
         "centerRadius": 80,
+        "zCameraOffset": -5.0,
         "blurInput": 1.0,
         "stdFactor": 2.0,
         "upScale": 100,
@@ -200,6 +201,9 @@ class Focus(Parameter):
 
         # Move to initial z position
         self.system.moveabs(fast, delay, z=z0)
+        # added this second exposure measurement because of images being too bright.
+        self.log.info("Start second exposure optimization for objective 63x with immersion.")
+        self.system.optexpose(127)
 
         # Return images
         self.log.info("Got background image.")
@@ -234,12 +238,13 @@ class Focus(Parameter):
 
         # Delay time after stages reached their destination
         delay = self.system["delay"]
-
+        # ToDo(HR+RC) Offset in system.zline für Aerotech integrieren
         # Move to center position
-        self.system.moveabs(fast, delay, x=x, y=y, z=z)
+        self.system.moveabs(fast, delay, x=x, y=y, z=z+self["zCameraOffset"])
 
         # Take pre exposure camera image
         img0 = self.system.getimage()
+        self.system.moveabs(fast, delay, z=z)
 
         # Expose axial line
         if dz != 0.0:
@@ -256,7 +261,9 @@ class Focus(Parameter):
             self.system.pulse(power, dt)
 
         # Take post exposure camera image
+        self.system.moveabs(fast, delay, z=z+self["zCameraOffset"])
         img1 = self.system.getimage()
+        #self.system.moveabs(fast, delay, x=x, y=y, z=z)
 
         # Exposure data
         exposure = {

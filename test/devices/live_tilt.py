@@ -28,8 +28,8 @@ def on_close(event):
 
 def getImage(dhm):
 
-    #holo, count = dhm.getimage(opt=False)
-    #return image.normcolor(holo)
+    #holo_get, count = dhm.getimage(opt=False)
+    #return image.normcolor(holo_get)
     holo, count = dhm.getimage()
     spectrum, fx, fy, weight = reconstruct.locateOrder(holo, 16)
     dhm.log.info(f"First order coordinates: {fx:d}, {fy:d} [{100 * weight:.1f}%]")

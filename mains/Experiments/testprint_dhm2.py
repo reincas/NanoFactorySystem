@@ -16,6 +16,10 @@ from nanofactorysystem.aerobasic.programs.drawings.lens import AsphericalLens
 from nanofactorysystem.devices.coordinate_system import DropDirection, Point2D, Point3D
 from nanofactorysystem.experiment import Experiment, StructureType
 
+"""
+ # ONLY FOR ONE TIME USE FOR OFFSET INVESTIGATION
+ """
+
 sys_args = {
     "attenuator": {
         "fitKind": "quadratic",
@@ -59,7 +63,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     # deleting all the different data of previous prints
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
-        path = Path(mkdir(f".output/dhm_paper/print4paper_{datetime.datetime.now():%Y%m%d}_dhm_{objective}", clean=False))
+        path = Path(mkdir(f".output/dhm_paper/print4paper_no_z_Offset_{datetime.datetime.now():%Y%m%d}_dhm_{objective}", clean=False))
     else:
         assert (path, Path)
         path = Path(mkdir(os.path.join(path, "testprint_dhm")))
@@ -131,7 +135,8 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             corner_length=c_length,
             corner_height=c_height,
             corner_hatch=c_hatch,
-            corner_slice=c_slice) as experiment:
+            corner_slice=c_slice,
+            skip_corner=True) as experiment:
 
         # Visualize experiment
         experiment.plot_experiment(show=False)
@@ -151,45 +156,15 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
         # Add structures
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="stair_galvo1",
-            axes="ABZ",
-            power=power,
-            structure=Stair(
-                Point3D(0, 0, -2),
-                n_steps=6,
-                step_height=0.6,
-                step_length=20,
-                step_width=50,
-                hatch_size=0.1,
-                slice_size=0.3,
-                socket_height=7,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
-        experiment.add_structure(
-            structure_type=StructureType.NORMAL,
-            name="stair_galvo2",
-            axes="ABZ",
-            power=power,
-            structure=Stair(
-                Point3D(0, 0, -2),
-                n_steps=6,
-                step_height=0.6,
-                step_length=20,
-                step_width=50,
-                hatch_size=0.1,
-                slice_size=0.3,
-                socket_height=7,
-                velocity=5000,
-                acceleration=experiment.accel_a_um))
+        experiment.skip_structure()
+        experiment.skip_structure()
         experiment.add_structure(
             structure_type=StructureType.NORMAL,
             name="stair_galvo3",
             axes="ABZ",
             power=power,
             structure=Stair(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 n_steps=6,
                 step_height=0.6,
                 step_length=20,
@@ -205,7 +180,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=Stair(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 n_steps=6,
                 step_height=0.6,
                 step_length=20,
@@ -221,7 +196,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=Stair(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 n_steps=6,
                 step_height=0.6,
                 step_length=20,
@@ -238,7 +213,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=AsphericalLens(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 height=7,
                 length=100,
                 width=75,
@@ -254,7 +229,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=AsphericalLens(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 height=7,
                 length=100,
                 width=75,
@@ -270,7 +245,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=AsphericalLens(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 height=7,
                 length=100,
                 width=75,
@@ -286,7 +261,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=AsphericalLens(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 height=7,
                 length=100,
                 width=75,
@@ -302,7 +277,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=AsphericalLens(
-                Point3D(0, 0, -2),
+                Point3D(0, 0, 0),
                 height=7,
                 length=100,
                 width=75,
@@ -319,7 +294,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=Rectangle3D(
-                center=Point3D(0, 0, -2),
+                center=Point3D(0, 0, 0),
                 width=50,
                 length=125,
                 height=7,
@@ -333,7 +308,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=Rectangle3D(
-                center=Point3D(0, 0, -2),
+                center=Point3D(0, 0, 0),
                 width=50,
                 length=125,
                 height=7,
@@ -347,7 +322,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=Rectangle3D(
-                center=Point3D(0, 0, -2),
+                center=Point3D(0, 0, 0),
                 width=50,
                 length=125,
                 height=7,
@@ -361,7 +336,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=Rectangle3D(
-                center=Point3D(0, 0, -2),
+                center=Point3D(0, 0, 0),
                 width=50,
                 length=125,
                 height=7,
@@ -375,7 +350,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             axes="ABZ",
             power=power,
             structure=Rectangle3D(
-                center=Point3D(0, 0, -2),
+                center=Point3D(0, 0, 0),
                 width=50,
                 length=125,
                 height=7,

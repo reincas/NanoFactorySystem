@@ -117,6 +117,7 @@ def moveMotor(dhm, m, opt=False):
     return the relative weight of its first diffraction order peak. """
 
     # Move the OPL motor
+    #dhm.log.info(f"Motorpos: {m:.1f}")
     dhm.device.MotorPos = m
 
     # Grab camera image
@@ -145,6 +146,12 @@ def addMotor(dhm, data, m, opt=False, logger=None):
     # Prepare logger
     logger = logger or logging
 
+    # Minimum and maximum motor position
+    minpos = dhm.device.MotorMinPos
+    maxpos = dhm.device.MotorMaxPos
+    if m < minpos or m > maxpos:
+        return
+
     value = data[m]
     if value is not None:
         return
@@ -171,15 +178,17 @@ def shortScan(dhm, steps=11, dm=250.0, thresh=0.05, m0=None, opt=True,
     m1 = m0 - dm * (steps - 1) / 2
     if m1 < minpos:
         m1 = minpos
-    m2 = m1 + (steps - 1) * dm
+    m2 = m0 + dm * (steps - 1) / 2
+    #m2 = m1 + (steps - 1) * dm
     if m2 > maxpos:
         m2 = maxpos
-        m1 = m2 - (steps - 1) * dm
+        #m1 = m2 - (steps - 1) * dm
 
         # Sanity check: That should never happen.
-        if m1 < minpos:
-            raise RuntimeError("OPL scan range too small!")
-
+        #if m1 < minpos:
+        #    raise RuntimeError("OPL scan range too small!")
+    #dhm.log.info(f"MinPos: {minpos:.1f}")
+    #dhm.log.info(f"MaxPos: {maxpos:.1f}")
     return runScan(dhm, m1, m2, dm, thresh, opt, logger)
 
 
@@ -269,7 +278,7 @@ def bisectMax(dhm, triple, minc=0.005, minm=5.0, opt=True, logger=None):
 
     # Center point must have maximum contrast
     if c0 > c1 or c2 > c1:
-        raise RuntimeError("No contrast maximum!")
+        raise MotorScanError("No contrast maximum!")
 
     # Bisectioning algorithm to find the motor position with maximum
     # image contrast. Proceed until either the difference of the
@@ -342,6 +351,20 @@ def motorScan(
     if result is None:
         raise RuntimeError("Long OPL scan detected no interference!")
 
-    m = bisectMax(dhm, result, minc, minm, opt, logger=logger)
+    # ToDo(RC) Hotfix: for oder while Schleife einbauen, minpos und maxpos prüfen, eigene Exception
+    m0, m1, m2 = result
+    dm0 = m1 - m0
+    dm2 = m2 - m1
+    try:
+        m = bisectMax(dhm, result, minc, minm, opt, logger=logger)
+    except MotorScanError:
+        result = (m1-2*dm0, m1, m1+2*dm2)
+        m = bisectMax(dhm, result, minc, minm, opt, logger=logger)
+
     dhm.device.MotorPos = m
     return m, init
+
+
+class MotorScanError(Exception):
+
+    pass

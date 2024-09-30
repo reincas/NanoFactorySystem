@@ -64,12 +64,12 @@ if __name__ == "__main__":
         "dhm": {},
     }
 
-    user = "Reinhard"
-    objective = "Zeiss 20x"
+    user = "Hannes"
+    objective = "Zeiss 63x"
     objective = sysConfig.objective(objective)
     # path = mkdir(".test/tilt")
     opt = True
-    scan = True
+    scan = False
     spectrum = False
 
     logger = getLogger()
@@ -77,7 +77,8 @@ if __name__ == "__main__":
     with Dhm(user, objective, logger, **args) as dhm:
 
         if opt:
-            dhm.device.MotorPos = 3597
+            dhm.device.MotorPos = 390.3 # 63x objective
+            # dhm.device.MotorPos = 3732.0 # 20x objective
             if scan:
                 logger.info("Run OPL Motor Scan...")
                 dhm.motorscan()

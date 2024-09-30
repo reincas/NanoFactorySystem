@@ -2,6 +2,7 @@
 .test/
 .output/
 attic/
+postprocessing/
 
 *.png
 *.zdc
