@@ -59,7 +59,7 @@ with System(user, objective, logger, **args) as system:
 
     # Run motor scan
     logger.info("Motor scan...")
-    mopt = system.dhm.motorscan()
+    mopt = system.dhm.opl_scan()
     m = system.dhm.device.MotorPos
     logger.info(f"Motor pos: {m:.1f} µm (set: {mopt:.1f} µm)")
 

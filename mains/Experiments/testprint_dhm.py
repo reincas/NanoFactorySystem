@@ -28,7 +28,10 @@ sys_args = {
         "material": "SZ2080",
         "materialThickness": 75.0,
     },
-    "focus": {},
+    "focus": {
+        "minCircularity": 0.6,
+        "exposureValue": 95
+    },
     "layer": {
             "beta": 0.7,
             "dzCoarseDefault": 50.0,

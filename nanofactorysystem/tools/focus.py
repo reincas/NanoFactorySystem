@@ -122,6 +122,7 @@ class Focus(Parameter):
         "factorContour": 1.0,
         "peakContour": 0.2,
         "minCircularity": 0.85,
+        "exposureValue": 127
     }
 
     _resultkeys = [
@@ -159,6 +160,8 @@ class Focus(Parameter):
         self.log.info("Initializing focus detector.")
 
         # Background image
+        if self.system.objective['magnification'] == 63.0:  # image was always too bright
+            self.system["backOffset"] = -20.0
         dz = self.system["backOffset"]
         self.imgBack = self.background(dz)
         shape = self["shape"]
@@ -194,16 +197,16 @@ class Focus(Parameter):
         self.system.moveabs(fast, delay, z=z0 + dz)
 
         # Set exposure time for normalized image
-        self.system.optexpose(127)
+        self.system.optexpose(self["exposureValue"])
 
         # Take background image
         img = self.system.getimage()
 
         # Move to initial z position
         self.system.moveabs(fast, delay, z=z0)
-        # added this second exposure measurement because of images being too bright.
-        self.log.info("Start second exposure optimization for objective 63x with immersion.")
-        self.system.optexpose(127)
+        # # added this second exposure measurement because of images being too bright.
+        # self.log.info("Start second exposure optimization for objective 63x with immersion.")
+        # self.system.optexpose(127)
 
         # Return images
         self.log.info("Got background image.")

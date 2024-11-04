@@ -58,7 +58,7 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
     # deleting all the different data of previous prints
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
-        path = Path(mkdir(f".output/parameter_study/Parameter_hatch_slice_SZ2080_{datetime.datetime.now():%Y%m%d}_{objective}", clean=False))
+        path = Path(mkdir(f".output/parameter_study/Parameter_hatch_slice_SZ2080_yellow_{datetime.datetime.now():%Y%m%d}_{objective}", clean=False))
     else:
         assert (path, Path)
         path = Path(mkdir(os.path.join(path, "parameter_testprint")))

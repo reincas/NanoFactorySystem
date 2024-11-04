@@ -72,7 +72,8 @@ class Experiment(object):
                  corner_hatch: float,
                  corner_slice: float,
                  *,
-                 skip_corner: bool = False):
+                 skip_corner: bool = False,
+                 plane_fit_mode: int = 0):
 
         self.path = path
         self.user = str(user)
@@ -98,6 +99,7 @@ class Experiment(object):
         assert self.n_mid_points >= 0
 
         self.drop_direction = drop_direction
+        self.plane_fit_mode = plane_fit_mode
 
         # Corner dimensions
         self.corner_z = float(corner_z)
@@ -227,15 +229,26 @@ class Experiment(object):
         return self.center_point + self.grid_center + [-self.grid_width / 2, self.grid_height / 2]
 
     def sample_points_for_plane_fitting(self) -> list[tuple[float, float]]:
-
         n_rows = self.grid[0] + 1
         n_cols = self.grid[1] + 1
         points = []
-        for i in range(n_rows):
-            for j in range(n_cols):
-                x = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + j * (self.fov_size + self.padding)
-                y = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + i * (self.fov_size + self.padding)
-                points.append((x, y))
+        if self.plane_fit_mode == 0:
+            for i in range(n_rows):
+                for j in range(n_cols):
+                    x = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + j * (self.fov_size + self.padding)
+                    y = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + i * (self.fov_size + self.padding)
+                    points.append((x, y))
+        elif self.plane_fit_mode == 1:
+            x0 = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding
+            x1 = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + n_cols * (self.fov_size + self.padding)
+            y0 = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding
+            y1 = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + n_rows * (self.fov_size + self.padding)
+            points.append((x0, y0))
+            points.append((x0, y1))
+            points.append((x1, y0))
+            points.append((x1, y1))
+        else:
+            raise NotImplementedError(f"Plane fit mode {self.plane_fit_mode} is not implemented!")
         return points
 
     # def sample_points_for_plane_fitting_old(self) -> list[tuple[float, float]]:
@@ -304,7 +317,6 @@ class Experiment(object):
             plt.show()
 
     def plane_fit(self, force: bool = False):
-
         path = self.path / "planefit"
         mkdir(path, clean=False)
         plane_dc_path = path / "plane.zdc"
@@ -371,7 +383,7 @@ class Experiment(object):
             # Dummy call to avoid low intensity images on motorscan.
             optImageMedian(dhm=self.system.dhm, vmedian=127, logger=self.log)
 
-            m0 = self.system.dhm.motorscan(m0)
+            m0 = self.system.dhm.opl_scan(m0)
             self.log.info(
                 f"OPL motor pos at {image_center}: {self.system.dhm.device.MotorPos:.1f} µm (set: {m0:.1f} µm)")
             with open(opl_dc_path, "w") as fp:
@@ -692,6 +704,10 @@ class Experiment(object):
         # Write JSON file with all configurations
         structure_configs_path = self.path / "structures.json"
         structure_configs_path.write_text(json.dumps(self.structure_configs, indent=4))
+
+    def retrieve_programs(self):
+        structure_configs_path = self.path / "structures.json"
+        self.structure_configs = json.loads(open(structure_configs_path).read())
 
     def print_structure(self,
                         pgm_files_list: list[Path],

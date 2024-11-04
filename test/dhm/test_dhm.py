@@ -3,6 +3,8 @@
 # <reinhard.caspary@phoenixd.uni-hannover.de>                            #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
+import os
+from datetime import datetime
 from unittest import TestCase
 
 import numpy as np
@@ -55,5 +57,4 @@ class TestDHM(TestCase):
             logger.info(f"Pixel values: {imin:d} - {imax:d} (avg: {iavg:.1f})")
 
             logger.info("Done.")
-
 
