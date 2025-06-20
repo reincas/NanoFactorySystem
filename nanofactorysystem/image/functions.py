@@ -81,7 +81,6 @@ def crop(img, shape, offset=None):
     h, w = img.shape
     if h < height or w < width:
         raise RuntimeError("Image too small!")
-
     x0 = offx + (w - width) // 2
     y0 = offy + (h - height) // 2
     x1 = x0 + width

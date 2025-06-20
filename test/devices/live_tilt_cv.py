@@ -76,10 +76,12 @@ if __name__ == "__main__":
     logger.setLevel(logging.DEBUG)
     with Dhm(user, objective, logger, **args) as dhm:
 
+        dhm.device.MotorPos = 3900.0  # 20x objective circa
+        dhm.device.MotorPos = 190.0  # 63x objective
         if opt:
-            dhm.device.MotorPos = 390.3  # 63x objective
-            # dhm.device.MotorPos = 500  # 63x objective
-            # dhm.device.MotorPos = 3732.0 # 20x objective
+            # dhm.device.MotorPos = 390.3  # 63x objective
+            dhm.device.MotorPos = 200  # 63x objective
+            # dhm.device.MotorPos = 2750.0  # 20x objective
             if scan:
                 logger.info("Run OPL Motor Scan...")
                 dhm.motorscan()

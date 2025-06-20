@@ -39,9 +39,11 @@ class DHMBackend:
 
         # standard initialisation optical path length motor position
         if objective == "Zeiss 63x":
-            self.motor_pos = 299.0
+            self.motor_pos = 190.0
         elif objective == "Zeiss 20x":
-            self.motor_pos = 3732.0
+            # self.motor_pos = 3732.0
+            self.motor_pos = 3100.0
+            self.motor_pos = 100.0
         elif objective == "Nikon 20x":
             self.motor_pos = 10.0
             raise Warning("Motor position not selected. Please run the opl motor scan.")
@@ -132,9 +134,10 @@ class DHMBackend:
         self.logger.info("Motor pos: %.1f µm" % self.client.device.MotorPos)
 
 if __name__ == "__main__":
+    objective_selected = "Zeiss 63x"
     desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
-    path = os.path.join(desktop, "holo_4_paper_after_development")
-    img_getter = DHMBackend(save_path=path)
+    path = os.path.join(desktop, "hologram_dhm_print_power_p07v10k")
+    img_getter = DHMBackend(save_path=path, objective=objective_selected)
 
     print("Start capturing mode...")
     while True:

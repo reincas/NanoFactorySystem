@@ -110,6 +110,7 @@ class Focus(Parameter):
     pre- and post-exposure images. """
 
     _defaults = {
+        "OffsetFocusDetection": (0, 0),
         "shape": (512, 512),
         "centerRadius": 80,
         "zCameraOffset": -5.0,
@@ -165,7 +166,7 @@ class Focus(Parameter):
         dz = self.system["backOffset"]
         self.imgBack = self.background(dz)
         shape = self["shape"]
-        self.back = image.crop(self.imgBack.img, shape)
+        self.back = image.crop(self.imgBack.img, shape, offset=self["OffsetFocusDetection"])
 
         # Mask of the center region
         r = self["centerRadius"]
@@ -243,7 +244,7 @@ class Focus(Parameter):
         delay = self.system["delay"]
         # ToDo(HR+RC) Offset in system.zline für Aerotech integrieren
         # Move to center position
-        self.system.moveabs(fast, delay, x=x, y=y, z=z+self["zCameraOffset"])
+        self.system.moveabs(fast, delay, x=x, y=y, z=z + self["zCameraOffset"])
 
         # Take pre exposure camera image
         img0 = self.system.getimage()
@@ -264,9 +265,9 @@ class Focus(Parameter):
             self.system.pulse(power, dt)
 
         # Take post exposure camera image
-        self.system.moveabs(fast, delay, z=z+self["zCameraOffset"])
+        self.system.moveabs(fast, delay, z=z + self["zCameraOffset"])
         img1 = self.system.getimage()
-        #self.system.moveabs(fast, delay, x=x, y=y, z=z)
+        # self.system.moveabs(fast, delay, x=x, y=y, z=z)
 
         # Exposure data
         exposure = {
@@ -306,8 +307,8 @@ class Focus(Parameter):
         post-exposure images. """
 
         # Get sub-images
-        img0_sub = image.crop(img0, self["shape"])
-        img1_sub = image.crop(img1, self["shape"])
+        img0_sub = image.crop(img0, self["shape"], offset=self["OffsetFocusDetection"])
+        img1_sub = image.crop(img1, self["shape"], offset=self["OffsetFocusDetection"])
 
         # Subtract camera background image
         img0 = image.diff(img0_sub, self.back, self["blurInput"])

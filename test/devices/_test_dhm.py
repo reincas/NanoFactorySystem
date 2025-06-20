@@ -20,7 +20,7 @@ args = {
     }
 
 user = "Reinhard"
-objective = "Zeiss 63x"
+objective = "Zeiss 20x"
 objective = sysConfig.objective(objective)
 path = mkdir(".test/dhm")
 logger = getLogger(logfile=f"{path}/console.log")
@@ -41,24 +41,27 @@ with Dhm(user, objective, logger, **args) as dhm:
     # plt.show()
     # exit(0)
 
-    optImageMedian(dhm, vmedian=32, logger=logger)
+    optImageMedian(dhm, vmedian=128, logger=logger)
 
-    # m0 = 500.0
-    # hist = []
-    # for i, m in enumerate(np.arange(m0 - 500, m0 + 500, 10)):
-    #     dhm.device.MotorPos = m
-    #     img, _ = dhm.getimage(opt=False)
-    #     hist.append(cv2.calcHist(img, [0], None, [256], (0, 255)))
-    #     vlo, vhi = np.quantile(img, [0.05, 0.95], method="nearest")
-    #     c = float(vhi - vlo) / 255
-    #     print(i, m, vlo, vhi, c)
-    # hist = np.concatenate(hist, axis=1)
-    # # cv2.namedWindow("hist", cv2.WINDOW_NORMAL)
-    # #cv2.imshow("hist", normcolor(hist))
-    # cv2.imwrite("hist.png", normcolor(hist))
-    # #cv2.waitKey(0)
+    m0 = 2750.0
+    hist = []
+    ref, _ = dhm.getimage(opt=False)
+    for i, m in enumerate(np.arange(m0 - 500, m0 + 500, 10)):
+    #for i, m in enumerate(np.arange(0, 15000, 75)):
+        dhm.device.MotorPos = m
+        img, _ = dhm.getimage(opt=False)
+        #img = cv2.absdiff(img, ref)
+        hist.append(cv2.calcHist(img, [0], None, [256], (0, 255)))
+        vlo, vhi = np.quantile(img, [0.05, 0.95], method="nearest")
+        c = float(vhi - vlo) / 255
+        print(i, m, vlo, vhi, c)
+    hist = np.concatenate(hist, axis=1)
+    # cv2.namedWindow("hist", cv2.WINDOW_NORMAL)
+    #cv2.imshow("hist", normcolor(hist))
+    cv2.imwrite("hist.png", normcolor(hist))
+    #cv2.waitKey(0)
 
-    dhm.device.MotorPos = 1500.0
+    dhm.device.MotorPos = 3250.0
     logger.info("Motor scan.")
     m = dhm.motorscan()
     logger.info(f"Motor pos: {dhm.device.MotorPos:.1f} µm (set: {m:.1f} µm)")

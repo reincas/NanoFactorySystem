@@ -1,7 +1,7 @@
 import os
 import datetime
 from nanofactorysystem.devices.coordinate_system import Point2D
-from Experiments.dhm_paper_print import dhm_paper as print_program
+from Experiments.qr_code_investigation import qr_code_test as print_program
 # from Experiments.testprint_dhm import dhm_testprint as print_program
 
 """
@@ -10,14 +10,15 @@ Maximum Dimensions DHM
 """
 def main():
     edges = [
-        [1700, 15850],  # right edge
-        [2300, 25200],  # left edge
-        [-2550, 20100],  # near edge
-        [6600, 20800]  # far edge
+        [1700, 18900],  # right edge
+        [1800, 28400],  # left edge
+        [-3100, 23600],  # near edge
+        [6600, 23900]  # far edge
     ]
+    # one structure at 280 25720 - seems like stair
 
-    center = Point2D(X=2000,
-                     Y=20500)
+    center = Point2D(X=2000,        #
+                     Y=25000)       #
     # ToDo: Make sure center is within the edges
     # assert center.Y in [ymin, ymax]
     # assert center.X in [xmin, xmax]
@@ -27,7 +28,7 @@ def main():
     print_program(absolute_center=center,
                   resin_dimension=edges,
                   ask_continue_box=True,
-                  # path=os.path.join(root_path, "test"),
+                  # path=r"C:\Users\Nanofactory\Documents\OFFLINE_Hannes\March_2025_Power_test_DHMPaper",
                   objective="Zeiss 63x",
                   user="Hannes")
     t2 = datetime.datetime.now()

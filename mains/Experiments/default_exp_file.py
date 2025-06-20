@@ -81,10 +81,18 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         # printing area settings
         margin = 200
         padding = 100
+        # printing settings
+        movement_axis = ["ABZ", "XYZ"]
+        parameterset = {
+            "hatch size": [0.125],  # hatch size
+            "slice size": [0.15],  # slice size/ layer height
+            "power": 0.7,
+            "velocity": 10_000
+        }
 
     elif objective == "Zeiss 63x":
         fov = 150
-        zmax = 25500.0  # could possibly be up to 25550 µm
+        zmax = 25480.0  # could possibly be up to 25550 µm
         # Corner settings
         c_width = 30
         c_length = 120
@@ -94,6 +102,14 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         # printing area settings
         margin = 50
         padding = 100
+        # printing settings
+        movement_axis = ["ABZ", "XYZ"]
+        parameterset = {
+            "hatch size": 0.1,  # hatch size
+            "slice size": 0.1,  # slice size/ layer height
+            "power": 0.3,
+            "velocity": 10_000
+        }
 
     else:
         raise Exception(f"No implemented objective {objective}! Possible objectives are 'Zeiss 20x' and 'Zeiss 63x'.")
@@ -117,7 +133,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=(2, 3),  # ToDo: changing depending on experiment
+            grid=(2, 3),  # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
             n_mid_points=0,  # ToDo changing depending on experiment
             drop_direction=DropDirection.DOWN,
             corner_z=-2,
@@ -125,7 +141,8 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             corner_length=c_length,
             corner_height=c_height,
             corner_hatch=c_hatch,
-            corner_slice=c_slice) as experiment:
+            corner_slice=c_slice,
+            plane_fit_mode=1) as experiment:
 
         # Visualize experiment
         experiment.plot_experiment(show=True)

@@ -108,17 +108,16 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": [0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],  # hatch size
-            "slice size": [0.01, 0.02, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5],  # slice size/ layer height
-            "power": 0.3,  # ToDo implmentieren, dass auch power gewechselt werden kann
-            "velocity": 10_000
+            "hatch size": 0.1,  # 0.05, 0.1, 0.15, 0.2  # hatch size
+            "slice size": 0.1,  # 0.1# slice size/ layer height
+            "power": [0.1, 0.15, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],
+            "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 7_500, 10_000]
         }
 
     else:
         raise Exception(f"No implemented objective {objective}! Possible objectives are 'Zeiss 20x' and 'Zeiss 63x'.")
 
-    logger.info(f"Parameter search with Structures stair, aspherical lens and rectangle. \nParameter set is selected as"
-                f" follows: \nHatch size: {parameterset['hatch size']} \nLayer height: {parameterset['slice size']}")
+    logger.info(f"")
     sys_args.update({"controller": {
         "zMax": zmax, }
     })
@@ -169,71 +168,24 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         # Add structures        - only galvo as movement axis just now
         # Adding Stair Structure
 
-        for i in range(len(parameterset["hatch size"])):
-            for j in range(len(parameterset["slice size"])):
-                if i == 0 or j == 0 or i == 1 or j == 1:
-                    experiment.skip_structure()
-                else:
-                    experiment.add_structure(
-                        structure_type=StructureType.NORMAL,
-                        name=f"stair{i + j}_{movement_axis[0]}_h_{parameterset['hatch size'][i]}_l_{parameterset['slice size'][j]}",
-                        axes=movement_axis[0],
-                        power=parameterset["power"],
-                        structure=Stair(
-                            Point3D(0, 0, -2),
-                            n_steps=5,
-                            step_height=0.6,
-                            step_length=20,
-                            step_width=50,
-                            hatch_size=parameterset["hatch size"][i],
-                            slice_size=parameterset["slice size"][j],
-                            socket_height=5,
-                            velocity=parameterset["velocity"],
-                            acceleration=experiment.accel_a_um))
-
-        # Adding aspherical lens structure
-        for i in range(len(parameterset["hatch size"])):
-            for j in range(len(parameterset["slice size"])):
-                if i == 0 or j == 0 or i == 1 or j == 1:
-                    experiment.skip_structure()
-                else:
-                    experiment.add_structure(
-                        structure_type=StructureType.NORMAL,
-                        name=f"lens{i + j}_{movement_axis[0]}_h_{parameterset['hatch size'][i]}_l_{parameterset['slice size'][j]}",
-                        axes=movement_axis[0],
-                        power=parameterset["power"],
-                        structure=AsphericalLens(
-                            Point3D(0, 0, -2),
-                            height=5,
-                            length=80,
-                            width=60,
-                            sphere_radius=1030,
-                            conic_constant=-2.3,
-                            hatch_size=parameterset["hatch size"][i],
-                            slice_size=parameterset["slice size"][j],
-                            velocity=parameterset["velocity"],
-                            acceleration=experiment.accel_a_um))
-
-        # Adding rectangle structure
-        for i in range(len(parameterset["hatch size"])):
-            for j in range(len(parameterset["slice size"])):
-                if i == 0 or j == 0 or i == 1 or j == 1:
-                    experiment.skip_structure()
-                else:
-                    experiment.add_structure(
-                        structure_type=StructureType.NORMAL,
-                        name=f"rect{i + j}_{movement_axis[0]}_h_{parameterset['hatch size'][i]}_l_{parameterset['slice size'][j]}",
-                        axes=movement_axis[0],
-                        power=parameterset["power"],
-                        structure=Rectangle3D(
-                            center=Point3D(0, 0, -2),
-                            width=40,
-                            length=75,
-                            height=5,
-                            hatch_size=parameterset["hatch size"][i],
-                            slice_size=parameterset["slice size"][j],
-                            velocity=parameterset["velocity"],
-                            acceleration=experiment.accel_a_um))
+        for i in range(len(parameterset["velocity"])):
+            for j in range(len(parameterset["power"])):
+                para_vel = parameterset["velocity"][i]
+                para_pow = parameterset["power"][j]
+                experiment.add_structure(
+                    structure_type=StructureType.NORMAL,
+                    name=f"rect_{i}_{para_vel}_{j}_{para_pow}",
+                    axes=movement_axis[0],
+                    power=parameterset["power"],
+                    structure=Rectangle3D(
+                        center=Point3D(0, 0, -2),
+                        width=50,
+                        length=50,
+                        height=3,
+                        hatch_size=parameterset["hatch size"][i],
+                        slice_size=parameterset["slice size"][j],
+                        velocity=parameterset["velocity"],
+                        acceleration=experiment.accel_a_um))
 
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------

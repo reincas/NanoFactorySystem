@@ -17,6 +17,7 @@ import logging
 import numpy as np
 # from offaxisholo.reconstruct import locateOrder
 
+
 class Contrast(object):
 
     def __init__(self):
@@ -112,7 +113,8 @@ class Contrast(object):
 
 
 def moveMotor(dhm, m, opt=False):
-    """ ... """
+    """ Move the OPL motor to the given position, take a camera image and
+    return the relative weight of its first diffraction order peak. """
 
     # Move the OPL motor
     #dhm.log.info(f"Motorpos: {m:.1f}")

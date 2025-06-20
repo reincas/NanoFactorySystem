@@ -4,6 +4,7 @@
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 import json
+import os.path
 import time
 import uuid
 from logging import Logger
@@ -46,7 +47,7 @@ class StructureType(Enum):
 
 
 class Experiment(object):
-
+    #todo(HR): Implement saving of QR code image - see https://pypi.org/project/qrcode/
     def __init__(self,
                  path: Path,
                  user: str,
@@ -469,7 +470,6 @@ class Experiment(object):
 
         # Reference point (center of QR code)
         reference_point = Point3D(0, 0, self.corner_z)
-
         qrcode = QRCode(
             reference_point,
             text=self.qr_text,
@@ -485,6 +485,7 @@ class Experiment(object):
             horizontal_acceleration=self.accel_a_um,
             vertical_velocity=300,
             vertical_acceleration=self.accel_z_um)
+        qrcode.get_image().save(os.path.join(self.path, "qr_code_image.png"))
         self.add_structure(
             structure_type=StructureType.QRCODE,
             name="qrcode",
@@ -595,12 +596,14 @@ class Experiment(object):
             offset_x=structure_center_absolute_um["X"],
             offset_y=structure_center_absolute_um["Y"],
             z_function=structure_center_absolute_um["Z"],
+            drop_direction=self.drop_direction,
             unit=Unit.um
         )
         coordinate_system_galvo = CoordinateSystem(
             offset_x=-offset_x,
             offset_y=-offset_y,
             z_function=structure_center_absolute_um["Z"],
+            drop_direction=self.drop_direction,
             unit=Unit.um
         )
         coordinate_system_galvo.axis_mapping = {"X": "A", "Y": "B"}

@@ -16,6 +16,7 @@ class QrErrorCorrection(Enum):
     Q = 2
     H = 3
 
+
 class QRCode(DrawableObject):
     def __init__(
             self,
@@ -24,10 +25,10 @@ class QRCode(DrawableObject):
             *,
             version: Optional[int] = None,
             error_correction: Optional[QrErrorCorrection] = None,
-            pixel_pitch: float,
-            base_height: float,
-            anchor_height: float,
-            pixel_height: float,
+            pixel_pitch: float,  # distance between pillars/ points of qr-code
+            base_height: float,  # height of base rectangle
+            anchor_height: float,  # height of beginning of pillars
+            pixel_height: float,  # height of pillars
             hatch_size: float,
             slice_size: float,
             horizontal_velocity: float,
@@ -63,13 +64,14 @@ class QRCode(DrawableObject):
             corr = qrcode.constants.ERROR_CORRECT_H
         else:
             raise ValueError(f"Unknown error correction {self.error_correction}!")
-        qr = qrcode.QRCode(version=self.version, error_correction=corr)
+        qr = qrcode.QRCode(version=self.version, error_correction=corr)  #, image_factory=qrcode.image.svg.SvgPathImage)
         qr.add_data(self.text)
         qr.make(fit=self.version is None)
+        self.qr_image = qr.make_image(fill_color="black", back_color="white")
         self.data = np.array(qr.modules, dtype=bool)
 
-        self.n_layer = round(self.base_height / self.slice_size) + 1
-        self.slice_size_opt = self.base_height / (self.n_layer - 1)
+        self.n_layer = round(self.base_height / self.slice_size) + 2
+        self.slice_size_opt = self.base_height / (self.n_layer - 2)
 
     @property
     def structure_length(self) -> float:
@@ -87,11 +89,14 @@ class QRCode(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
+    def get_image(self):
+        return self.qr_image
+
     def layer_to_z(self, layer_id: int) -> float:
 
         assert layer_id >= 0 and layer_id < self.n_layer
-        if layer_id == self.n_layer-1:
-            return self.base_height - self.anchor_height + (self.anchor_height + self.pixel_height)/2
+        if layer_id == self.n_layer - 1:
+            return self.base_height - self.anchor_height + (self.anchor_height + self.pixel_height) / 2
         return self.slice_size_opt * layer_id
 
     def pixel_program(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
@@ -104,11 +109,13 @@ class QRCode(DrawableObject):
 
         program = DrawableAeroBasicProgram(coordinate_system)
 
-        # TODO(RC) Take DropDirection into account
+        # TODO(RC) Take DropDirection into account -- Done.
         # Note: z is relative to substrate surface
         z_start = self.base_height + self.pixel_height
         z_end = self.base_height - self.anchor_height
-        lines = [[z_start, z_end]]
+        if coordinate_system.drop_direction == DropDirection.UP:
+            z_start, z_end = z_end, z_start
+        lines = [[z_start, z_end]]  # -> end height of pillar - begin height of pillars
 
         h, w = self.data.shape
         order = 1
@@ -149,7 +156,7 @@ class QRCode(DrawableObject):
         hatch_size_opt = size / (n_hatch - 1)
         order = 1
         for i in range(n_hatch):
-            line_position = hatch_size_opt * (i - n_hatch/2 + 0.5)
+            line_position = hatch_size_opt * (i - n_hatch / 2 + 0.5)
             line_start = size / 2
             lines = [[-line_start, line_start][::order]]
             line = line_program(
@@ -170,5 +177,23 @@ class QRCode(DrawableObject):
 
 
 if __name__ == '__main__':
-    qr = QRCode(Point2D(0, 0), "Hello world")
-    print(qr.draw_on(CoordinateSystem()))
+    qr = QRCode(Point2D(0, 0), "Hello world",
+                version=None,
+                error_correction=QrErrorCorrection.Q,
+                pixel_pitch=2,
+                base_height=5.0,
+                anchor_height=2.0,
+                pixel_height=1.0,
+                slice_size=0.1,
+                hatch_size=0.1,
+                horizontal_velocity=5000,
+                horizontal_acceleration=10000,
+                vertical_velocity=300,
+                vertical_acceleration=10000
+                )
+    img=qr.get_image()
+    import matplotlib.pyplot as plt
+    plt.imshow(img)
+    plt.show()
+    img.save("test_qr.png")
+    # print(qr.draw_on(CoordinateSystem()))
