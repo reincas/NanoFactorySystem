@@ -44,7 +44,7 @@ sys_args = {
 
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
-def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=True, path=None,
+def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
               objective="Zeiss 20x", user="Hannes"):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
@@ -64,7 +64,7 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
         path = Path(mkdir(
-            f".output/parameter_study/main_experiments/power_speed_at-h0.5_s0.6_{datetime.datetime.now():%Y%m%d}_{objective}",
+            f".output/parameter_study/Orientation_test_TL_MARK_{datetime.datetime.now():%Y%m%d}_{objective}",
             clean=False))
     else:
         assert (path, Path)
@@ -113,8 +113,8 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": 0.5,  # 0.05, 0.1, 0.15, 0.2, 0.3  # hatch size
-            "slice size": 0.6,  # 0.1# slice size/ layer height
+            "hatch size": 0.1,  # 0.05, 0.1, 0.15, 0.2  # hatch size
+            "slice size": 0.2,  # 0.1# slice size/ layer height
             "power": [0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],  # 8
             "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 7_500, 10_000],  # 7
             "default power": 0.7
@@ -177,22 +177,56 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
 
         for i in range(len(parameterset["velocity"])):
             for j in range(len(parameterset["power"])):
-                para_vel = parameterset["velocity"][i]
-                para_pow = parameterset["power"][j]
-                experiment.add_structure(
-                    structure_type=StructureType.NORMAL,
-                    name=f"rect_{i}_{para_vel}_{j}_{para_pow}",
-                    axes=movement_axis[0],
-                    power=parameterset["power"][j],
-                    structure=Rectangle3D(
-                        center=Point3D(0, 0, -2),
-                        width=50,
-                        length=50,
-                        height=5,
-                        hatch_size=parameterset["hatch size"],
-                        slice_size=parameterset["slice size"],
-                        velocity=parameterset["velocity"][i],
-                        acceleration=experiment.accel_a_um))
+
+                if i==0 and j==0:
+                    experiment.add_structure(
+                        structure_type=StructureType.NORMAL,
+                        name=f"rect_{i}_{10_000}_{j}_{0.7}",
+                        axes=movement_axis[0],
+                        power=0.7,
+                        structure=Rectangle3D(
+                            center=Point3D(0, 0, -2),
+                            width=50,
+                            length=50,
+                            height=3,
+                            hatch_size=parameterset["hatch size"],
+                            slice_size=parameterset["slice size"],
+                            velocity=10_000,
+                            acceleration=experiment.accel_a_um))
+                elif i==1 and j==0:
+                    experiment.add_structure(
+                        structure_type=StructureType.NORMAL,
+                        name=f"rect_{i}_{10_000}_{j}_{0.7}",
+                        axes=movement_axis[0],
+                        power=0.7,
+                        structure=Rectangle3D(
+                            center=Point3D(0, 0, -2),
+                            width=50,
+                            length=50,
+                            height=3,
+                            hatch_size=parameterset["hatch size"],
+                            slice_size=parameterset["slice size"],
+                            velocity=10_000,
+                            acceleration=experiment.accel_a_um))
+                elif i==1 and j==1:
+                    experiment.add_structure(
+                        structure_type=StructureType.NORMAL,
+                        name=f"rect_{i}_{10_000}_{j}_{0.7}",
+                        axes=movement_axis[0],
+                        power=0.7,
+                        structure=Rectangle3D(
+                            center=Point3D(0, 0, -2),
+                            width=50,
+                            length=50,
+                            height=3,
+                            hatch_size=parameterset["hatch size"],
+                            slice_size=parameterset["slice size"],
+                            velocity=10_000,
+                            acceleration=experiment.accel_a_um))
+                else:
+                    experiment.skip_structure()
+
+
 
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
@@ -209,7 +243,7 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         if ask_continue_box and not messagebox.askyesno(message="FINAL STEP: Print experiment?"): return
         experiment.print_experiment()
 
-        # TODO: Take image of whole scene   
+        # TODO: Take image of whole scene
         # experiment.measure(coordinate=center, name="after")
 
 # if __name__ == '__main__':

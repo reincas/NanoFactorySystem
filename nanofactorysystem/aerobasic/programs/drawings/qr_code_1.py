@@ -27,7 +27,7 @@ class QRCode(DrawableObject):
             error_correction: Optional[QrErrorCorrection] = None,
             pixel_pitch: float,  # distance between pillars/ points of qr-code
             base_height: float,  # height of base rectangle
-            anchor_height: float,  # ? - height of beginning of pillars?
+            anchor_height: float,  # height of beginning of pillars
             pixel_height: float,  # height of pillars
             hatch_size: float,
             slice_size: float,
@@ -70,8 +70,8 @@ class QRCode(DrawableObject):
         self.qr_image = qr.make_image(fill_color="black", back_color="white")
         self.data = np.array(qr.modules, dtype=bool)
 
-        self.n_layer = round(self.base_height / self.slice_size) + 1
-        self.slice_size_opt = self.base_height / (self.n_layer - 1)
+        self.n_layer = round(self.base_height / self.slice_size) + 2
+        self.slice_size_opt = self.base_height / (self.n_layer - 2)
 
     @property
     def structure_length(self) -> float:
@@ -109,11 +109,13 @@ class QRCode(DrawableObject):
 
         program = DrawableAeroBasicProgram(coordinate_system)
 
-        # TODO(RC) Take DropDirection into account
+        # TODO(RC) Take DropDirection into account -- Done.
         # Note: z is relative to substrate surface
         z_start = self.base_height + self.pixel_height
         z_end = self.base_height - self.anchor_height
-        lines = [[z_start, z_end]]
+        if coordinate_system.drop_direction == DropDirection.UP:
+            z_start, z_end = z_end, z_start
+        lines = [[z_start, z_end]]  # -> end height of pillar - begin height of pillars
 
         h, w = self.data.shape
         order = 1

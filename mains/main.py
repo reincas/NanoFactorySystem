@@ -1,30 +1,34 @@
 import os
 import datetime
 from nanofactorysystem.devices.coordinate_system import Point2D
-from Experiments.qr_code_investigation import qr_code_test as print_program
+from Experiments.parameter_study.parameter_testprint_power_speed import testprint as print_program
+# from Experiments.parameter_study.parameter_testprint_power_speed_test4orientation import testprint as print_program
 # from Experiments.testprint_dhm import dhm_testprint as print_program
 
 """
-Maximum Dimensions DHM
-70µm x 70µm with 63x 
+Parameter study sibin
+16.06.25
 """
 def main():
     edges = [
-        [1700, 18900],  # right edge
-        [1800, 28400],  # left edge
-        [-3100, 23600],  # near edge
-        [6600, 23900]  # far edge
-    ]
-    # one structure at 280 25720 - seems like stair
 
-    center = Point2D(X=2000,        #
-                     Y=25000)       #
+        [1000, 19000],  # right edge
+        [900, 27200],  # left edge
+        [-3100, 23000],  # near edge
+        [5600, 23300]  # far edge
+
+    ]
+    # old experiment 100-20200 (double corner) - other corners in negative x and negative y direction
+
+    center = Point2D(X=1000,        #
+                     Y=24500)       #
     # ToDo: Make sure center is within the edges
     # assert center.Y in [ymin, ymax]
     # assert center.X in [xmin, xmax]
 
     root_path = os.path.join(os.getcwd(), ".output/")
     t1 = datetime.datetime.now()
+
     print_program(absolute_center=center,
                   resin_dimension=edges,
                   ask_continue_box=True,
