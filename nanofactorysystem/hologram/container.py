@@ -51,9 +51,24 @@ class HoloContainer(Container):
 
         # Hologram image
         holo = self.kwargs.pop("holo_get")
+        holo_imgs = self.kwargs.pop("holo_images", None)
         if not isinstance(holo, np.ndarray) or len(holo.shape) != 2:
             raise RuntimeError("Hologram image expected!")
         items["meas/image.png"] = holo
+        if holo_imgs is not None or holo_imgs != []:
+            for i, img in enumerate(holo_imgs):
+                items[f"meas/image_{i+1}.png"] = img
+
+        # Hologram capture time
+        cap_time = self.kwargs.pop("capture_time")
+        cap_times = self.kwargs.pop("capture_times", None)
+        if cap_times is not None and cap_times != []:
+            time_dict = {"Image_0_capture_time": cap_time}
+            for i, cap_time in enumerate(cap_times):
+                time_dict.update({f"Image_{i+1}_capture_time": cap_time})
+            items["meas/image_capture_times.json"] = time_dict
+        else:
+            items["meas/image_capture_time.json"] = cap_time
 
         # Hologram parameters
         params = self.kwargs.pop("params")

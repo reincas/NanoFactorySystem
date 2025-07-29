@@ -9,7 +9,7 @@
 #
 ##########################################################################
 import time
-
+import datetime
 import numpy as np
 
 from ..config import sysConfig, popargs
@@ -140,13 +140,27 @@ class Dhm(Parameter):
         self["oplOptPos"] = m
         return m
 
-    def container(self, opt=True, loc=None, config=None, **kwargs):
+    def container(self, opt=True, loc=None, config=None, image_count=0, **kwargs):
 
         """ Return a HoloContainer with current hologram image. """
 
         # Hologram image
+        t1 = datetime.datetime.now()
         holo, count = self.getimage(opt=opt)
+        t2 = datetime.datetime.now()
         kwargs["holo_get"] = holo
+        kwargs["capture_time"] = t2 - t1
+
+        if image_count != 0:
+            kwargs["holo_images"] = []
+            kwargs["capture_times"] = []
+            for i in range(image_count-1):
+                time.sleep(0.1)  # wait for 100 ms
+                t1 = datetime.datetime.now()
+                holos, count = self.getimage(opt=opt)
+                t2 = datetime.datetime.now()
+                kwargs["holo_images"].append(holos)
+                kwargs["capture_times"].append(t2 - t1)
 
         # Median values
         q = [self["contrastQuantile"], 0.5, 1.0 - self["contrastQuantile"]]

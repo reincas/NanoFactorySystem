@@ -765,7 +765,8 @@ class Experiment(object):
                     coordinate=structure_center_absolute_mm,
                     name=f"{name}.{layer_id}",
                     camera_path=camera_path,
-                    dhm_path=dhm_path)
+                    dhm_path=dhm_path,
+                    dhm_image_count=10)
                 self.update_print_progress(name, layer_id, order=order)
             except AerotechError as e:
                 self.update_print_progress(name, layer_id, order=order, error=e)
@@ -778,7 +779,8 @@ class Experiment(object):
             coordinate=structure_center_absolute_mm,
             name=f"{name}_after",
             camera_path=structure_path,
-            dhm_path=structure_path)
+            dhm_path=structure_path,
+            dhm_image_count=100)
 
     def print_experiment(self):
 
@@ -821,7 +823,8 @@ class Experiment(object):
                 coordinate: Coordinate,
                 name: str,
                 camera_path: Path,
-                dhm_path: Path
+                dhm_path: Path,
+                dhm_image_count: int = None,
                 ) -> tuple[Container, ImageContainer]:
         """
         Coordinate in mm in absolute coordinates
@@ -831,7 +834,7 @@ class Experiment(object):
         self.a3200.api.LINEAR(**coordinate, F=20)
 
         # Take DHM image
-        dhm_container = self.system.dhm.container(opt=True)
+        dhm_container = self.system.dhm.container(opt=True, image_count=dhm_image_count)
         fn = dhm_path / f"dhm_{name}.zdc"
         dhm_container.write(fn)
         self.log.info(f"DHM image: '{fn}'")
