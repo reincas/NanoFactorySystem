@@ -37,6 +37,7 @@ class CornerPosition(Enum):
     BR = 2
     BL = 3
 
+
 # test für merge
 
 class StructureType(Enum):
@@ -47,7 +48,6 @@ class StructureType(Enum):
 
 
 class Experiment(object):
-    #todo(HR): Implement saving of QR code image - see https://pypi.org/project/qrcode/
     def __init__(self,
                  path: Path,
                  user: str,
@@ -236,14 +236,18 @@ class Experiment(object):
         if self.plane_fit_mode == 0:
             for i in range(n_rows):
                 for j in range(n_cols):
-                    x = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + j * (self.fov_size + self.padding)
-                    y = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + i * (self.fov_size + self.padding)
+                    x = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + j * (
+                                self.fov_size + self.padding)
+                    y = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + i * (
+                                self.fov_size + self.padding)
                     points.append((x, y))
         elif self.plane_fit_mode == 1:
             x0 = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding
-            x1 = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + n_cols * (self.fov_size + self.padding)
+            x1 = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + n_cols * (
+                        self.fov_size + self.padding)
             y0 = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding
-            y1 = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + n_rows * (self.fov_size + self.padding)
+            y1 = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + n_rows * (
+                        self.fov_size + self.padding)
             points.append((x0, y0))
             points.append((x0, y1))
             points.append((x1, y0))
@@ -728,6 +732,7 @@ class Experiment(object):
         self.log.info(f"Printing {name}")
 
         # Set laser power
+        # todo (HR) - improvement of printing process by adjustable power (between layers or even between lines)
         self.system.controller.power(power)
 
         # Absolute coordinates of structure center
@@ -761,7 +766,9 @@ class Experiment(object):
                     name=f"{name}.{layer_id}",
                     camera_path=camera_path,
                     dhm_path=dhm_path)
+                self.update_print_progress(name, layer_id, order=order)
             except AerotechError as e:
+                self.update_print_progress(name, layer_id, order=order, error=e)
                 self.log.error(f"Program failed for {name}: {e}")
         t2 = time.time()
         self.log.info(f"Making {name} took {t2 - t1:.2f}s")
@@ -786,6 +793,29 @@ class Experiment(object):
                 name=structure_config["name"],
                 power=structure_config["power"]
             )
+
+    def update_print_progress(self,
+                              name: str,
+                              layer_id: int,
+                              order: int = None,
+                              error=None):
+        save_path = self.path / "print_progress.json"
+        # # check if save path ends with a json extension
+        # if str(save_path).split(".")[-1] is not "json":
+        #     save_path = save_path / "print_progress.json"
+        # os.makedirs(save_path, exist_ok=True)
+        # create update
+        print_status = {
+            "name": name,
+            "finished layer": layer_id,
+            "order": order,
+            "error": error,
+            "information": "order negative = Drop Direction negative (down)"
+        }
+        save_path.write_text(json.dumps(print_status, indent=4))
+
+    def restart_experiment(self):
+        pass
 
     def measure(self,
                 coordinate: Coordinate,
