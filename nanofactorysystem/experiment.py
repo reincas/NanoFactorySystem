@@ -372,7 +372,8 @@ class Experiment(object):
         self.log.info("Done.")
 
     def opl_scan(self, m0: float = None, force: bool = False) -> float:
-
+        if self.system.dhm is None:
+            return 0
         path = self.path / "oplscan"
         mkdir(path, clean=False)
 
@@ -784,7 +785,6 @@ class Experiment(object):
         self.update_print_progress("finished", 000, order=0)
 
     def print_experiment(self):
-
         if self.structure_configs is None:
             raise ValueError("No programs!")
 
@@ -836,10 +836,14 @@ class Experiment(object):
         self.a3200.api.LINEAR(**coordinate, F=20)
 
         # Take DHM image
-        dhm_container = self.system.dhm.container(opt=True, image_count=dhm_image_count)
-        fn = dhm_path / f"dhm_{name}.zdc"
-        dhm_container.write(fn)
-        self.log.info(f"DHM image: '{fn}'")
+        if self.system.dhm is not None:
+            dhm_container = self.system.dhm.container(opt=True, image_count=dhm_image_count)
+            fn = dhm_path / f"dhm_{name}.zdc"
+            dhm_container.write(fn)
+            self.log.info(f"DHM image: '{fn}'")
+        else:
+            self.log.info(f"DHM images was not captured!")
+            dhm_container = None
 
         # Take camera image
         camera_container = self.system.getimage()

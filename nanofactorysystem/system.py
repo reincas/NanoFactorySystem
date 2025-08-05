@@ -61,10 +61,17 @@ class System(Parameter):
 
         # Initialize the LyncéeTec DHM
         args = popargs(kwargs, "dhm")
-        self.dhm = Dhm(user, self.objective, logger=self.log, **args)
-        if not self.dhm.opened:
-            self.log.error("Can't connect to holographic microscope!")
-            raise RuntimeError("Can't connect to holographic microscope!")
+        if "usage" in args["dhm"].keys():
+            dhm_usage = args["dhm"]["usage"]
+        else:
+            dhm_usage = True
+        if dhm_usage:
+            self.dhm = Dhm(user, self.objective, logger=self.log, **args)
+            if not self.dhm.opened:
+                self.log.error("Can't connect to holographic microscope!")
+                raise RuntimeError("Can't connect to holographic microscope!")
+        else:
+            self.dhm = None
 
         # Initialize the Aerotech A3200 controller
         args = popargs(kwargs, ("attenuator", "controller"))
@@ -95,7 +102,8 @@ class System(Parameter):
         if home and self.opened:
             self.home(wait=False)
 
-        self.dhm.close()
+        if self.dhm is not None:
+            self.dhm.close()
         self.camera["AcquisitionMode"] = "Continuous"
         self.a3200_new.save_log()
         self.camera.close()
@@ -297,7 +305,7 @@ class System(Parameter):
             "data/objective.json": self.objective,
             "data/controller.json": self.controller.parameters(),
             "data/camera.json": self.camera.parameters(),
-            "data/dhm.json": self.dhm.parameters(),
+            "data/dhm.json": self.dhm.parameters() if self.dhm is not None else "DHM was not in use",
             "data/system.json": self.parameters(),
         }
         if self.sample:

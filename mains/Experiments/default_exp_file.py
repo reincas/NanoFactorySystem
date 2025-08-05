@@ -38,7 +38,7 @@ sys_args = {
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
 def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-                  objective="Zeiss 20x", user="Hannes"):
+                  objective="Zeiss 20x", user="Hannes", dhm_usage=True):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -117,6 +117,12 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     sys_args.update({"controller": {
         "zMax": zmax, }
     })
+    # Option to not use DHM
+    if "dhm" in sys_args.keys():
+        sys_args["dhm"].update({"usage": dhm_usage})
+    else:
+        sys_args.update({"dhm": {"usage": dhm_usage}})
+
 
     with Experiment(
             path=path,
@@ -152,8 +158,9 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         experiment.plane_fit(force=False)
 
         # Optical path length for DHM
-        if ask_continue_box and not messagebox.askyesno(message="Run OPL motor scan?"): return
-        experiment.opl_scan(m0=3847.0, force=False)
+        if dhm_usage:
+            if ask_continue_box and not messagebox.askyesno(message="Run OPL motor scan?"): return
+            experiment.opl_scan(m0=350.0, force=False)
 
         # TODO: Take image of whole scene
         # center = experiment.coordinate_system_grid_to_absolute.convert({"X": 0, "Y": 0, "Z": 0})
