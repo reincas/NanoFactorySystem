@@ -68,7 +68,8 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
             clean=False))
     else:
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "parameter_testprint")))
+        path = Path(mkdir(os.path.join(path, f"power_speed_at-h0.4_s0.5_{datetime.datetime.now():%Y%m%d}_{objective}"),
+                          clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -113,8 +114,8 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": 0.5,  # 0.05, 0.1, 0.15, 0.2, 0.3  # hatch size
-            "slice size": 0.6,  # 0.1# slice size/ layer height
+            "hatch size": 0.4,  # 0.05, 0.1, 0.15, 0.2, 0.3  # hatch size
+            "slice size": 0.5,  # 0.1# slice size/ layer height
             "power": [0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],  # 8
             "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 7_500, 10_000],  # 7
             "default power": 0.7

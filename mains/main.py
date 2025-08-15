@@ -2,6 +2,7 @@ import os
 import datetime
 from nanofactorysystem.devices.coordinate_system import Point2D
 from Experiments.parameter_study.parameter_testprint_power_speed import testprint as print_program
+
 # from Experiments.parameter_study.parameter_testprint_power_speed_test4orientation import testprint as print_program
 # from Experiments.testprint_dhm import dhm_testprint as print_program
 
@@ -9,19 +10,21 @@ from Experiments.parameter_study.parameter_testprint_power_speed import testprin
 Parameter study sibin
 16.06.25
 """
+
+
 def main():
     edges = [
 
-        [1000, 19000],  # right edge
-        [900, 27200],  # left edge
-        [-3100, 23000],  # near edge
-        [5600, 23300]  # far edge
+        [700, 18000],  # right edge
+        [500, 27200],  # left edge
+        [-4000, 22800],  # near edge
+        [5100, 22500]  # far edge
 
     ]
     # old experiment 100-20200 (double corner) - other corners in negative x and negative y direction
 
-    center = Point2D(X=1000,        #
-                     Y=24500)       #
+    center = Point2D(X=1200,  #
+                     Y=20900)  #
     # ToDo: Make sure center is within the edges
     # assert center.Y in [ymin, ymax]
     # assert center.X in [xmin, xmax]
@@ -32,9 +35,10 @@ def main():
     print_program(absolute_center=center,
                   resin_dimension=edges,
                   ask_continue_box=True,
-                  # path=r"C:\Users\Nanofactory\Documents\OFFLINE_Hannes\March_2025_Power_test_DHMPaper",
+                  path=r"C:\Users\Nanofactory\Desktop\Sibin Joseph\Experiment data\parameter_study\main_experiments\second_print",  # please change here
                   objective="Zeiss 63x",
-                  user="Hannes")
+                  user="Hannes",
+                  dhm_usage=False)
     t2 = datetime.datetime.now()
     time = t2 - t1
     print(f"Total time: {time}")
