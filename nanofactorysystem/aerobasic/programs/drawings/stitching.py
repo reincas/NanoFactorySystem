@@ -197,8 +197,8 @@ class LargeStructureStitcher:
                 # Offset from original structure center
                 original_center = structure.center
                 center_offset = Point3D(
-                    tile_center_x - original_center.x,
-                    tile_center_y - original_center.y,
+                    tile_center_x - original_center.X,
+                    tile_center_y - original_center.Y,
                     0  # Z offset is 0 for horizontal tiles
                 )
 
@@ -239,9 +239,9 @@ class LargeStructureStitcher:
 
         # Create new center point
         new_center = Point3D(
-            original_structure.center.x + center_offset.x,
-            original_structure.center.y + center_offset.y,
-            original_structure.center.z
+            original_structure.center.X + center_offset.X,
+            original_structure.center.Y + center_offset.Y,
+            original_structure.center.Z
         )
 
         # For now, create a simple wrapper that offsets the drawing
@@ -374,7 +374,7 @@ class TiledStructureWrapper:
 
         filtered_points = []
         for point in points:
-            if x_min <= point.x <= x_max and y_min <= point.y <= y_max:
+            if x_min <= point.X <= x_max and y_min <= point.Y <= y_max:
                 filtered_points.append(point)
 
         return filtered_points

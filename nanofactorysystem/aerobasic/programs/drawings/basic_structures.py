@@ -84,11 +84,11 @@ class Square:
         if not self.filled:
             # Draw only the outline
             corners = [
-                Point3D(-half_side, -half_side, self.center.z),
-                Point3D(half_side, -half_side, self.center.z),
-                Point3D(half_side, half_side, self.center.z),
-                Point3D(-half_side, half_side, self.center.z),
-                Point3D(-half_side, -half_side, self.center.z)  # Close the square
+                Point3D(-half_side, -half_side, self.center.Z),
+                Point3D(half_side, -half_side, self.center.Z),
+                Point3D(half_side, half_side, self.center.Z),
+                Point3D(-half_side, half_side, self.center.Z),
+                Point3D(-half_side, -half_side, self.center.Z)  # Close the square
             ]
 
             # Apply rotation and translation
@@ -107,11 +107,11 @@ class Square:
 
                 # Alternate direction for smoother printing
                 if i % 2 == 0:
-                    start = Point3D(-half_side, y, self.center.z)
-                    end = Point3D(half_side, y, self.center.z)
+                    start = Point3D(-half_side, y, self.center.Z)
+                    end = Point3D(half_side, y, self.center.Z)
                 else:
-                    start = Point3D(half_side, y, self.center.z)
-                    end = Point3D(-half_side, y, self.center.z)
+                    start = Point3D(half_side, y, self.center.Z)
+                    end = Point3D(-half_side, y, self.center.Z)
 
                 # Apply rotation and translation
                 start_rot = self._rotate_point(start, self.rotation) + self.center
@@ -135,20 +135,20 @@ class Square:
         cos_a = np.cos(angle_rad)
         sin_a = np.sin(angle_rad)
 
-        x_rot = point.x * cos_a - point.y * sin_a
-        y_rot = point.x * sin_a + point.y * cos_a
+        x_rot = point.X * cos_a - point.Y * sin_a
+        y_rot = point.X * sin_a + point.Y * cos_a
 
-        return Point3D(x_rot, y_rot, point.z)
+        return Point3D(x_rot, y_rot, point.Z)
 
     @property
     def bounding_box(self):
         """Return (min_x, max_x, min_y, max_y) of the square."""
         half = self.side_length / 2
         return (
-            self.center.x - half,
-            self.center.x + half,
-            self.center.y - half,
-            self.center.y + half
+            self.center.X - half,
+            self.center.X + half,
+            self.center.Y - half,
+            self.center.Y + half
         )
 
 
@@ -227,11 +227,11 @@ class Rectangle:
         if not self.filled:
             # Draw only the outline
             corners = [
-                Point3D(-half_width, -half_height, self.center.z),
-                Point3D(half_width, -half_height, self.center.z),
-                Point3D(half_width, half_height, self.center.z),
-                Point3D(-half_width, half_height, self.center.z),
-                Point3D(-half_width, -half_height, self.center.z)  # Close
+                Point3D(-half_width, -half_height, self.center.Z),
+                Point3D(half_width, -half_height, self.center.Z),
+                Point3D(half_width, half_height, self.center.Z),
+                Point3D(-half_width, half_height, self.center.Z),
+                Point3D(-half_width, -half_height, self.center.Z)  # Close
             ]
 
             for corner in corners:
@@ -248,11 +248,11 @@ class Rectangle:
 
                 # Alternate direction
                 if i % 2 == 0:
-                    start = Point3D(-half_width, y, self.center.z)
-                    end = Point3D(half_width, y, self.center.z)
+                    start = Point3D(-half_width, y, self.center.Z)
+                    end = Point3D(half_width, y, self.center.Z)
                 else:
-                    start = Point3D(half_width, y, self.center.z)
-                    end = Point3D(-half_width, y, self.center.z)
+                    start = Point3D(half_width, y, self.center.Z)
+                    end = Point3D(-half_width, y, self.center.Z)
 
                 start_rot = self._rotate_point(start, self.rotation) + self.center
                 end_rot = self._rotate_point(end, self.rotation) + self.center
@@ -274,10 +274,10 @@ class Rectangle:
         cos_a = np.cos(angle_rad)
         sin_a = np.sin(angle_rad)
 
-        x_rot = point.x * cos_a - point.y * sin_a
-        y_rot = point.x * sin_a + point.y * cos_a
+        x_rot = point.X * cos_a - point.Y * sin_a
+        y_rot = point.X * sin_a + point.Y * cos_a
 
-        return Point3D(x_rot, y_rot, point.z)
+        return Point3D(x_rot, y_rot, point.Z)
 
     @property
     def bounding_box(self):
@@ -285,10 +285,10 @@ class Rectangle:
         half_w = self.width / 2
         half_h = self.height / 2
         return (
-            self.center.x - half_w,
-            self.center.x + half_w,
-            self.center.y - half_h,
-            self.center.y + half_h
+            self.center.X - half_w,
+            self.center.X + half_w,
+            self.center.Y - half_h,
+            self.center.Y + half_h
         )
 
 
@@ -364,9 +364,9 @@ class Circle:
             # Draw only the outline
             angles = np.linspace(0, 2 * np.pi, self.resolution, endpoint=True)
             for angle in angles:
-                x = self.center.x + self.radius * np.cos(angle)
-                y = self.center.y + self.radius * np.sin(angle)
-                points.append(Point3D(x, y, self.center.z))
+                x = self.center.X + self.radius * np.cos(angle)
+                y = self.center.Y + self.radius * np.sin(angle)
+                points.append(Point3D(x, y, self.center.Z))
         else:
             # Fill with horizontal hatch lines
             num_lines = int(np.ceil(2 * self.radius / self.hatch_size)) + 1
@@ -394,14 +394,14 @@ class Circle:
                     end_x = -x_offset
 
                 start = Point3D(
-                    self.center.x + start_x,
-                    self.center.y + y,
-                    self.center.z
+                    self.center.X + start_x,
+                    self.center.Y + y,
+                    self.center.Z
                 )
                 end = Point3D(
-                    self.center.x + end_x,
-                    self.center.y + y,
-                    self.center.z
+                    self.center.X + end_x,
+                    self.center.Y + y,
+                    self.center.Z
                 )
 
                 start.laser_off = True
@@ -416,10 +416,10 @@ class Circle:
     def bounding_box(self):
         """Return (min_x, max_x, min_y, max_y) of the circle."""
         return (
-            self.center.x - self.radius,
-            self.center.x + self.radius,
-            self.center.y - self.radius,
-            self.center.y + self.radius
+            self.center.X - self.radius,
+            self.center.X + self.radius,
+            self.center.Y - self.radius,
+            self.center.Y + self.radius
         )
 
 
@@ -498,16 +498,16 @@ class Triangle:
         if self.orientation == 'up':
             # Apex at top
             vertices = [
-                Point3D(0, self.height * 2 / 3, self.center.z),  # Top apex
-                Point3D(-self.side_length / 2, -self.height / 3, self.center.z),  # Bottom left
-                Point3D(self.side_length / 2, -self.height / 3, self.center.z),  # Bottom right
+                Point3D(0, self.height * 2 / 3, self.center.Z),  # Top apex
+                Point3D(-self.side_length / 2, -self.height / 3, self.center.Z),  # Bottom left
+                Point3D(self.side_length / 2, -self.height / 3, self.center.Z),  # Bottom right
             ]
         else:  # 'down'
             # Apex at bottom
             vertices = [
-                Point3D(0, -self.height * 2 / 3, self.center.z),  # Bottom apex
-                Point3D(-self.side_length / 2, self.height / 3, self.center.z),  # Top left
-                Point3D(self.side_length / 2, self.height / 3, self.center.z),  # Top right
+                Point3D(0, -self.height * 2 / 3, self.center.Z),  # Bottom apex
+                Point3D(-self.side_length / 2, self.height / 3, self.center.Z),  # Top left
+                Point3D(self.side_length / 2, self.height / 3, self.center.Z),  # Top right
             ]
 
         # Apply rotation if needed
@@ -534,7 +534,7 @@ class Triangle:
         else:
             # Fill with horizontal hatch lines
             # Get y-bounds
-            y_coords = [v.y for v in vertices]
+            y_coords = [v.Y for v in vertices]
             y_min = min(y_coords)
             y_max = max(y_coords)
 
@@ -576,17 +576,17 @@ class Triangle:
             v2 = vertices[(i + 1) % 3]
 
             # Check if edge crosses the y line
-            if min(v1.y, v2.y) <= y <= max(v1.y, v2.y):
+            if min(v1.Y, v2.Y) <= y <= max(v1.Y, v2.Y):
                 # Avoid duplicate points at vertices
-                if v1.y == y:
+                if v1.Y == y:
                     intersections.append(v1)
-                elif v2.y == y:
+                elif v2.Y == y:
                     intersections.append(v2)
-                elif v1.y != v2.y:
+                elif v1.Y != v2.Y:
                     # Linear interpolation to find x
-                    t = (y - v1.y) / (v2.y - v1.y)
-                    x = v1.x + t * (v2.x - v1.x)
-                    intersections.append(Point3D(x, y, self.center.z))
+                    t = (y - v1.Y) / (v2.Y - v1.Y)
+                    x = v1.X + t * (v2.X - v1.X)
+                    intersections.append(Point3D(x, y, self.center.Z))
 
         return intersections
 
@@ -596,17 +596,17 @@ class Triangle:
         cos_a = np.cos(angle_rad)
         sin_a = np.sin(angle_rad)
 
-        x_rot = point.x * cos_a - point.y * sin_a
-        y_rot = point.x * sin_a + point.y * cos_a
+        x_rot = point.X * cos_a - point.Y * sin_a
+        y_rot = point.X * sin_a + point.Y * cos_a
 
-        return Point3D(x_rot, y_rot, point.z)
+        return Point3D(x_rot, y_rot, point.Z)
 
     @property
     def bounding_box(self):
         """Return (min_x, max_x, min_y, max_y) of the triangle."""
         vertices = self._get_vertices()
-        x_coords = [v.x for v in vertices]
-        y_coords = [v.y for v in vertices]
+        x_coords = [v.X for v in vertices]
+        y_coords = [v.Y for v in vertices]
         return (
             min(x_coords),
             max(x_coords),
