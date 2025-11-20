@@ -13,7 +13,7 @@ import numpy as np
 from nanofactorysystem import mkdir, getLogger
 from nanofactorysystem.aerobasic.programs.drawings.lines import Stair, Rectangle3D
 from nanofactorysystem.aerobasic.programs.drawings.lens import AsphericalLens
-from nanofactorysystem.aerobasic.programs.drawings.qr_code_1 import QRCode, QrErrorCorrection
+from nanofactorysystem.aerobasic.programs.drawings.qr_code import QRCode, QrErrorCorrection
 from nanofactorysystem.devices.coordinate_system import DropDirection, Point2D, Point3D
 from nanofactorysystem.experiment import Experiment, StructureType
 

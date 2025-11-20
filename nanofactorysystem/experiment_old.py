@@ -23,7 +23,7 @@ from nanofactorysystem.aerobasic.ascii import AerotechError
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
 from nanofactorysystem.aerobasic.programs.drawings import DrawableObject, DrawableAeroBasicProgram
 from nanofactorysystem.aerobasic.programs.drawings.lines import Corner
-from nanofactorysystem.aerobasic.programs.drawings.qr_code_1 import QRCode, QrErrorCorrection
+from nanofactorysystem.aerobasic.programs.drawings.qr_code import QRCode, QrErrorCorrection
 from nanofactorysystem.aerobasic.programs.setups import DefaultSetup
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, PlaneFit, DropDirection, Unit, \
     Point2D, Point3D, Coordinate
