@@ -4,7 +4,6 @@ from enum import Enum
 from typing import Optional, Literal, Iterator
 
 import numpy as np
-import qrcode
 
 from nanofactorysystem.aerobasic import GalvoLaserOverrideMode, SingleAxis
 from nanofactorysystem.aerobasic.programs.drawings import DrawableAeroBasicProgram, DrawableObject
@@ -73,6 +72,11 @@ class _Lines(DrawableObject, ABC):
 
 
 class XLines(_Lines):
+    """
+    As an input only a list of Tuple(x_start, x_end) necessary!
+    Y and Z values are extra Parameters to be given. They do not change, because it is a Line on one Plane.
+    ToDo (HR): Create Functionalities for Vector printing.
+    """
     line_axis = SingleAxis.X
 
     def __init__(
@@ -132,7 +136,20 @@ class ZLines(_Lines):
         return Point3D(self.x, self.y, (self.lines[0][0] + self.lines[-1][1]) / 2)
 
 class PolyLine(DrawableObject):
+    """
+    Function to Draw a shape with different Points in one Plane.
+               x---------x
+              /           \
+             /             \
+            /               \
+           x                 x
+            \               /
+             \             /
+              \           /
+               x---------x
 
+    X are Points and / \ - are the lines with LASER ON
+    """
     def __init__(
             self,
             line: list[Coordinate],
@@ -492,7 +509,7 @@ class Stair(DrawableObject):
             n_steps: int,
             step_height: float,
             step_length: float,
-            step_width: float,  # same as structure width
+            step_width: float,  # same as structure max_width
             socket_height: float = 0.0,
             *,
             hatch_size: float,
@@ -567,13 +584,7 @@ class Stair(DrawableObject):
         return program
 
 
-class QrErrorCorrection(Enum):
-    L = 0
-    M = 1
-    Q = 2
-    H = 3
-
-
+"""
 class QRCode(DrawableObject):
     def __init__(
             self,
@@ -654,11 +665,11 @@ class QRCode(DrawableObject):
 
     def pixel_program(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
 
-        """
+        '''
         Special layer. Draw a vertical line for each True pixel. Note: drawing must take place in the
         same direction (negative z direction in global coordinate system) for all lines to minimise
         disturbing effects of exposed resin.
-        """
+        '''
 
         program = DrawableAeroBasicProgram(coordinate_system)
 
@@ -725,3 +736,4 @@ class QRCode(DrawableObject):
         for layer_id in range(self.n_layer):
             yield self.layer_program(coordinate_system, layer_id)
         return program
+"""

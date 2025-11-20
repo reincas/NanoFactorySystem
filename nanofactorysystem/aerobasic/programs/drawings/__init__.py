@@ -171,26 +171,76 @@ class DrawableObject(abc.ABC):
     def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         pass
 
+    # def _init_args(self) -> dict[str, Any]:
+    #     code = self.__init__.__code__
+    #     if "__init__" not in code.co_names:
+    #         return {}
+    #
+    #     start_idx = code.co_names.index("__init__") + 1
+    #     kwargs = {}
+    #     # for name in code.co_names[start_idx:start_idx + code.co_argcount]: # here is a mistake - co_argcount is 5 but should be higher
+    #     for name in code.co_names[start_idx:]:
+    #         attr = getattr(self, name, "[NOT FOUND]")
+    #         if name == "data" or name == "height_profile":
+    #             continue        # ToDo(HR) Delete Hotfix and change this - if not attr == "data": if attr == "[NOT FOUND]": continue else: irgendwie die daten abspeichern
+    #         if attr == "[NOT FOUND]":
+    #             continue
+    #         if hasattr(attr, "to_json"):
+    #             attr = attr.to_json()
+    #         elif not isinstance(attr, (str, int, float, dict, list)) or attr is not None:
+    #             attr = str(attr)
+    #
+    #         kwargs[name] = attr
+    #     return kwargs
+
     def _init_args(self) -> dict[str, Any]:
+        # Try to import numpy safely
+        try:
+            import numpy as np
+        except ImportError:
+            np = None
+
         code = self.__init__.__code__
         if "__init__" not in code.co_names:
             return {}
 
         start_idx = code.co_names.index("__init__") + 1
         kwargs = {}
-        # for name in code.co_names[start_idx:start_idx + code.co_argcount]: # here is a mistake - co_argcount is 5 but should be higher
+
         for name in code.co_names[start_idx:]:
             attr = getattr(self, name, "[NOT FOUND]")
-            if name == "data" or name == "height_profile":
-                continue        # ToDo(HR) Delete Hotfix and change this - if not attr == "data": if attr == "[NOT FOUND]": continue else: irgendwie die daten abspeichern
-            if attr == "[NOT FOUND]":
+
+            # Skip missing attributes
+            if isinstance(attr, str) and attr == "[NOT FOUND]":
                 continue
+
+            # Skip special attributes
+            if name in ("data", "height_profile"):
+                continue
+
+                # Properly handle serialization
             if hasattr(attr, "to_json"):
                 attr = attr.to_json()
-            elif not isinstance(attr, (str, int, float, dict, list)) or attr is not None:
-                attr = str(attr)
+            elif np is not None and isinstance(attr, np.ndarray):
+                # Serialize numpy arrays safely
+                attr = {
+                    "type": "ndarray",
+                    "shape": attr.shape,
+                    "dtype": str(attr.dtype),
+                    "values": attr.tolist()
+                }
+            elif isinstance(attr, (str, int, float, dict, list)) or attr is None:
+                # Keep native types unchanged
+                pass
+            else:
+                # Fallback for custom objects — avoid infinite loops
+                try:
+                    attr = str(attr)
+                except Exception:
+                    attr = f"<unserializable object of type {type(attr).__name__}>"
 
             kwargs[name] = attr
+
         return kwargs
 
     def to_json(self):

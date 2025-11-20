@@ -176,3 +176,103 @@ class Simple_DOE(DrawableObject):
                 )
                 yield from DOE_pixel.iterate_layers(coordinate_system)
         return program
+
+
+class Binary_grating(DrawableObject):
+    def __init__(self,
+                 center: Point2D | Point3D,
+                 max_width: float,
+                 max_length: float,
+                 width_phase: float,
+                 period: float,
+                 height: float,
+                 base_height: float = 0,
+                 rotation_angle: float = 0.0,
+                 *,
+                 hatch_size: float,
+                 slice_size: float,
+                 velocity: float,
+                 acceleration: float
+                 ):
+        super().__init__()
+        self.center = center
+        # todo future - make the axis on which the grating is orientated parameterized
+        # todo: überlegen wie man es besser macht: gesamtbreite und periode oder breite von Berg & Tal sowie n_periode um gesamtbreite zu berechnen
+        self.center = center
+        self.full_width_grating = max_width
+        self.length_grating = max_length  # max_length of grating - no
+        self.width_phase = width_phase
+        self.period_width = period  # period_width along max_width of grating
+        self.height = height  # height of grating
+        self.base_height = base_height  # height of base-rectangle
+
+        self.hatch_size = hatch_size
+        self.slice_size = slice_size
+        self.velocity = velocity
+        self.acceleration = acceleration
+
+    @property
+    def center_point(self) -> Point2D:
+        return self.center
+
+    @property
+    def structure_length(self) -> float:
+        return self.length_grating
+
+    @property
+    def structure_width(self) -> float:
+        # max_width = y-direction
+        return self.full_width_grating
+
+    @property
+    def max_structure_height(self) -> float:
+        return self.height + self.base_height
+
+    @property
+    def min_structure_height(self) -> float:
+        return self.base_height
+
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
+        """
+        """
+        program = DrawableAeroBasicProgram(coordinate_system)
+        # Add socket
+        if self.base_height > 0:
+            slice_size_opt = self.base_height / round(self.base_height / self.slice_size)
+            socket = Rectangle3D(
+                center=self.center,
+                width=self.structure_width,
+                length=self.structure_length,
+                height=self.base_height,
+                hatch_size=self.hatch_size,
+                slice_size=slice_size_opt,
+                velocity=self.velocity,
+                acceleration=self.acceleration
+            )
+            yield from socket.iterate_layers(coordinate_system)
+
+        # Add grating
+        slice_size_opt = self.height / round(self.height / self.slice_size)
+        n_grating = self.full_width_grating/ self.period_width
+        number_of_periods = int(np.floor(n_grating))
+        for step in range(number_of_periods):
+            # check for max_width difference
+            assert self.width_phase<self.period_width, "max_width of period has to be bigger than the max_width of grating"
+
+            x_offset = -self.full_width_grating/2 + self.width_phase/2 + step*self.period_width
+            # todo future: make sure that the structure doesnt exceed full_width! somehow to do with n_grating and number of periods + full max_width grating?
+            step_rectangle = Rectangle3D(
+                center=self.center + Point3D(X=x_offset, Y=0, Z=0),
+                width=self.width_phase,
+                length=self.length_grating,
+                height=self.height,
+                hatch_size=self.hatch_size,
+                slice_size=slice_size_opt,
+                velocity=self.velocity,
+                acceleration=self.acceleration
+            )
+
+            yield from step_rectangle.iterate_layers(coordinate_system)
+
+        return program
+

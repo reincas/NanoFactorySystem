@@ -1,6 +1,6 @@
 ##########################################################################
-# Copyright (c) 2022-2024 Reinhard Caspary                               #
-# <reinhard.caspary@phoenixd.uni-hannover.de>                            #
+# Copyright (c) 2022-2025 Hannes Robben                                  #
+# <hannes.robben@phoenixd.uni-hannover.de>                               #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
@@ -64,11 +64,11 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
         path = Path(mkdir(
-            f".output/parameter_study/main_experiments/power_speed_at-h0.5_s0.6_{datetime.datetime.now():%Y%m%d}_{objective}",
+            f".output/parameter_study/main_experiments/power_speed_at-h0.1_s0.2_{datetime.datetime.now():%Y%m%d}_{objective}",
             clean=False))
     else:
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, f"power_speed_at-h0.4_s0.5_{datetime.datetime.now():%Y%m%d}_{objective}"),
+        path = Path(mkdir(os.path.join(path, f"power_speed_at-h0.1_s0.2_{datetime.datetime.now():%Y%m%d}_{objective}"),
                           clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
@@ -114,8 +114,8 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": 0.4,  # 0.05, 0.1, 0.15, 0.2, 0.3  # hatch size
-            "slice size": 0.5,  # 0.1# slice size/ layer height
+            "hatch size": 0.1,  # 0.05, 0.1, 0.15, 0.2, 0.3  # hatch size
+            "slice size": 0.2,  # 0.1# slice size/ layer height
             "power": [0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],  # 8
             "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 7_500, 10_000],  # 7
             "default power": 0.7
@@ -168,7 +168,7 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         if ask_continue_box and not messagebox.askyesno(message="Run plane fitting?"): return
         experiment.plane_fit(force=False)
 
-        # Optical path length for DHM
+        # Optical path max_length for DHM
         if dhm_usage:
             if ask_continue_box and not messagebox.askyesno(message="Run OPL motor scan?"): return
             experiment.opl_scan(m0=350.0, force=False)

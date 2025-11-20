@@ -1,6 +1,6 @@
 ##########################################################################
-# Copyright (c) 2022-2024 Reinhard Caspary                               #
-# <reinhard.caspary@phoenixd.uni-hannover.de>                            #
+# Copyright (c) 2022-2025 Hannes Robben                                  #
+# <hannes.robben@phoenixd.uni-hannover.de>                               #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
@@ -28,9 +28,16 @@ sys_args = {
         "material": "SZ2080",
         "materialThickness": 75.0,
     },
-    "focus": {},
+    "focus": {
+        "OffsetFocusDetection": [120, -80],
+        "minCircularity": 0.6,
+        "exposureValue": 120
+    },
     "layer": {
-        "beta": 0.7,
+        # "beta": 0.7,
+        # "dzCoarseDefault": 50.0,
+        "dzFineDefault": 25.0,
+        "laserPower": 0.7
     },
     "plane": {},
 }
@@ -60,7 +67,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     else:
         # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "testprint_dhm")))
+        path = Path(mkdir(os.path.join(path, "testprint_dhm"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres

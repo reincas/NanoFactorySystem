@@ -12,7 +12,7 @@ import numpy as np
 
 from nanofactorysystem import mkdir, getLogger
 from nanofactorysystem.aerobasic.programs.drawings.lines import Stair, Rectangle3D
-from nanofactorysystem.aerobasic.programs.drawings.lens import AsphericalLens
+from nanofactorysystem.aerobasic.programs.drawings.calibration_prints import Distance_Test
 from nanofactorysystem.devices.coordinate_system import DropDirection, Point2D, Point3D
 from nanofactorysystem.experiment import Experiment, StructureType
 
@@ -28,20 +28,24 @@ sys_args = {
         "material": "SZ2080",
         "materialThickness": 75.0,
     },
-    "focus": {},
+    "focus": {
+        "OffsetFocusDetection": [120, -80],
+        "minCircularity": 0.6,
+        "exposureValue": 120
+    },
     "layer": {
-            "beta": 0.7,
-            "dzCoarseDefault": 50.0,
-            "dzFineDefault": 10.0,
-            "laserPower": 0.4,
-        },
+        # "beta": 0.7,
+        # "dzCoarseDefault": 50.0,
+        "dzFineDefault": 25.0,
+        "laserPower": 0.7,
+    },
     "plane": {},
 }
 
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
-def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-              objective="Zeiss 20x", user="Hannes"):
+def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=True, path=None,
+                  objective="Zeiss 20x", user="Hannes", dhm_usage=True):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -59,10 +63,11 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
     # deleting all the different data of previous prints
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
-        path = Path(mkdir(f".output/parameter_study/{datetime.datetime.now():%Y%m%d}_parameter_testprint_{objective}", clean=False))
+        path = Path(mkdir(f".output/dhm_paper/testprintline_{datetime.datetime.now():%Y%m%d}", clean=False))
     else:
+        # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "parameter_testprint")))
+        path = Path(mkdir(os.path.join(path, "testprint_dhm"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -88,7 +93,8 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         parameterset = {
             "hatch size": [0.125],  # hatch size
             "slice size": [0.15],  # slice size/ layer height
-            "power": 0.7
+            "power": 0.7,
+            "velocity": 10_000
         }
 
     elif objective == "Zeiss 63x":
@@ -106,27 +112,33 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": [0.1, 0.1, 0.2, 0.3],  # hatch size
-            "slice size": [0.15, 0.3, 0.15, 0.15],  # slice size/ layer height
-            "power": 0.3    # ToDo implmentieren, dass auch power gewechselt werden kann
+            "hatch size": 0.1,  # hatch size
+            "slice size": 0.1,  # slice size/ layer height
+            "power": [0.3, 0.4],  # 2
+            "velocity": [4_000, 5_000],  # 7
+            # "power": [0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],  # 8
+            # "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 7_500, 10_000],  # 7
         }
 
     else:
         raise Exception(f"No implemented objective {objective}! Possible objectives are 'Zeiss 20x' and 'Zeiss 63x'.")
 
-    logger.info(f"Parameter search with Structures stair, aspherical lens and rectangle. \nParameter set is selected as"
-                f" follows: \nHatch size: {parameterset['hatch size']} \nLayer height: {parameterset['slice size']}")
     sys_args.update({"controller": {
         "zMax": zmax, }
     })
-    grid_size = (3, len(parameterset["hatch size"]))
+    # Option to not use DHM
+    if "dhm" in sys_args.keys():
+        sys_args["dhm"].update({"usage": dhm_usage})
+    else:
+        sys_args.update({"dhm": {"usage": dhm_usage}})
+
     with Experiment(
             path=path,
             user=user,
             objective=objective,
             logger=logger,
             sys_args=sys_args,
-            default_power=parameterset["power"],
+            default_power=0.7,
             low_speed_um=1000,
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
@@ -135,7 +147,7 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=grid_size,
+            grid=(2, 3),  # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
             n_mid_points=0,  # ToDo changing depending on experiment
             drop_direction=DropDirection.DOWN,
             corner_z=-2,
@@ -143,83 +155,50 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
             corner_length=c_length,
             corner_height=c_height,
             corner_hatch=c_hatch,
-            corner_slice=c_slice) as experiment:
+            corner_slice=c_slice,
+            plane_fit_mode=1) as experiment:
 
         # Visualize experiment
-        experiment.plot_experiment(show=False)
+        experiment.plot_experiment(show=True)
 
         # Get substrate surface plane
         if ask_continue_box and not messagebox.askyesno(message="Run plane fitting?"): return
         experiment.plane_fit(force=False)
 
-        # Optical path length for DHM
-        if ask_continue_box and not messagebox.askyesno(message="Run OPL motor scan?"): return
-        experiment.opl_scan(m0=350.0, force=False)
+        # Optical path max_length for DHM
+        if dhm_usage:
+            if ask_continue_box and not messagebox.askyesno(message="Run OPL motor scan?"): return
+            experiment.opl_scan(m0=350.0, force=False)
 
         # TODO: Take image of whole scene
         # center = experiment.coordinate_system_grid_to_absolute.convert({"X": 0, "Y": 0, "Z": 0})
         # experiment.measure(coordinate=center, name="before")
 
         # ----------------------------------------------------------------------------------------------------------------------
-
         # ----------------------------------------------------------------------------------------------------------------------
-        # Add structures        - only galvo as movement axis just now
-        # Adding Stair Structure
-        # sanity check - should always be equal
-        assert len(parameterset["hatch size"]) == len(parameterset["slice size"])
-        for i in range(len(parameterset)):
-            experiment.add_structure(
-                structure_type=StructureType.NORMAL,
-                name=f"stair{i}_{movement_axis[0]}_h_{parameterset['hatch size'][i]}_l_{parameterset['slice size'][i]}",
-                axes=movement_axis[0],
-                power=parameterset["power"],
-                structure=Stair(
-                    Point3D(0, 0, -2),
-                    n_steps=6,
-                    step_height=0.6,
-                    step_length=20,
-                    step_width=50,
-                    hatch_size=parameterset["hatch size"][i],
-                    slice_size=parameterset["slice size"][i],
-                    socket_height=7,
-                    velocity=5000,
-                    acceleration=experiment.accel_a_um))
-
-        # Adding aspherical lens structure
-        for i in range(len(parameterset)):
-            experiment.add_structure(
-                structure_type=StructureType.NORMAL,
-                name=f"lens{i}_{movement_axis[0]}_h_{parameterset['hatch size'][i]}_l_{parameterset['slice size'][i]}",
-                axes=movement_axis[0],
-                power=parameterset["power"],
-                structure=AsphericalLens(
-                    Point3D(0, 0, -2),
-                    height=7,
-                    length=100,
-                    width=75,
-                    sphere_radius=1030,
-                    conic_constant=-2.3,
-                    hatch_size=parameterset["hatch size"][i],
-                    slice_size=parameterset["slice size"][i],
-                    velocity=5000,
-                    acceleration=experiment.accel_a_um))
-
-        # Adding rectangle structure
-        for i in range(len(parameterset)):
-            experiment.add_structure(
-                structure_type=StructureType.NORMAL,
-                name=f"rect{i}_{movement_axis[0]}_h_{parameterset['hatch size'][i]}_l_{parameterset['slice size'][i]}",
-                axes=movement_axis[0],
-                power=parameterset["power"],
-                structure=Rectangle3D(
-                    center=Point3D(0, 0, -2),
-                    width=50,
-                    length=125,
-                    height=7,
-                    hatch_size=parameterset["hatch size"][i],
-                    slice_size=parameterset["slice size"][i],
-                    velocity=5000,
-                    acceleration=experiment.accel_a_um))
+        # Add structures
+        # experiment.skip_structure()
+        for i in range(len(parameterset["velocity"])):
+            for j in range(len(parameterset["power"])):
+                para_vel = parameterset["velocity"][i]
+                para_pow = parameterset["power"][j]
+                experiment.add_structure(
+                    structure_type=StructureType.NORMAL,
+                    name=f"lines_{i}_v_{para_vel}_{j}_p_{para_pow}",
+                    axes=movement_axis[0],
+                    power=parameterset["power"][j],
+                    structure=Distance_Test(
+                        center=Point3D(0, 0, -2),
+                        fov=[100, 100],  # field of view range -> minimal 100µm x 100µm (63x Objective)
+                        min_dist=0.050,  # 50 nm
+                        max_dist=5,  # maximal distance between lines -> 5 µm
+                        n_lines=20,
+                        length=50.0,  # 50 µm
+                        height=3.0,  # 3 µm
+                        draw_axis='x',
+                        slice_size=parameterset["slice size"],
+                        velocity=parameterset["velocity"][i],
+                        acceleration=experiment.accel_a_um))
 
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
@@ -229,7 +208,8 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
             if messagebox.askyesno(message="Create programs for all structures?"):
                 experiment.build_programs()
             else:
-                if not messagebox.askyesno(message="Programs already created?"): return
+                if messagebox.askyesno(message="Programs already created?"):
+                    experiment.retrieve_programs()
         else:
             experiment.build_programs()
 

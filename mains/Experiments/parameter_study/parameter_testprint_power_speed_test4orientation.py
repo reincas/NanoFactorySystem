@@ -1,6 +1,6 @@
 ##########################################################################
-# Copyright (c) 2022-2024 Reinhard Caspary                               #
-# <reinhard.caspary@phoenixd.uni-hannover.de>                            #
+# Copyright (c) 2022-2025 Hannes Robben                                  #
+# <hannes.robben@phoenixd.uni-hannover.de>                               #
 # This program is free software under the terms of the MIT license.      #
 ##########################################################################
 
@@ -161,7 +161,7 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         if ask_continue_box and not messagebox.askyesno(message="Run plane fitting?"): return
         experiment.plane_fit(force=False)
 
-        # Optical path length for DHM
+        # Optical path max_length for DHM
         if ask_continue_box and not messagebox.askyesno(message="Run OPL motor scan?"): return
         experiment.opl_scan(m0=350.0, force=False)
 
