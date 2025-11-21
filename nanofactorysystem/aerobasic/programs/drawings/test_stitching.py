@@ -158,8 +158,8 @@ def example_3_strategy_comparison():
         for i in range(len(ordered_tiles) - 1):
             t1 = ordered_tiles[i]
             t2 = ordered_tiles[i + 1]
-            dx = t2.center_offset.x - t1.center_offset.x
-            dy = t2.center_offset.y - t1.center_offset.y
+            dx = t2.center_offset.X - t1.center_offset.X
+            dy = t2.center_offset.Y - t1.center_offset.Y
             distance = np.sqrt(dx ** 2 + dy ** 2)
             total_distance += distance
 

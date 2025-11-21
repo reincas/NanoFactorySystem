@@ -15,6 +15,7 @@ from enum import Enum
 from typing import List, Tuple, Iterator, Optional
 import numpy as np
 
+from nanofactorysystem.aerobasic.programs.drawings.basic_structures import Square
 from nanofactorysystem.devices.coordinate_system import Point3D, CoordinateSystem
 from nanofactorysystem.aerobasic.programs.drawings import DrawableObject, DrawableAeroBasicProgram
 
@@ -118,6 +119,7 @@ class LargeStructureStitcher:
         Returns:
             bool: True if structure needs to be tiled
         """
+        # todo -> implementing bounding box in every structure
         if not hasattr(structure, 'bounding_box'):
             # If structure doesn't have bounding_box, assume it fits
             return False
@@ -507,8 +509,6 @@ if __name__ == '__main__':
     # Example 1: Small structure (no stitching needed)
     print("Example 1: Small Square (50x50 µm)")
     print("-" * 60)
-
-    from nanofactorysystem.aerobasic.programs.drawings.basic_structures import Square
 
     small_square = Square(
         center=Point3D(0, 0, -2),
