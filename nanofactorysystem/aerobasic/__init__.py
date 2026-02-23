@@ -65,12 +65,21 @@ class AeroBasicAPI(abc.ABC):
 
     def WAIT_MODE(self, mode: WaitMode) -> str:
         # Change wait mode
+        # NOTE (HR) Program Setup command
         return self.send(f"WAIT MODE {mode.name}")
+
+    def WAIT(self, mode: WaitMode, axis="X Y") -> str:
+        # send wait command
+        # NOTE auto wait is not possible
+        if mode == WaitMode.AUTO:
+            raise TypeError("WAIT MODE AUTO NOT POSSIBLE")
+        return self.send(f"WAIT {mode.value} {axis}")
 
     def DWELL(self, duration: float):
         """
         :param duration: in seconds
         """
+        # NOTE (HR) Program Flow Command
         assert 0 < duration < 4.29e6
         return self.send(f"DWELL {duration:.3f}")
 
@@ -328,6 +337,12 @@ class AeroBasicAPI(abc.ABC):
 
         return self.send(f"MOVEINC {axis.parameter_name} {distance} {speed}")
 
+    def MOVEDELAY(self, axis: SingleAxis, time_in_ms: float,):
+        # NOTE (HR) Motion command - waiting for a specific time
+        self._assert_is_single_axis(axis)
+
+        return self.send(f"MOVEDELAY {axis.parameter_name},  {time_in_ms}")
+
     def HOMEASYNC(self):
         pass
 
@@ -339,6 +354,7 @@ class AeroBasicAPI(abc.ABC):
             cycles: int,
             num_iterations: int = 1
     ):
+        # NOTE (HR) Program tuning command
         self._assert_is_single_axis(axis)
         return self.send(f"OSCILLATE {axis.parameter_name}, {distance}, {frequency}, {cycles}, {num_iterations}")
 

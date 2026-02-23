@@ -132,7 +132,7 @@ def qr_code_test(absolute_center: Point2D, resin_dimension: list, ask_continue_b
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            fov_size=fov,
+            structure_size=fov,
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,

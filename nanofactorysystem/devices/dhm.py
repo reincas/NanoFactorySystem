@@ -26,7 +26,7 @@ class Dhm(Parameter):
         "maxOverflow": 9,
         "oplMode": "both",
         "oplSteps": 11,
-        "oplStep": 250.0,
+        "oplStep": 250.0,  # steps for opl scan
         "oplThreshold": 0.2,
         "oplMinContrast": 0.001,
         "oplMinPos": 5.0,
@@ -145,13 +145,14 @@ class Dhm(Parameter):
         """ Return a HoloContainer with current hologram image. """
 
         # Hologram image
+        #todo: t2-t1 seems very high - dive into code to see if there are loops which causes this or if it actually the capture time
         t1 = datetime.datetime.now()
         holo, count = self.getimage(opt=opt)
         t2 = datetime.datetime.now()
         kwargs["holo_get"] = holo
-        kwargs["capture_time"] = t2 - t1
+        kwargs["capture_time"] = (t2 - t1).total_seconds()
 
-        if image_count != 0:
+        if image_count != 0 and image_count is not None:
             kwargs["holo_images"] = []
             kwargs["capture_times"] = []
             for i in range(image_count-1):
@@ -160,7 +161,7 @@ class Dhm(Parameter):
                 holos, count = self.getimage(opt=opt)
                 t2 = datetime.datetime.now()
                 kwargs["holo_images"].append(holos)
-                kwargs["capture_times"].append(t2 - t1)
+                kwargs["capture_times"].append((t2 - t1).total_seconds())
 
         # Median values
         q = [self["contrastQuantile"], 0.5, 1.0 - self["contrastQuantile"]]

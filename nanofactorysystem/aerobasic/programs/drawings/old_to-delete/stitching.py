@@ -417,7 +417,7 @@ class StitchedStructure:
             structure,
             fov_size: Tuple[float, float],
             overlap: float = 0.1,
-            strategy: StitchingStrategy = StitchingStrategy.LAYER_FIRST
+            strategy: StitchingStrategy = StitchingStrategy.TILE_FIRST
     ):
         self.structure = structure
         self.stitcher = LargeStructureStitcher(fov_size, overlap, strategy)

@@ -130,7 +130,6 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
-
     with Experiment(
             path=path,
             user=user,
@@ -142,7 +141,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            fov_size=fov,
+            structure_size=fov,
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,
@@ -155,7 +154,8 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             corner_height=c_height,
             corner_hatch=c_hatch,
             corner_slice=c_slice,
-            plane_fit_mode=1) as experiment:
+            plane_fit_mode=1,
+            skip_corner=False) as experiment:
 
         # Visualize experiment
         experiment.plot_experiment(show=True)
@@ -179,19 +179,19 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         # experiment.skip_structure()
         # experiment.add_structure(
         #     structure_type=StructureType.NORMAL,
-        #     name="stair_galvo",
+        #     name="stacked_lens_1",
         #     axes="ABZ",
-        #     power=power,
+        #     power=parameterset['power'],
         #     structure=Stair(
         #         Point3D(0, 0, -2),
         #         n_steps=6,
         #         step_height=0.6,
         #         step_length=20,
         #         step_width=50,
-        #         hatch_size=0.125,
-        #         slice_size=0.3,
+        #         hatch_size=parameterset['hatch size'],
+        #         slice_size=parameterset['slice size'],
         #         socket_height=7,
-        #         velocity=5000,
+        #         velocity=parameterset['velocity'],
         #         acceleration=experiment.accel_a_um))
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------

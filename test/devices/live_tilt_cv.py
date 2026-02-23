@@ -22,7 +22,7 @@ run = False
 ############################################################################
 
 def getImage(dhm):
-    holo, count = dhm.getimage()
+    holo, count = dhm.getimage(opt=False)
     spectrum, fx, fy, weight = reconstruct.locateOrder(holo, 16)
     dhm.log.info(f"First order coordinates: {fx:d}, {fy:d} [{100 * weight:.1f}%]")
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     with Dhm(user, objective, logger, **args) as dhm:
 
         dhm.device.MotorPos = 3900.0  # 20x objective circa
-        dhm.device.MotorPos = 190.0  # 63x objective
+        dhm.device.MotorPos = 325.0  # 63x objective
         if opt:
             # dhm.device.MotorPos = 390.3  # 63x objective
             dhm.device.MotorPos = 200  # 63x objective
@@ -94,11 +94,12 @@ if __name__ == "__main__":
             shutterus = dhm.device.CameraShutterUs
             logger.info(f"Shutter: {shutterus:.1f} us [{shutter:d}]")
 
-        dc = dhm.container()
+        dc = dhm.container(opt=False)
         dc.write("test.zdc")
 
         logger.info("Start Spectrum Display Loop...")
         run = True
+        print(dhm.device.MotorPos)
         while run:
             if spectrum:
                 img = getImage(dhm)

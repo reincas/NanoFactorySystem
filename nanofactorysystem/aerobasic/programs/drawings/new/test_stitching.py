@@ -7,11 +7,10 @@ This file demonstrates:
 3. Best practices for different scenarios
 """
 
-from typing import List
 import numpy as np
 
 from nanofactorysystem.devices.coordinate_system import Point3D
-from nanofactorysystem.aerobasic.programs.drawings.basic_structures import Square, Rectangle, Circle
+from nanofactorysystem.aerobasic.programs.drawings.basic_structures import Square, Circle
 from nanofactorysystem.aerobasic.programs.drawings.stitching import (
     LargeStructureStitcher,
     StitchedStructure,

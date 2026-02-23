@@ -275,6 +275,8 @@ class CameraDevice(object):
 
             # Get result from the result queue
             req = self.fi.getRequest(reqno)
+            # if req.imagePixelFormat.read() == 28:
+            #     print("Pixel Format is mvIMPACT.acquire.ibpfMono12Packed_V1.")  # https://assets.balluff.com/documents/DRF_957356_AA_000/classmvIMPACT_1_1acquire_1_1Request.html#a491bca5fe5a03e9523a411a90d8b29cd
             if req.isOK:
 
                 # Get image meta data
@@ -289,8 +291,14 @@ class CameraDevice(object):
 
                 # Copy image data to numpy array
                 cbuf = (ctypes.c_char * size).from_address(addr)
+                # note: if depth is not 16 the dtype is not correctly chosen and one need to change the PixelFormat
                 dtype = np.uint16 if depth > 8 else np.uint8
                 img = np.copy(np.frombuffer(cbuf, dtype=dtype))
+
+                # print(f"size={size}, width={width}, height={height}, depth={depth}")
+                # print(f"Array length: {len(img)}, Expected: {height * width}")
+
+
                 img.shape = (height, width)
 
             # Unlock the request object

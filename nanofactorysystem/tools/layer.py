@@ -96,8 +96,8 @@ class Layer(Parameter):
     _defaults = {
         "xCenter": None,
         "yCenter": None,
-        "dzCoarseDefault": 100.0,
-        "dzFineDefault": 10.0,
+        "dzCoarseDefault": 50.0,
+        "dzFineDefault": 45.0,
         "laserPower": 0.7,
         "stageSpeed": 200.0,
         "duration": 0.2,
@@ -210,7 +210,8 @@ class Layer(Parameter):
 
             # ToDo (HR) Hotfix beseitigen! Orientation in dieser Datei ändern und in Scanner ändern und abhängig von DropDirection machen. dazu dropdirection ins system dict rein
             # orientation = Orientation[self["sampleOrientation"].upper()]
-            orientation = Orientation["DOWN"]
+            # orientation = Orientation["DOWN"]
+            orientation = Orientation["UP"]
             scanner = Scanner(z_guess, dz, self.zmin, self.zmax, orientation, interface, self["stretch"], self["overlap"], self["jitter"], self.log)
             self.result["coarse"] = self.scan(spiral, scanner, "coarse", path)
             if z_low is not None:

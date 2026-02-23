@@ -123,7 +123,8 @@ class Focus(Parameter):
         "factorContour": 1.0,
         "peakContour": 0.2,
         "minCircularity": 0.85,
-        "exposureValue": 127
+        "exposureValue": 127,
+        "minDiffMax": 10.0
     }
 
     _resultkeys = [
@@ -412,6 +413,11 @@ class Focus(Parameter):
             result["status"] = focusStatus.noncircular
             return
 
+        # new (HR) 23.02.2026 -> HOTFIX because wrong detection of foci - noise was detected as focus
+        # 10 is a random number atm. nofocus(noise) was mostly in the region 1.7-2.5
+        if result["diffMax"] <= self["minDiffMax"]:
+            result["status"] = focusStatus.nofocus
+            return
         # Done
         result["status"] = focusStatus.focus
 

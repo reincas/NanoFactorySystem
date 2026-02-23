@@ -109,7 +109,7 @@ def focal_point_matrix_maker(absolute_center: Point2D, resin_dimension: list, as
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            fov_size=fov,
+            structure_size=fov,
             margin=10,
             padding=10,
             absolute_grid_center=absolute_grid_center,

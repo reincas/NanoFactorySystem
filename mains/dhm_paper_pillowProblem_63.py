@@ -73,7 +73,7 @@ def main():
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            fov_size=150,
+            structure_size=150,
             margin=100,
             padding=50,
             absolute_grid_center=absolute_grid_center,

@@ -64,11 +64,11 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
         path = Path(mkdir(
-            f".output/parameter_study/main_experiments/power_speed_at-h0.1_s0.2_{datetime.datetime.now():%Y%m%d}_{objective}",
+            f".output/parameter_study/main_experiments/power_speed_at-h0.7_s0.7_2_{datetime.datetime.now():%Y%m%d}_{objective}",
             clean=False))
     else:
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, f"power_speed_at-h0.1_s0.2_{datetime.datetime.now():%Y%m%d}_{objective}"),
+        path = Path(mkdir(os.path.join(path, f"power_speed_at-h0.7_s0.7_2_{datetime.datetime.now():%Y%m%d}_{objective}"),
                           clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
@@ -114,8 +114,8 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": 0.1,  # 0.05, 0.1, 0.15, 0.2, 0.3  # hatch size
-            "slice size": 0.2,  # 0.1# slice size/ layer height
+            "hatch size": 0.7,  # 0.05, 0.1, 0.15, 0.2, 0.3  # hatch size
+            "slice size": 0.7,  # 0.1# slice size/ layer height
             "power": [0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],  # 8
             "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 7_500, 10_000],  # 7
             "default power": 0.7
@@ -146,7 +146,7 @@ def testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
             high_speed_um=10_000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            fov_size=fov,
+            structure_size=fov,
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,

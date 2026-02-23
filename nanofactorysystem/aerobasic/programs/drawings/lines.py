@@ -410,7 +410,7 @@ class Rectangle2D(DrawableObject):
         program = DrawableAeroBasicProgram(coordinate_system)
         bottom_left = self.center - Point2D(self.width / 2, self.length / 2)
 
-        if self.hatching_direction == HatchingDirection.X:
+        if self.hatching_direction == HatchingDirection.X: 
             line_program = XLines
             hatching_start_position = bottom_left.X
             line_start = bottom_left.Y
@@ -477,6 +477,8 @@ class Rectangle3D(DrawableObject):
 
     def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
+        # todo: i dont know exactly why i added Z==0 here. maybe rethink in future - 02.12 HOTFIX
+        # if self.height == 0 and self.center.Z==0:
         if self.height == 0:
             return program
 

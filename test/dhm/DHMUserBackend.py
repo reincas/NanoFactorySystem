@@ -31,7 +31,7 @@ class DHMBackend:
     opt_image_calibration = False
     continuous_saving_variable = 0
 
-    def __init__(self, objective="Zeiss 63x", user="Hannes", save_path=None):
+    def __init__(self, objective="Zeiss 63x", user="Hannes", motor_pos=None, save_path=None):
         self.objective_name = objective
         self.objective = sysConfig.objective(objective)
         self.user = user
@@ -39,11 +39,17 @@ class DHMBackend:
 
         # standard initialisation optical path length motor position
         if objective == "Zeiss 63x":
-            self.motor_pos = 190.0
+            if motor_pos is None:
+                self.motor_pos = 190.0
+            else:
+                self.motor_pos = motor_pos
         elif objective == "Zeiss 20x":
             # self.motor_pos = 3732.0
-            self.motor_pos = 3100.0
-            self.motor_pos = 100.0
+            if motor_pos is None:
+                self.motor_pos = 3100.0
+                self.motor_pos = 100.0
+            else:
+                self.motor_pos = motor_pos
         elif objective == "Nikon 20x":
             self.motor_pos = 10.0
             raise Warning("Motor position not selected. Please run the opl motor scan.")
@@ -136,8 +142,10 @@ class DHMBackend:
 if __name__ == "__main__":
     objective_selected = "Zeiss 63x"
     desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
-    path = os.path.join(desktop, "hologram_dhm_print_power_p07v10k")
-    img_getter = DHMBackend(save_path=path, objective=objective_selected)
+    path = os.path.join(desktop, "Axel_Messung")
+    path_2 = os.path.join(path, "refractive_index"
+                                "")
+    img_getter = DHMBackend(save_path=path_2, objective=objective_selected, motor_pos=190)
 
     print("Start capturing mode...")
     while True:

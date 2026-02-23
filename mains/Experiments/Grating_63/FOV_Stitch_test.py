@@ -11,6 +11,7 @@ from tkinter import messagebox
 import numpy as np
 
 from nanofactorysystem import mkdir, getLogger
+from nanofactorysystem.aerobasic.programs.drawings import BinaryGrating, Apertures, BlazedGrating
 from nanofactorysystem.aerobasic.programs.drawings.lines import Stair, Rectangle3D
 from nanofactorysystem.aerobasic.programs.drawings.DOE import Binary_grating
 from nanofactorysystem.aerobasic.programs.drawings.lens import AsphericalLens
@@ -30,7 +31,8 @@ sys_args = {
         "materialThickness": 75.0,
     },
     "focus": {
-        "OffsetFocusDetection": [120, -80],
+        "OffsetFocusDetection": [100, -40],
+        # "OffsetFocusDetection": [120, -80],
         "minCircularity": 0.6,
         "exposureValue": 120
     },
@@ -45,7 +47,7 @@ sys_args = {
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
 def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-                  objective="Zeiss 20x", user="Hannes", dhm_usage=False):
+                     objective="Zeiss 20x", user="Hannes", dhm_usage=False):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -67,7 +69,7 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
     else:
         # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "binary_testprint"), clean=False))
+        path = Path(mkdir(os.path.join(path, "fov_print_quality_test"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -93,8 +95,8 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
         parameterset = {
             "hatch size": [0.125],  # hatch size
             "slice size": [0.15],  # slice size/ layer height
-            "power": 0.7,
-            "velocity": 10_000
+            "power": 0.5,
+            "velocity": 5_000
         }
 
     elif objective == "Zeiss 63x":
@@ -112,10 +114,10 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": [0.1, 0.25, 0.5],  # hatch size
-            "slice size": [0.1, 0.25, 0.5],  # slice size/ layer height
-            "power": 0.3,
-            "velocity": 10_000
+            "hatch size": 0.2,  # [0.1, 0.2, 0.5],  # hatch size
+            "slice size": 0.2,  # [0.1, 0.2, 0.5],  # slice size/ layer height
+            "power": 0.5,
+            "velocity": 5_000
         }
 
     else:
@@ -130,8 +132,9 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
-
-    grid_size = (len(parameterset["hatch size"]), len(parameterset["slice size"]))
+    fov_fractions = [0.5, 0.6, 0.7, 0.75, 0.8, 0.85, 0.9, 0.95, 0.99]
+    structure_size = [fov*i for i in fov_fractions]
+    grid_size = (1, len(fov_fractions))  # -> horizontale linie
     with Experiment(
             path=path,
             user=user,
@@ -143,11 +146,12 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
             high_speed_um=10_000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            fov_size=fov,
+            structure_size=160,  # ToDo change fov to structure size and add fov to real
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=grid_size,  # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
+            grid=grid_size,
+            # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
             n_mid_points=0,  # ToDo changing depending on experiment
             drop_direction=DropDirection.DOWN,
             corner_z=-2,
@@ -156,7 +160,9 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
             corner_height=c_height,
             corner_hatch=c_hatch,
             corner_slice=c_slice,
-            plane_fit_mode=1) as experiment:
+            fov_dim=(fov, fov),
+            plane_fit_mode=1,
+            skip_corner=False) as experiment:
 
         # Visualize experiment
         experiment.plot_experiment(show=True)
@@ -179,27 +185,33 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
         # Add structures
         # experiment.skip_structure()
 
-        for i in range(len(parameterset["hatch size"])):
-            for j in range(len(parameterset["slice size"])):
-                experiment.add_structure(
-                    structure_type=StructureType.NORMAL,
-                    name=f"binary_s{parameterset["slice size"][j]}_h_{parameterset["hatch size"][i]}_v_10k_p0_3",
-                    axes="ABZ",
-                    power=parameterset["power"],
-                    structure=Binary_grating(
-                        Point3D(0, 0, -2),
-                        max_width=120,
-                        max_length=120,
-                        width_phase=5,
-                        period=10,
-                        height=2,
-                        base_height=2,
-                        hatch_size=parameterset["hatch size"][i],
-                        slice_size=parameterset["slice size"][j],
-                        velocity=parameterset["velocity"],
-                        acceleration=experiment.accel_a_um
-                        )
-        )
+        # Experiment Binary no rotation
+        for i in range(len(fov_fractions)):
+            experiment.add_structure(
+                structure_type=StructureType.STITCHING,
+                name=f"binary_fov_{fov_fractions[i]}_structure_{structure_size[i]}",
+                axes="ABZ",
+                power=parameterset["power"],
+                structure=BinaryGrating(
+                    center=Point3D(0, 0, -1),
+                    width=structure_size[i],  # µm
+                    length=structure_size[i],  # µm
+                    period=10,  # µm
+                    height=2,  # µm
+                    duty_cycle=5,  # µm
+                    grating_angle_deg=0.0,
+                    base_height=0.0,  # µm
+                    hatch_size=parameterset["hatch size"],
+                    slice_size=parameterset["slice size"],
+                    velocity=parameterset["velocity"],
+                    acceleration=experiment.accel_a_um,
+                    aperture=None,
+                    hatch_angle_deg=0.0,
+                    alternating_hatch=True,
+                    fov_size=(fov, fov),
+                    usable_fov_fraction=fov_fractions[i],
+                    grid_resolution=5_000)
+            )
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
 

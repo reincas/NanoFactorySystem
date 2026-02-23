@@ -45,6 +45,8 @@ class StructureType(Enum):
     NORMAL = 1
     CORNER = 2
     QRCODE = 3
+    STITCHING = 4
+    REPEAT = 5
 
 
 class Experiment(object):
@@ -59,7 +61,7 @@ class Experiment(object):
                  high_speed_um: float,
                  resin_corner_tr: Point2D,
                  resin_corner_bl: Point2D,
-                 fov_size: float,
+                 structure_size: float,
                  margin: float,
                  padding: float,
                  absolute_grid_center: Point2D,
@@ -72,6 +74,7 @@ class Experiment(object):
                  corner_height: float,
                  corner_hatch: float,
                  corner_slice: float,
+                 fov_dim: tuple[float, float],
                  *,
                  skip_corner: bool = False,
                  plane_fit_mode: int = 0):
@@ -87,10 +90,11 @@ class Experiment(object):
 
         self.resin_corner_tr = np.array(resin_corner_tr.as_tuple(), dtype=float)
         self.resin_corner_bl = np.array(resin_corner_bl.as_tuple(), dtype=float)
-        self.fov_size = float(fov_size)
+        self.structure_size = float(structure_size)
         self.margin = float(margin)
         self.padding = float(padding)
         self.absolute_grid_center = np.array(absolute_grid_center.as_tuple(), dtype=float)
+        self.fov_dimensions = fov_dim
 
         self.grid = np.array(grid, dtype=int)
         assert self.grid.shape == (2,)
@@ -162,15 +166,15 @@ class Experiment(object):
         """ Return experiment locations in um """
         for i in range(self.grid[0]):
             for j in range(self.grid[1]):
-                rect_x = self.rectangle_tl[0] + self.margin + j * (self.fov_size + self.padding)
-                rect_y = self.rectangle_tl[1] + self.margin + i * (self.fov_size + self.padding)
-                yield rect_x + self.fov_size / 2, rect_y + self.fov_size / 2
+                rect_x = self.rectangle_tl[0] + self.margin + j * (self.structure_size + self.padding)
+                rect_y = self.rectangle_tl[1] + self.margin + i * (self.structure_size + self.padding)
+                yield rect_x + self.structure_size / 2, rect_y + self.structure_size / 2
 
     def structure_location(self, index) -> Point2D:
         i, j = divmod(index, self.grid[1])
-        rect_x = self.rectangle_tl[0] + self.margin + j * (self.fov_size + self.padding)
-        rect_y = self.rectangle_tl[1] + self.margin + i * (self.fov_size + self.padding)
-        return Point2D(rect_x + self.fov_size / 2, rect_y + self.fov_size / 2)
+        rect_x = self.rectangle_tl[0] + self.margin + j * (self.structure_size + self.padding)
+        rect_y = self.rectangle_tl[1] + self.margin + i * (self.structure_size + self.padding)
+        return Point2D(rect_x + self.structure_size / 2, rect_y + self.structure_size / 2)
 
     def corner_location(self, position: CornerPosition) -> Point2D:
         if position == CornerPosition.TL:
@@ -207,11 +211,11 @@ class Experiment(object):
 
     @property
     def grid_width(self) -> float:
-        return self.grid[1] * (self.fov_size + self.padding) - self.padding + 2 * self.margin
+        return self.grid[1] * (self.structure_size + self.padding) - self.padding + 2 * self.margin
 
     @property
     def grid_height(self) -> float:
-        return self.grid[0] * (self.fov_size + self.padding) - self.padding + 2 * self.margin
+        return self.grid[0] * (self.structure_size + self.padding) - self.padding + 2 * self.margin
 
     @property
     def rectangle_tl(self) -> np.ndarray:
@@ -230,24 +234,24 @@ class Experiment(object):
         return self.center_point + self.grid_center + [-self.grid_width / 2, self.grid_height / 2]
 
     def sample_points_for_plane_fitting(self) -> list[tuple[float, float]]:
-        n_rows = self.grid[0] + 1
-        n_cols = self.grid[1] + 1
+        n_rows = self.grid[0]  # + 1
+        n_cols = self.grid[1]  # + 1 todo check if +1 is necessary for planefit_mode=0
         points = []
         if self.plane_fit_mode == 0:
             for i in range(n_rows):
                 for j in range(n_cols):
                     x = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + j * (
-                                self.fov_size + self.padding)
+                            self.structure_size + self.padding)
                     y = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + i * (
-                                self.fov_size + self.padding)
+                            self.structure_size + self.padding)
                     points.append((x, y))
         elif self.plane_fit_mode == 1:
             x0 = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding
             x1 = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + n_cols * (
-                        self.fov_size + self.padding)
+                    self.structure_size + self.padding)
             y0 = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding
             y1 = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + n_rows * (
-                        self.fov_size + self.padding)
+                    self.structure_size + self.padding)
             points.append((x0, y0))
             points.append((x0, y1))
             points.append((x1, y0))
@@ -289,12 +293,12 @@ class Experiment(object):
         center_xs = []
         center_ys = []
         for i, (x, y) in enumerate(self.iter_experiment_locations()):
-            x_tl = x - self.fov_size / 2
-            y_tl = y - self.fov_size / 2
+            x_tl = x - self.structure_size / 2
+            y_tl = y - self.structure_size / 2
             rect = Rectangle(
                 (x_tl, y_tl),
-                width=self.fov_size,
-                height=self.fov_size,
+                width=self.structure_size,
+                height=self.structure_size,
                 edgecolor='green',
                 facecolor='none',
                 lw=1
@@ -523,7 +527,9 @@ class Experiment(object):
         elif structure_type == StructureType.NORMAL:
             assert structure is not None
             n_structures = sum(
-                [s["structure_type"] in (StructureType.NORMAL, StructureType.DUMMY) for s in self.structures])
+                [s["structure_type"] in (
+                StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING) for s in
+                 self.structures])
             if n_structures >= self.grid[0] * self.grid[1]:
                 raise ValueError(f"Too many structures for structure {name}!")
 
@@ -541,6 +547,28 @@ class Experiment(object):
             n_qrcodes = sum([s["structure_type"] == StructureType.QRCODE for s in self.structures])
             if n_qrcodes != 0:
                 raise ValueError(f"More than one QR code given!")
+
+        elif structure_type == StructureType.STITCHING:
+            # process should be like serveral different strucutres printed after another?
+            # strategy is then only tile wise
+            pass
+
+        elif structure_type == StructureType.REPEAT:
+            n_structures = sum(
+                [s["structure_type"] in (
+                    StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING) for s in
+                 self.structures])
+            assert n_structures >=1, "At least one structure has to be defined prior to repeat."
+
+            s_2_repeat = (self.structures[-1]).copy
+            repition_number = sum(s["name"].split("(")[0] in (s_2_repeat["name"].split("(")[0]) for s in self.structures)
+            name = f"{s_2_repeat["name"]}({repition_number})"
+            structure = s_2_repeat["structure"]
+            axes = s_2_repeat["axes"]
+            power = s_2_repeat["power"]
+            # todo
+            #   - add structure is finished -- building program is next - how to differentiate between same name(adding (1)) and repition (adding (number repition))
+            #   - repition der programm funktioniert gar nicht weil in den layer programmen absolut verfahren wird und nicht relativ
 
         # Unknown structure type
         else:
@@ -572,8 +600,10 @@ class Experiment(object):
                           name: str,
                           printing_axes: str,
                           power: float,
-                          path: Path):
-
+                          path: Path,
+                          n_dhm_img: int = 0,
+                          stitching: bool = False):
+        plotting_structure = False  # todo make it dependent of stitching needed.
         self.log.info(f"Creating layer programs for {name}: {structure}")
         assert isinstance(structure, DrawableObject)
 
@@ -620,12 +650,38 @@ class Experiment(object):
             coordinate_system = coordinate_system_stage
         structure_pgm = DrawableAeroBasicProgram(coordinate_system)
         layer_pgm_paths = []
-        x_center = structure_center_absolute_mm["X"]
-        y_center = structure_center_absolute_mm["Y"]
+        # NOTE What to do with tiles
+        x_structure_center = structure_center_absolute_mm["X"]
+        y_structure_center = structure_center_absolute_mm["Y"]
+
+        if stitching:
+            for _ in structure.iterate_layers(coordinate_system):
+                pass
+
+        #     layer_pgm.add_programm(layer)
+        #     # ... rest
+        #
+        #
+        # for layer_id, layer in enumerate(structure.iterate_layers(coordinate_system)):
+        #     # AeroBasic program for given layer
+        #     layer_pgm = AeroBasicProgram()
+        #
+        #
+        #     layer_pgm.LINEAR(X=x_center, Y=y_center)  # move to reference point for galvo scanner
+
         for layer_id, layer in enumerate(structure.iterate_layers(coordinate_system)):
-            # AeroBasic program for given layer
             layer_pgm = AeroBasicProgram()
-            layer_pgm.LINEAR(X=x_center, Y=y_center)  # move to reference point for galvo scanner
+
+            if stitching:  # funktioniert anscheinend!
+                x_offset, y_offset = structure.get_tile_center_for_layer(layer_id)
+                x_value = x_structure_center+x_offset/1000
+                y_value = y_structure_center+y_offset/1000
+            else:
+                x_value = x_structure_center
+                y_value = y_structure_center
+
+            layer_pgm.LINEAR(X=x_value, Y=y_value)
+
             layer_pgm.add_programm(layer)
 
             # Store layer program file
@@ -651,14 +707,16 @@ class Experiment(object):
             "structure": structure.to_json(),
             "program_file": str(structure_pgm_path),
             "layer_files": layer_pgm_paths,
+            "number of dhm images": n_dhm_img,
         }
 
-        # Plot structure to image file
-        self.log.info(f"Plotting {name}")
-        movements = read_file(structure_pgm_path)
-        plot_movements(movements)
-        plt.savefig(path / f"plot_{name}.png")
-        plt.close()
+        if plotting_structure:
+            # Plot structure to image file
+            self.log.info(f"Plotting {name}")
+            movements = read_file(structure_pgm_path)
+            plot_movements(movements)
+            plt.savefig(path / f"plot_{name}.png")
+            plt.close()
 
         # Done
         return layer_pgm_paths, structure_config
@@ -677,21 +735,40 @@ class Experiment(object):
             # Skip dummy structure
             if structure_dict["structure_type"] == StructureType.DUMMY:
                 structure_id += 1
+                n_dhm_img = 0
                 continue
 
             # Reference point of normal structure
             elif structure_dict["structure_type"] == StructureType.NORMAL:
                 x, y = self.structure_location(structure_id).as_tuple()
+                n_dhm_img = 10
                 structure_id += 1
+                stitching=False
+
+            elif structure_dict["structure_type"] == StructureType.STITCHING:
+                x, y = self.structure_location(structure_id).as_tuple()
+                n_dhm_img = 10
+                structure_id += 1
+                stitching=True
+
+            elif structure_dict["structure_type"] == StructureType.REPEAT:
+                x, y = self.structure_location(structure_id).as_tuple()
+                n_dhm_img = 10
+                structure_id += 1
+                stitching=False
 
             # Reference point of corner structure
             elif structure_dict["structure_type"] == StructureType.CORNER:
                 corner_pos = structure_dict["corner"]
                 x, y = self.corner_location(corner_pos).as_tuple()
+                n_dhm_img = 1
+                stitching=False
 
             # Reference point of qrcode
             elif structure_dict["structure_type"] == StructureType.QRCODE:
                 x, y = self.qrcode_location().as_tuple()
+                n_dhm_img = 1
+                stitching=False
 
             # Unknown structure type
             else:
@@ -705,7 +782,9 @@ class Experiment(object):
                 name=structure_dict["name"],
                 printing_axes=structure_dict["axes"],
                 power=structure_dict["power"],
-                path=path)
+                path=path,
+                n_dhm_img=n_dhm_img,
+                stitching=stitching)
             self.structure_programs.append(paths)
             self.structure_configs.append(config)
 
@@ -722,7 +801,8 @@ class Experiment(object):
                         x: float,  # um
                         y: float,  # um
                         name: str,
-                        power: float):
+                        power: float,
+                        dhm_image_count: int = 0):
 
         structure_path = self.path / "structures" / name
         camera_path = structure_path / "camera"
@@ -744,7 +824,8 @@ class Experiment(object):
             coordinate=structure_center_absolute_mm,
             name=f"{name}_before",
             camera_path=structure_path,
-            dhm_path=structure_path)
+            dhm_path=structure_path,
+            dhm_image_count=dhm_image_count)
 
         # Prepare order of layer writing
         if self.drop_direction == DropDirection.UP:
@@ -767,7 +848,7 @@ class Experiment(object):
                     name=f"{name}.{layer_id}",
                     camera_path=camera_path,
                     dhm_path=dhm_path,
-                    dhm_image_count=10)
+                    dhm_image_count=dhm_image_count)
                 self.update_print_progress(name, layer_id, order=order)
             except AerotechError as e:
                 self.update_print_progress(name, layer_id, order=order, error=e)
@@ -781,7 +862,7 @@ class Experiment(object):
             name=f"{name}_after",
             camera_path=structure_path,
             dhm_path=structure_path,
-            dhm_image_count=100)
+            dhm_image_count=dhm_image_count + 10)
         self.update_print_progress("finished", 000, order=0)
 
     def print_experiment(self):
@@ -794,7 +875,8 @@ class Experiment(object):
                 x=structure_config["center_x"],
                 y=structure_config["center_y"],
                 name=structure_config["name"],
-                power=structure_config["power"]
+                power=structure_config["power"],
+                dhm_image_count=structure_config["number of dhm images"]
             )
 
     def update_print_progress(self,
@@ -826,7 +908,7 @@ class Experiment(object):
                 name: str,
                 camera_path: Path,
                 dhm_path: Path,
-                dhm_image_count: int = None,
+                dhm_image_count: int = 0,
                 ) -> tuple[Container, ImageContainer]:
         """
         Coordinate in mm in absolute coordinates
@@ -837,7 +919,7 @@ class Experiment(object):
 
         # Take DHM image
         if self.system.dhm is not None:
-            dhm_container = self.system.dhm.container(opt=True, image_count=dhm_image_count)
+            dhm_container = self.system.dhm.container(opt=False, image_count=dhm_image_count)
             fn = dhm_path / f"dhm_{name}.zdc"
             dhm_container.write(fn)
             self.log.info(f"DHM image: '{fn}'")

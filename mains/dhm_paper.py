@@ -65,7 +65,7 @@ def main():
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            fov_size=500,
+            structure_size=500,
             margin=200,
             padding=100,
             absolute_grid_center=absolute_grid_center,
@@ -99,17 +99,17 @@ def main():
             structure_type=StructureType.NORMAL,
             name="stair_galvo",
             axes="ABZ",
-            power=0.7,
+            power=0.2,
             structure=Stair(
                 Point3D(0, 0, -2),
                 n_steps=6,
                 step_height=0.6,
                 step_length=20,
                 step_width=50,
-                hatch_size=0.125,
-                slice_size=0.3,
-                socket_height=7,
-                velocity=5000,
+                hatch_size=0.2,
+                slice_size=0.2,
+                socket_height=5,
+                velocity=2000,
                 acceleration=experiment.accel_a_um))
         experiment.skip_structure()
         experiment.add_structure(

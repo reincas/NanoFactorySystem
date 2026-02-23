@@ -55,7 +55,7 @@ class HoloContainer(Container):
         if not isinstance(holo, np.ndarray) or len(holo.shape) != 2:
             raise RuntimeError("Hologram image expected!")
         items["meas/image.png"] = holo
-        if holo_imgs is not None or holo_imgs != []:
+        if holo_imgs is not None and holo_imgs != []:
             for i, img in enumerate(holo_imgs):
                 items[f"meas/image_{i+1}.png"] = img
 
