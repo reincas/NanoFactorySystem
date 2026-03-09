@@ -131,11 +131,11 @@ class A3200(Parameter):
         self.reset()
 
         # Some standard definitions
-        self.run("ABSOLUTE")
-        self.run("METRIC")
-        self.run("SECONDS")
-        self.run("VELOCITY OFF")
-        self.run("IFOV OFF")
+        # self.run("ABSOLUTE")
+        # self.run("METRIC")
+        # self.run("SECONDS")
+        # self.run("VELOCITY OFF")
+        # self.run("IFOV OFF")
 
         # Store software version
         self["softwareVersion"] = self.version()

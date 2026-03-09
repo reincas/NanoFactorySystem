@@ -34,7 +34,8 @@ sys_args = {
         "OffsetFocusDetection": [130, -15],
         # "OffsetFocusDetection": [120, -80],
         "minCircularity": 0.8,
-        "exposureValue": 120
+        "exposureValue": 120,
+        "minDiffMax": 10.0  # Wert für 20x - ToDO für 63x genauso?
     },
     "layer": {
         # "beta": 0.7,
@@ -47,7 +48,7 @@ sys_args = {
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
 def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-                     objective="Zeiss 20x", user="Hannes", dhm_usage=False):
+                     objective="Zeiss 20x", substrate=None, user="Hannes", dhm_usage=False):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -69,7 +70,7 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
     else:
         # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "20x_grating"), clean=False))
+        path = Path(mkdir(os.path.join(path, f"TEST_aerotech_1"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -79,7 +80,7 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
     absolute_grid_center = absolute_center
 
     if objective == "Zeiss 20x":
-        drop_direction =DropDirection.UP
+        drop_direction = DropDirection.UP
         fov = 500
         zmax = 25350.0
         # Corner settings
@@ -97,11 +98,11 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
             "hatch size": 0.25,  # hatch size
             "slice size": 0.3,  # slice size/ layer height
             "power": 0.7,
-            "velocity": 10_000
+            "velocity": 5_000
         }
 
     elif objective == "Zeiss 63x":
-        drop_direction =DropDirection.DOWN
+        drop_direction = DropDirection.DOWN
         fov = 150
         zmax = 25480.0  # could possibly be up to 25550 µm
         # Corner settings
@@ -134,8 +135,8 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
-    structure_size = 600.0
-    # grid_size = (2, 2)
+    structure_size = 300.0
+    grid_size = (2, 1)
     with Experiment(
             path=path,
             user=user,
@@ -148,10 +149,10 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
             structure_size=structure_size,  # ToDo change fov to structure size and add fov to real
-            margin=margin*5,  # note extra big margin and padding
-            padding=padding*5,
+            margin=margin,  # note extra big margin and padding
+            padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=(1,1),
+            grid=grid_size,
             # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
             n_mid_points=0,  # ToDo changing depending on experiment
             drop_direction=drop_direction,
@@ -163,7 +164,7 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
             corner_slice=c_slice,
             fov_dim=(fov, fov),
             plane_fit_mode=1,
-            skip_corner=True) as experiment:
+            skip_corner=False) as experiment:
 
         # Visualize experiment
         experiment.plot_experiment(show=True)
@@ -186,6 +187,22 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
         # Add structures
         # experiment.skip_structure()
 
+        # experiment.add_structure(
+        #     structure_type=StructureType.NORMAL,
+        #     name="stair_test",
+        #     axes="ABZ",
+        #     power=parameterset["power"],
+        #     structure=Stair(
+        #         center=Point3D(0, 0, -2),
+        #         n_steps=6,
+        #         step_height=0.532,
+        #         step_length=structure_size/6,
+        #         step_width=structure_size,
+        #         hatch_size=parameterset["hatch size"],
+        #         slice_size=parameterset["slice size"],
+        #         socket_height=6,
+        #         velocity=parameterset["velocity"],
+        #         acceleration=experiment.accel_a_um))
         experiment.add_structure(
             structure_type=StructureType.STITCHING,
             name=f"binary_s{parameterset["slice size"]}_h_{parameterset["hatch size"]}_p_{parameterset["power"]}_v_{parameterset["velocity"]}_Obj_{objective}",
@@ -196,7 +213,32 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
                 width=structure_size,  # µm
                 length=structure_size,  # µm
                 period=20,  # µm
-                height=3,  # µm
+                height=6,  # µm
+                duty_cycle=10,  # µm
+                grating_angle_deg=0.0,
+                base_height=0.0,  # µm
+                hatch_size=parameterset["hatch size"],
+                slice_size=parameterset["slice size"],
+                velocity=parameterset["velocity"],
+                acceleration=experiment.accel_a_um,
+                aperture=None,
+                hatch_angle_deg=90.0,
+                alternating_hatch=False,
+                fov_size=(fov, fov),
+                usable_fov_fraction=0.8,
+                grid_resolution=5_000)
+        )
+        experiment.add_structure(
+            structure_type=StructureType.STITCHING,
+            name=f"binary_s{parameterset["slice size"]}_h_{parameterset["hatch size"]}_p_{parameterset["power"]}_v_{parameterset["velocity"]}_Obj_{objective}",
+            axes="ABZ",
+            power=parameterset["power"],
+            structure=BinaryGrating(
+                center=Point3D(0, 0, -2),
+                width=structure_size,  # µm
+                length=structure_size,  # µm
+                period=20,  # µm
+                height=6,  # µm
                 duty_cycle=10,  # µm
                 grating_angle_deg=0.0,
                 base_height=0.0,  # µm

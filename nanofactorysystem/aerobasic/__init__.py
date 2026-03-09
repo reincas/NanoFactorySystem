@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional, Literal
 
 from nanofactorysystem.aerobasic.constants import Axis, AxisStatusDataItem, TaskStatusDataItem, SingleAxis
-from nanofactorysystem.aerobasic.constants.laser import GalvoLaserOverrideMode
+from nanofactorysystem.aerobasic.constants.laser import GalvoLaserOverrideMode, IFOV_Mode
 from nanofactorysystem.aerobasic.constants.motions import BezierMode
 from nanofactorysystem.aerobasic.constants.system import SystemStatusDataItem, WaitMode
 from nanofactorysystem.aerobasic.constants.tasks import VelocityMode
@@ -126,7 +126,7 @@ class AeroBasicAPI(abc.ABC):
     def PROGRAM_START(self, task_id: int) -> str:
         return self.send(f"PROGRAM {task_id} START")
 
-    def PROGRAM_STOP(self, task_id: Optional[int]=None) -> str:
+    def PROGRAM_STOP(self, task_id: Optional[int] = None) -> str:
         if task_id is None:
             return self.send(f"PROGRAM STOP")
         return self.send(f"PROGRAM {task_id} STOP")
@@ -182,6 +182,40 @@ class AeroBasicAPI(abc.ABC):
             raise ValueError(f"Cannot specify dependent and independent velocity at same time ({E=}, {F=})")
 
         cmd = "LINEAR"
+        # Axes
+        if X is not None:
+            cmd += f" X{X:.10f}"
+        if Y is not None:
+            cmd += f" Y{Y:.10f}"
+        if Z is not None:
+            cmd += f" Z{Z:.10f}"
+        if A is not None:
+            cmd += f" A{A:.10f}"
+        if B is not None:
+            cmd += f" B{B:.10f}"
+
+        # Velocities
+        if F is not None:
+            cmd += f" F{F:f}"
+        if E is not None:
+            cmd += f" E{E:f}"
+
+        return self.send(cmd)
+
+    def RAPID(
+            self,
+            X: Optional[float] = None,
+            Y: Optional[float] = None,
+            Z: Optional[float] = None,
+            A: Optional[float] = None,
+            B: Optional[float] = None,
+            F: Optional[float] = None,
+            E: Optional[float] = None
+    ):
+        if F is not None and E is not None:
+            raise ValueError(f"Cannot specify dependent and independent velocity at same time ({E=}, {F=})")
+
+        cmd = "RAPID"
         # Axes
         if X is not None:
             cmd += f" X{X:.10f}"
@@ -337,7 +371,7 @@ class AeroBasicAPI(abc.ABC):
 
         return self.send(f"MOVEINC {axis.parameter_name} {distance} {speed}")
 
-    def MOVEDELAY(self, axis: SingleAxis, time_in_ms: float,):
+    def MOVEDELAY(self, axis: SingleAxis, time_in_ms: float, ):
         # NOTE (HR) Motion command - waiting for a specific time
         self._assert_is_single_axis(axis)
 
@@ -365,7 +399,32 @@ class AeroBasicAPI(abc.ABC):
 
         self.send(f"GALVO LASEROVERRIDE {axis.parameter_name} {mode.value}")
 
+    def GALVO_ROTATION(self,
+                       axis: SingleAxis,
+                       compensation_angle: float):
+        return self.send(f"GALVO ROTATION {axis.parameter_name} {compensation_angle:3f}")
+
     # IFOV
+    def IFOV(self,
+             mode: IFOV_Mode):
+        return self.send(f"IFOV {mode.value}")
+
+    def CONNECTED_SPEED(self,
+                        speed_in_mm_per_sec: float = None):
+        if speed_in_mm_per_sec is None:
+            speed_in_mm_per_sec = 10
+        return self.send(f"F{speed_in_mm_per_sec}")
+
+    def POWER(self,
+              power: float):
+        if power < 0:
+            raise ValueError(f"Power needs to be >= 0")
+        elif power > 10:
+            raise ValueError(
+                f"Power needs to be >= 10. Unit is NOT mW or µW. It has to interpolated from the calibration file and "
+                f"therefore has a value between 0 and 10 to attenuate the attenuator!")
+        return self.send(f"$A0[0].A={power}")
+
     def IFOV_TIME(self, search_time: int = 200):
         """
         Configures the maximum search time that the controller looks ahead in Infinite Field of View (IFOV).

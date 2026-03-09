@@ -122,7 +122,47 @@ class AerotechAsciiInterface(AeroBasicAPI):
             self.socket.close()
             self.socket = None
 
+    def run_testzweck_altesSystem(self, cmd: str):
+        """ Run the given AeroBasic command on the A3200 controller. """
+
+        cmdTerminatingChar= 10
+        cmdSuccessChar= 37
+        cmdInvalidChar= 33
+        cmdFaultChar= 35
+        if not self.is_opened:
+            raise RuntimeError("Not connected!")
+
+        # Append terminal character
+        if cmd[-1] != chr(cmdTerminatingChar):
+            cmd += chr(cmdTerminatingChar)
+
+        # Send command
+        self.socket.send(cmd.encode())
+
+        # Read and return response
+        line = self.socket.recv(4096).decode().strip()
+        code, response = line[0], line[1:]
+        if code != chr(cmdSuccessChar):
+            print(f"Command failed! {code}, {response} -> {line}")
+            self.socket.send("~LASTERROR".encode())
+            line = self.socket.recv(4096).decode().strip()
+            print(f"Command failed! {code}, {response} -> {line}")
+
+        data = "".join(response)
+
+        # Check return code
+        self.logger.debug(str(response))
+
+        return data
+
+    def send_one(self, command: str) -> str:
+        try:
+            return self.send_one(command)
+        except AerotechError:
+            return self.run_testzweck_altesSystem(command)
+
     def send(self, command: str) -> str:
+
         """ Run the given AeroBasic command on the A3200 controller. """
 
         if not self.is_opened:
@@ -152,6 +192,7 @@ class AerotechAsciiInterface(AeroBasicAPI):
 
         # Error handling -> Invalid Syntax
         if cmd_resp.return_code == ReturnCode.INVALID:
+            print(f"Command failed! {code}, {data}")
             raise AerotechError(f"Command '{command.strip()}' has an invalid syntax!")
 
         # Error handling -> Code execution failed
@@ -164,6 +205,7 @@ class AerotechAsciiInterface(AeroBasicAPI):
             cmd_resp.error = error
             self.logger.error(str(cmd_resp))
 
+            print(f"Command failed! {code}, {data}")
             raise AerotechError(f"Execution failed for {command}. Reason: {error}")
 
         raise RuntimeError(f"Could not identify return code {code}")

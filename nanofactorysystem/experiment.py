@@ -9,7 +9,7 @@ import time
 import uuid
 from logging import Logger
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator, Optional, Literal
 from enum import Enum
 
 import matplotlib.pyplot as plt
@@ -77,7 +77,8 @@ class Experiment(object):
                  fov_dim: tuple[float, float],
                  *,
                  skip_corner: bool = False,
-                 plane_fit_mode: int = 0):
+                 plane_fit_mode: int = 0,
+                 setup: Literal["IFOV_off", "IFOV_on"] = "IFOV_off"):
 
         self.path = path
         self.user = str(user)
@@ -131,7 +132,13 @@ class Experiment(object):
 
         # AeroTech A3200 API
         self.a3200 = self.system.a3200_new
-        self.a3200.api(DefaultSetup())
+        if setup == "IFOV_off":
+            self.a3200.api(DefaultSetup())
+        elif setup == "IFOV_on":
+            raise NotImplementedError(
+                "Es muss nochmal das IFOV Setup angepasst werden")  # todo hier schon mal begonnen für IFOV (HR - 26.2.26)
+        else:
+            raise NotImplementedError("Please use an existing setup!")
 
         # Acceleration rates of stages and galvanometer
         self.accel_x_mm = float(
@@ -237,9 +244,9 @@ class Experiment(object):
         n_rows = self.grid[0]  # + 1
         n_cols = self.grid[1]  # + 1 todo check if +1 is necessary for planefit_mode=0
         points = []
-        if self.plane_fit_mode == 0:
-            for i in range(n_rows):
-                for j in range(n_cols):
+        if self.plane_fit_mode == 0:  # plane fitting points also in between structures
+            for i in range(n_rows + 1):
+                for j in range(n_cols + 1):
                     x = float(self.rectangle_tl[0]) + self.margin - 0.5 * self.padding + j * (
                             self.structure_size + self.padding)
                     y = float(self.rectangle_tl[1]) + self.margin - 0.5 * self.padding + i * (
@@ -528,7 +535,7 @@ class Experiment(object):
             assert structure is not None
             n_structures = sum(
                 [s["structure_type"] in (
-                StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING) for s in
+                    StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING) for s in
                  self.structures])
             if n_structures >= self.grid[0] * self.grid[1]:
                 raise ValueError(f"Too many structures for structure {name}!")
@@ -558,10 +565,11 @@ class Experiment(object):
                 [s["structure_type"] in (
                     StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING) for s in
                  self.structures])
-            assert n_structures >=1, "At least one structure has to be defined prior to repeat."
+            assert n_structures >= 1, "At least one structure has to be defined prior to repeat."
 
             s_2_repeat = (self.structures[-1]).copy
-            repition_number = sum(s["name"].split("(")[0] in (s_2_repeat["name"].split("(")[0]) for s in self.structures)
+            repition_number = sum(
+                s["name"].split("(")[0] in (s_2_repeat["name"].split("(")[0]) for s in self.structures)
             name = f"{s_2_repeat["name"]}({repition_number})"
             structure = s_2_repeat["structure"]
             axes = s_2_repeat["axes"]
@@ -603,7 +611,9 @@ class Experiment(object):
                           path: Path,
                           n_dhm_img: int = 0,
                           stitching: bool = False):
-        plotting_structure = False  # todo make it dependent of stitching needed.
+        plotting_structure = False
+        if not stitching:
+            plotting_structure = True
         self.log.info(f"Creating layer programs for {name}: {structure}")
         assert isinstance(structure, DrawableObject)
 
@@ -674,8 +684,8 @@ class Experiment(object):
 
             if stitching:  # funktioniert anscheinend!
                 x_offset, y_offset = structure.get_tile_center_for_layer(layer_id)
-                x_value = x_structure_center+x_offset/1000
-                y_value = y_structure_center+y_offset/1000
+                x_value = x_structure_center + x_offset / 1000
+                y_value = y_structure_center + y_offset / 1000
             else:
                 x_value = x_structure_center
                 y_value = y_structure_center
@@ -743,32 +753,32 @@ class Experiment(object):
                 x, y = self.structure_location(structure_id).as_tuple()
                 n_dhm_img = 10
                 structure_id += 1
-                stitching=False
+                stitching = False
 
             elif structure_dict["structure_type"] == StructureType.STITCHING:
                 x, y = self.structure_location(structure_id).as_tuple()
                 n_dhm_img = 10
                 structure_id += 1
-                stitching=True
+                stitching = True
 
             elif structure_dict["structure_type"] == StructureType.REPEAT:
                 x, y = self.structure_location(structure_id).as_tuple()
                 n_dhm_img = 10
                 structure_id += 1
-                stitching=False
+                stitching = False
 
             # Reference point of corner structure
             elif structure_dict["structure_type"] == StructureType.CORNER:
                 corner_pos = structure_dict["corner"]
                 x, y = self.corner_location(corner_pos).as_tuple()
                 n_dhm_img = 1
-                stitching=False
+                stitching = False
 
             # Reference point of qrcode
             elif structure_dict["structure_type"] == StructureType.QRCODE:
                 x, y = self.qrcode_location().as_tuple()
                 n_dhm_img = 1
-                stitching=False
+                stitching = False
 
             # Unknown structure type
             else:
@@ -802,7 +812,8 @@ class Experiment(object):
                         y: float,  # um
                         name: str,
                         power: float,
-                        dhm_image_count: int = 0):
+                        dhm_image_count: int = 0,
+                        restart: bool=False):
 
         structure_path = self.path / "structures" / name
         camera_path = structure_path / "camera"
@@ -811,6 +822,8 @@ class Experiment(object):
         mkdir(dhm_path, clean=False)
 
         self.log.info(f"Printing {name}")
+        # program files angucken
+        # allgmein power
 
         # Set laser power
         # todo (HR) - improvement of printing process by adjustable power (between layers or even between lines)
@@ -820,12 +833,13 @@ class Experiment(object):
         structure_center_absolute_mm = {"X": x / 1000, "Y": y / 1000}
 
         # Images before structure writing
-        self.measure(
-            coordinate=structure_center_absolute_mm,
-            name=f"{name}_before",
-            camera_path=structure_path,
-            dhm_path=structure_path,
-            dhm_image_count=dhm_image_count)
+        if not restart:
+            self.measure(
+                coordinate=structure_center_absolute_mm,
+                name=f"{name}_before",
+                camera_path=structure_path,
+                dhm_path=structure_path,
+                dhm_image_count=dhm_image_count)
 
         # Prepare order of layer writing
         if self.drop_direction == DropDirection.UP:
@@ -837,8 +851,10 @@ class Experiment(object):
 
         # Write all layers of the structure
         t1 = time.time()
-        for layer_id in range(len(pgm_files_list))[::order]:
-            layer_pgm_path = pgm_files_list[layer_id]
+        for layer_count in range(len(pgm_files_list))[::order]:
+            layer_pgm_path = pgm_files_list[layer_count]
+            layer_id = int(str(layer_pgm_path).split('.')[-2])
+            # Einzelheiten über das Programm. Wenn das Programm bestimmte Größe überschreiten sollte, dann sollte man überdenken ob man das nicht vielleicht aufsplittet
             try:
                 task = self.a3200.run_program_as_task(layer_pgm_path, task_id=1)
                 task.wait_to_finish()
@@ -849,10 +865,12 @@ class Experiment(object):
                     camera_path=camera_path,
                     dhm_path=dhm_path,
                     dhm_image_count=dhm_image_count)
-                self.update_print_progress(name, layer_id, order=order)
+                self.update_print_progress(name, layer_id=layer_id, layer_count=layer_count, order=order,
+                                           drop_direction=self.drop_direction)
             except AerotechError as e:
-                self.update_print_progress(name, layer_id, order=order, error=e)
                 self.log.error(f"Program failed for {name}: {e}")
+                self.update_print_progress(name, layer_id=layer_id, layer_count=layer_count, order=order, error=e,
+                                           drop_direction=self.drop_direction, error_log=True)
         t2 = time.time()
         self.log.info(f"Making {name} took {t2 - t1:.2f}s")
 
@@ -863,7 +881,8 @@ class Experiment(object):
             camera_path=structure_path,
             dhm_path=structure_path,
             dhm_image_count=dhm_image_count + 10)
-        self.update_print_progress("finished", 000, order=0)
+        self.update_print_progress(name, layer_id=layer_id, layer_count=layer_count, order=order,
+                                   drop_direction=self.drop_direction, finished=True)
 
     def print_experiment(self):
         if self.structure_configs is None:
@@ -882,26 +901,141 @@ class Experiment(object):
     def update_print_progress(self,
                               name: str,
                               layer_id: int,
+                              layer_count: int = None,
                               order: int = None,
-                              error=None):
+                              error=None,
+                              drop_direction=None,
+                              finished: bool = False,
+                              error_log: bool = False):
         save_path = self.path / "print_progress.json"
-        # # check if save path ends with a json extension
-        # if str(save_path).split(".")[-1] is not "json":
-        #     save_path = save_path / "print_progress.json"
-        # os.makedirs(save_path, exist_ok=True)
-        # create update
-        print_status = {
-            "name": name,
-            "finished layer": layer_id,
-            "order": order,
-            "error": error,
-            "information": "order negative = Drop Direction negative (down)"
-        }
-        save_path.write_text(json.dumps(print_status, indent=4))
+
+        if save_path.exists():
+            data = json.loads(save_path.read_text())
+        else:
+            data = {
+                "current_structure": {},
+                "finished_structures": [],
+                "error log": []
+            }
+        if error is not None:
+            e = error
+            print(e)
+        if not finished:
+            data["current_structure"] = {"name": name,
+                                         "finished layer": layer_id,
+                                         "layer count (n printed layers)": layer_count,
+                                         "order": order,
+                                         "error": str(error),
+                                         "drop direction": drop_direction.to_text() if drop_direction is not None else "No information",
+                                         "information": "order -1 -> Drop direction negative.\norder +1 -> Drop direction positive.\nlayer count varies, because if a print is aborted and restarted the layer count give the amount of printed layers in that print instance."
+                                         }
+            if error_log:
+                data["error log"].append(data["current_structure"])
+        else:
+            completed_structure = data["current_structure"]
+            data["finished_structures"].append(completed_structure)
+            if error_log:
+                data["error log"].append(data["current_structure"])
+            data["current_structure"] = {}
+
+        save_path.write_text(json.dumps(data, indent=4))
 
     def restart_experiment(self):
-        # todo (HR) - write a code to restart print after abortion. Print_progress.json + structures.json
-        pass
+        progress_path = self.path / "print_progress.json"
+
+        if not progress_path.exists():
+            raise ValueError("No print progress file found.")
+
+        # loading print progress data
+        print_data = json.loads(progress_path.read_text())
+
+        # retrieve original programs
+        self.retrieve_programs()
+
+        # finished structures
+        finished_names = {
+            s["name"] for s in print_data["finished_structures"]
+        }
+
+        # printed structure where the print was aborted - or an empty dictionary
+        current_structure = print_data.get("current_structure", {})
+
+        resume_name = None
+        resume_layer_id = None
+        resume_order = None
+
+        if current_structure:
+            resume_name = current_structure["name"]
+            resume_layer_id = current_structure["finished layer"]
+            resume_order = current_structure["order"]
+
+        # filter out every finished structures
+        remaining_structures = [
+            s for s in self.structure_configs
+            if s["name"] not in finished_names
+        ]
+
+        # Iterate over all remaining (not fully finished) structures
+        for config in remaining_structures:
+
+            name = config["name"]
+            layer_files = [Path(p) for p in config["layer_files"]]
+
+            # If this structure was partially printed, trim the layer list
+            if name == resume_name:
+                self.log.info(
+                    f"Resuming structure '{name}' at layer {resume_layer_id}"
+                )
+
+            # OLD--------------------------------------------------------------
+            #     if resume_order == 1:
+            #         layer_files = layer_files[resume_layer + 1:]
+            #     elif resume_order == -1:
+            #         layer_files = layer_files[:resume_layer]
+            #         layer_files = layer_files[::-1]  # reverse order
+            #     else:
+            #         raise ValueError("Invalid resume order")
+            # NEW--------------------------------------------------------------
+                # lange version für den kurzen for block unten
+                # for f in layer_files:
+                #     layer_id = extract_layer_id(f)
+                #
+                #     if resume_order == 1:
+                #         if layer_id > resume_layer_id:
+                #             remaining_layers.append(f)
+                #
+                #     elif resume_order == -1:
+                #         if layer_id < resume_layer_id:
+                #             remaining_layers.append(f)
+                #
+                #     else:
+                #         raise ValueError("Invalid resume order")
+
+            # helper function to extract layer id from filename
+                def extract_layer_id(path):
+                    return int(str(path).split('.')[-2])
+
+                # always sort ascending
+                layer_files = sorted(layer_files, key=extract_layer_id)
+
+                remaining_layers = []
+                for f in layer_files:
+                    layer_id = extract_layer_id(f)
+
+                    if (layer_id - resume_layer_id) * resume_order > 0:
+                        remaining_layers.append(f)
+
+                layer_files = remaining_layers
+
+            self.print_structure(
+                layer_files,
+                x=config["center_x"],
+                y=config["center_y"],
+                name=name,
+                power=config["power"],
+                dhm_image_count=config["number of dhm images"],
+                restart=True
+            )
 
     def measure(self,
                 coordinate: Coordinate,

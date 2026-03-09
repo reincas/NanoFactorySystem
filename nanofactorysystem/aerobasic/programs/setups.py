@@ -20,12 +20,66 @@ class DefaultSetup(AeroBasicProgram):
 class SetupIFOV(AeroBasicProgram):
     def __init__(
             self,
+            objective,
+            time=200,
+            tracking_speed=10000,
+            tracking_acceleration=20000,
+            velocity_mode: VelocityMode = VelocityMode.ON,
+    ):
+        super().__init__()
+        if objective=="Zeiss 20x":
+            self.ifov_size = 500/2  # half FOV
+        if objective=="Zeiss 63x":
+            self.ifov_size = 150/2  # half FOV
+        self.ifov_time = time
+        self.ifov_tracking_speed = tracking_speed # max =100*self.ifov_size
+        self.ifov_tracking_acceleration = tracking_acceleration
+
+        self.send("SECONDS")
+        self.send("ABSOLUTE")  # ABSOLUTE has to be set for IFOV
+        self.VELOCITY(velocity_mode)
+        self.send("WAIT MODE AUTO")
+        self.send("GALVO LASEROVERRIDE A AUTO")
+
+        # Synchronize axes
+        self.comment("\nSynchronize axes")
+        self.send("IFOV AXISPAIR 0, A, X")
+        self.send("IFOV AXISPAIR 1, B, Y")
+
+        # IFOV Settings
+        self.comment("\nIFOV Settings")
+        self.send(f"IFOV TIME {self.ifov_time:f}")
+        self.send(f"IFOV SIZE {self.ifov_size:f}")
+        self.send(f"IFOV TRACKINGSPEED {tracking_speed:f}")
+        self.send(f"IFOV TRACKINGACCEL {tracking_acceleration:f}")
+
+        # Compensation of tilted GALVO Axis
+        self.send("GALVO ROTATION A -0.6")
+        self.send("GALVO ROTATION B -1.1")
+        #
+        # # Muss im IFOV Programm geamcht werden
+        # power_aber_nicht_in_mW=2.4
+        # self.send(f"$A[0].A = {power_aber_nicht_in_mW}")
+        # # Speed einstellung in dem Program selbst, da es Strukturabhängig ist
+        # speed = 10
+        # self.send(f"F {speed}")
+        # self.send("RAPID A0 B0")
+        # # an die richtige stelle verfahren
+        # self.send("RAPID X0 Y0")  # ändern
+        # self.send("IFOV ON")
+
+
+class SetupIFOV_OLD(AeroBasicProgram):
+    def __init__(
+            self,
+            objective,
             size=0.5,
             time=10,
             tracking_speed=500,
             tracking_acceleration=500
     ):
         super().__init__()
+
         self.ifov_size = size
         self.ifov_time = time
         self.ifov_tracking_speed = tracking_speed

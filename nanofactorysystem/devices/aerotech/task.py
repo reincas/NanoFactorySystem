@@ -140,6 +140,9 @@ class Task:
                 f"Program not finished! {self.task_state}.{additional_info}"
             )
 
+        if int(self.current_line) != self.total_lines:
+            print(f"Task Mode: {self.task_mode}\nTask State: {self.task_state}\nTask Status 0: {self.task_status0}\nTask Status 1: {self.task_status1}\nTask Status 2: {self.task_status2}")
+
         pbar.close()
 
     def finish(self):

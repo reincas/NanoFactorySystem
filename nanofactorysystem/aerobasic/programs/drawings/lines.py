@@ -1,13 +1,78 @@
 import math
 from abc import ABC
 from enum import Enum
-from typing import Optional, Literal, Iterator
+from typing import Optional, Literal, Iterator, Tuple
 
 import numpy as np
 
 from nanofactorysystem.aerobasic import GalvoLaserOverrideMode, SingleAxis
 from nanofactorysystem.aerobasic.programs.drawings import DrawableAeroBasicProgram, DrawableObject
+from nanofactorysystem.aerobasic.programs.drawings.base import IFOV_AeroBasicProgram
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, Coordinate, Point3D, Point2D
+
+
+class IFOV_Lines(DrawableObject):
+    def __init__(
+            self,
+            reference_point: Point2D | Point3D,
+            lines: list[list[Tuple[float, float]]],  # correct? - not sure for Typing
+            *,
+            velocity: float,
+            power: float = None
+    ):
+        super().__init__()
+        self.reference_point = reference_point
+        self.lines = lines
+        if 500 <= velocity <= 25000:
+            self.velocity = velocity / 1000
+        else:
+            self.velocity = velocity
+
+        self.power = power
+
+    @property
+    def center_point(self) -> Point2D:
+        return self.reference_point if isinstance(self.reference_point, Point2D) else Point2D(X=self.reference_point.X,
+                                                                                              Y=self.reference_point.Y)
+
+    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[IFOV_AeroBasicProgram]:
+        program = IFOV_AeroBasicProgram(coordinate_system)
+        # set power
+        if self.power is not None:
+            program.SET_POWER(power=self.power)
+        # set velocity
+        if self.velocity is not None:
+            program.SET_SPEED(self.velocity)
+
+        # Initialize Galvo - not necessary needed?! Already in IFOV Setup done
+        program.COMPENSATE_GALVO_ROTATION(axis=SingleAxis.A)
+        program.COMPENSATE_GALVO_ROTATION(axis=SingleAxis.B)
+
+        # IFOV only works with absolute system
+        program.ABSOLUTE()
+
+        # go to reference and reset
+        if isinstance(self.reference_point, Point3D):
+            program.RAPID(X=self.reference_point.X, Y=self.reference_point.Y, Z=self.reference_point.Z)
+        elif isinstance(self.reference_point, Point2D):
+            program.RAPID(X=self.reference_point.X, Y=self.reference_point.Y)
+        else:
+            raise ValueError("Reference Point is not a 2D or 3D Point.")
+
+        program.RESET_GALVO()
+        # start IFOV Program
+        program.START_IFOV()
+
+        for start, end in self.lines:
+            assert isinstance(start, Point2D), "Start Point is not a Point2D."
+            assert isinstance(end, Point2D), "End Point is not a Point2D."
+
+            program.RAPID(A=start.X, B=start.Y)
+            program.LINEAR(A=end.X, B=end.Y)
+
+        program.END_IFOV()
+
+        yield program
 
 
 class _Lines(DrawableObject, ABC):
@@ -135,6 +200,7 @@ class ZLines(_Lines):
     def center_point(self) -> Point3D:
         return Point3D(self.x, self.y, (self.lines[0][0] + self.lines[-1][1]) / 2)
 
+
 class PolyLine(DrawableObject):
     """
     Function to Draw a shape with different Points in one Plane.
@@ -150,6 +216,7 @@ class PolyLine(DrawableObject):
 
     X are Points and / \ - are the lines with LASER ON
     """
+
     def __init__(
             self,
             line: list[Coordinate],
@@ -287,7 +354,7 @@ class Corner(DrawableObject):
 
         for z in np.arange(0, self.height, self.slice_size):
             program = DrawableAeroBasicProgram(coordinate_system)
-            program.LINEAR(Z=z+self.corner_center.Z)
+            program.LINEAR(Z=z + self.corner_center.Z)
             poly_lines = self.single_layer(
                 self.corner_center + Point3D(0, 0, z),
                 self.length,
@@ -332,10 +399,10 @@ class Corner(DrawableObject):
             p1, p2, p3 = [p1, p2, p3][::order]
             lines.append([p1.as_dict(), p2.as_dict(), p3.as_dict()])
             if mark:
-                p1_mark = corner_center + (p1_raw - Point2D(0, 2*width)).rotate2D(rotation_rad)
-                p2a_mark = corner_center + (p2_raw - Point2D(0, 2*width)).rotate2D(rotation_rad)
-                p2b_mark = corner_center + (p2_raw - Point2D(2*width, 0)).rotate2D(rotation_rad)
-                p3_mark = corner_center + (p3_raw - Point2D(2*width, 0)).rotate2D(rotation_rad)
+                p1_mark = corner_center + (p1_raw - Point2D(0, 2 * width)).rotate2D(rotation_rad)
+                p2a_mark = corner_center + (p2_raw - Point2D(0, 2 * width)).rotate2D(rotation_rad)
+                p2b_mark = corner_center + (p2_raw - Point2D(2 * width, 0)).rotate2D(rotation_rad)
+                p3_mark = corner_center + (p3_raw - Point2D(2 * width, 0)).rotate2D(rotation_rad)
                 p1_mark, p2a_mark, p2b_mark, p3_mark = [p1_mark, p2a_mark, p2b_mark, p3_mark][::order]
                 lines_mark.append([p1_mark.as_dict(), p2a_mark.as_dict()])
                 lines_mark.append([p2b_mark.as_dict(), p3_mark.as_dict()])
@@ -410,7 +477,7 @@ class Rectangle2D(DrawableObject):
         program = DrawableAeroBasicProgram(coordinate_system)
         bottom_left = self.center - Point2D(self.width / 2, self.length / 2)
 
-        if self.hatching_direction == HatchingDirection.X: 
+        if self.hatching_direction == HatchingDirection.X:
             line_program = XLines
             hatching_start_position = bottom_left.X
             line_start = bottom_left.Y
@@ -480,7 +547,7 @@ class Rectangle3D(DrawableObject):
         # todo: i dont know exactly why i added Z==0 here. maybe rethink in future - 02.12 HOTFIX
         # if self.height == 0 and self.center.Z==0:
         if self.height == 0:
-            return program
+            yield program
 
         n_layer = abs(round(self.height / self.slice_size)) + 1
         slice_size_opt = self.height / (n_layer - 1)
@@ -498,7 +565,7 @@ class Rectangle3D(DrawableObject):
                 hatching_direction=hatching_direction
             )
             program = DrawableAeroBasicProgram(coordinate_system)
-            program.LINEAR(Z=z_offset+self.center.Z)
+            program.LINEAR(Z=z_offset + self.center.Z)
             program.add_programm(rectangle.draw_on(coordinate_system))
             yield program
             hatching_direction = hatching_direction.flip()

@@ -82,7 +82,7 @@ def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_contin
     if objective == "Zeiss 20x":
         drop_direction =DropDirection.UP
         fov = 500
-        zmax = 25700.0
+        zmax = 25350.0
         # Corner settings
         c_width = 50
         c_length = 300

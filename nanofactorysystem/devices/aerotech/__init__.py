@@ -154,13 +154,14 @@ class Aerotech3200:
             path = Path(program)
 
         # Copy program to uniform name for execution to avoid loading too many programs on controller.
-        exec_path = Path.home() / "python_aerobasic_program.pgm"
+        exec_path = Path.home() / "python_aerobasic_program.pgm"    # todo (hr 26.2.26 - Bugfixing) here maybe deletion of prior program?
         exec_path.write_bytes(path.read_bytes())
 
         # Load program
         if task_id is None:
             # TODO: Better algorithm to determine task_id
             task_id = 2
+# here error occurs - HR - 20x objective - binary program loading
         self.api.PROGRAM_LOAD(task_id, exec_path)
 
         # Wait for program to be ready

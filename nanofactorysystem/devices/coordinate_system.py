@@ -76,6 +76,9 @@ class DropDirection(Enum):
     UP = -1
     DOWN = 1
 
+    def to_text(self):
+        return f"Droplet is facing down" if self.name == "DOWN" else "Droplet is facing up"
+
 class ZFunction(abc.ABC):
     @abc.abstractmethod
     def __call__(self, x: float, y: float) -> float:
@@ -173,10 +176,10 @@ class PlaneFit(Plane):
     @classmethod
     def from_points(cls, points: np.ndarray | Iterable[Iterable[float]]):
         # Copy A and b, so that we can change them without affecting 'points'
-        A = np.array(points, dtype=float)
-        b = np.array(A[:, -1])
-        A[:, -1] = 1.0
-        parameters, _, _, _ = np.linalg.lstsq(A, b, rcond=None)
+        A = np.array(points, dtype=float)  # constructing an array
+        b = np.array(A[:, -1])  # separating z coordinates
+        A[:, -1] = 1.0  # set z to 1
+        parameters, _, _, _ = np.linalg.lstsq(A, b, rcond=None)  # return x_slope, y_slope and z0
         return PlaneFit(parameters, points=points)
 
     @classmethod
@@ -239,3 +242,4 @@ class CoordinateSystem:
         )
         coordinate_system.axis_mapping = self.axis_mapping.copy()
         return coordinate_system
+
