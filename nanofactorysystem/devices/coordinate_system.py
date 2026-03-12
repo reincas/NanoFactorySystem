@@ -218,8 +218,11 @@ class CoordinateSystem:
 
     def convert(self, coordinate: Coordinate) -> Coordinate:
         new_coordinate = {}
-        x = self.offset_x
-        y = self.offset_y
+        # NOTE Potential bug discovered (HR - 10.03.26 - fixed
+        # x = self.offset_x  #old
+        # y = self.offset_y
+        x = coordinate.get("X", 0) + self.offset_x
+        y = coordinate.get("Y", 0) + self.offset_y
         if "X" in coordinate:
             new_coordinate[self.axis_mapping.get("X", "X")] = coordinate["X"] + self.offset_x
         if "Y" in coordinate:

@@ -20,28 +20,46 @@ class IFOV_Lines(DrawableObject):
             velocity: float,
             power: float = None
     ):
+        """
+        Reference point: Point2D or Point3D.
+        lines: Has to be a list of tuples where each tuple is (start, end). Start and end point have to be of type
+                Point2D or Point3D. If not then an error will occur.
+        velocity: float in unit mm/s. If value is between 500 and 25000 it will be divided with 1000, because it will be
+                assumed that a wrong unit of µm/s was being chosen.
+        power: Possible to set the power at each line/ layer individually.
+
+        Note: Before each Line, the controller goes to the reference point.
+        """
         super().__init__()
         self.reference_point = reference_point
         self.lines = lines
         if 500 <= velocity <= 25000:
             self.velocity = velocity / 1000
+        elif 50 <= velocity < 500:
+            self.velocity = 25
+            raise Warning(f"Velocity v={velocity} is too high. Velocity was set to 25mm/s!")
+        elif velocity>25000:
+            raise ValueError(f"Velocity value {velocity} exceeds 25 mm/s.")
         else:
             self.velocity = velocity
 
         self.power = power
 
     @property
-    def center_point(self) -> Point2D:
-        return self.reference_point if isinstance(self.reference_point, Point2D) else Point2D(X=self.reference_point.X,
-                                                                                              Y=self.reference_point.Y)
+    def center_point(self) -> Point3D:
+        return self.reference_point if isinstance(self.reference_point, Point3D) else Point3D(X=self.reference_point.X,
+                                                                                              Y=self.reference_point.Y,
+                                                                                              Z=0)
 
     def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[IFOV_AeroBasicProgram]:
         program = IFOV_AeroBasicProgram(coordinate_system)
+        program.initialise_IFOV_configuration(objective="Zeiss 20x")
         # set power
         if self.power is not None:
             program.SET_POWER(power=self.power)
         # set velocity
         if self.velocity is not None:
+            # Velocity very important for good functionality of IFOV - will be automatically added (F10) if not specified (None)
             program.SET_SPEED(self.velocity)
 
         # Initialize Galvo - not necessary needed?! Already in IFOV Setup done
@@ -52,7 +70,7 @@ class IFOV_Lines(DrawableObject):
         program.ABSOLUTE()
 
         # go to reference and reset
-        if isinstance(self.reference_point, Point3D):
+        if isinstance(self.reference_point, Point3D):  # NOTE PROBLEM HUSTON WE HAVE A PROBLEM!!!!
             program.RAPID(X=self.reference_point.X, Y=self.reference_point.Y, Z=self.reference_point.Z)
         elif isinstance(self.reference_point, Point2D):
             program.RAPID(X=self.reference_point.X, Y=self.reference_point.Y)
@@ -64,8 +82,8 @@ class IFOV_Lines(DrawableObject):
         program.START_IFOV()
 
         for start, end in self.lines:
-            assert isinstance(start, Point2D), "Start Point is not a Point2D."
-            assert isinstance(end, Point2D), "End Point is not a Point2D."
+            assert isinstance(start, Point2D) or isinstance(start, Point3D), "Start Point is not a 2D/3D Point."
+            assert isinstance(end, Point2D) or isinstance(end, Point3D), "End Point is not a 2D/3D Point."
 
             program.RAPID(A=start.X, B=start.Y)
             program.LINEAR(A=end.X, B=end.Y)

@@ -1,16 +1,118 @@
 import abc
 from typing import Optional, Any, Iterator
 
-from nanofactorysystem.aerobasic import SingleAxis, BezierMode, Axis, GalvoLaserOverrideMode, IFOV_Mode
+from nanofactorysystem.aerobasic import SingleAxis, BezierMode, Axis, GalvoLaserOverrideMode, IFOV_Mode, VelocityMode
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
+from nanofactorysystem.aerobasic.programs.setups import SetupIFOV
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, Point2D, Point3D
 
-
 class IFOV_AeroBasicProgram(AeroBasicProgram):
+    TRACKING_SPEED = 10000
+    TRACKING_ACCELERATION = 20000
+    IFOV_TIME = 200
+    IFOV_SIZE_20x = 500/2  # half FOV of Objective
+    IFOV_SIZE_63x = 150/2  # half FOV of Objective
+    VELOCITY_MODE = VelocityMode.ON
+
+    ROTATION_A = -0.6  # experimental validated values for Zeiss 20x Objective
+    ROTATION_B = -1.1  # experimental validated values for Zeiss 20x Objective
+
     def __init__(self, coordinate_system: CoordinateSystem):
         super().__init__()
         self.coordinate_system = coordinate_system
 
+    def initialise_IFOV_configuration(self, objective="Zeiss 20x"):
+        if objective == "Zeiss 20x":
+            ifov_size = self.IFOV_SIZE_20x
+        else:
+            ifov_size = self.IFOV_SIZE_63x
+
+        self.send("SECONDS")
+        self.send("ABSOLUTE")  # ABSOLUTE has to be set for IFOV
+        self.VELOCITY(self.VELOCITY_MODE)
+        self.send("WAIT MODE AUTO")
+        self.send("GALVO LASEROVERRIDE A AUTO")
+
+        # Synchronize axes
+        self.comment("\nSynchronize axes")
+        self.send("IFOV AXISPAIR 0, A, X")
+        self.send("IFOV AXISPAIR 1, B, Y")
+
+        # IFOV Settings
+        self.comment("\nIFOV Settings")
+        self.send(f"IFOV TIME {self.IFOV_TIME:f}")
+        self.send(f"IFOV SIZE {ifov_size:f}")
+        self.send(f"IFOV TRACKINGSPEED {self.TRACKING_SPEED:f}")
+        self.send(f"IFOV TRACKINGACCEL {self.TRACKING_ACCELERATION:f}")
+
+        # # Compensation of tilted GALVO Axis
+        # self.send("GALVO ROTATION A {self.ROTATION_A}")
+        # self.send("GALVO ROTATION B {self.ROTATION_B}")
+
+    def _apply_ifov_conversion(self, coordinate: dict) -> dict:
+        result = {}
+        for k, v in coordinate.items():
+            if k == "Z":
+                # Z offset from the coordinate system (StaticOffset = PlaneFit-Z)
+                result[k] = v + self.coordinate_system.z_function(0, 0)
+            elif k == "X":
+                result[k] = v + self.coordinate_system.offset_x
+            elif k == "Y":
+                result[k] = v + self.coordinate_system.offset_y
+            else:
+                result[k] = v
+        # Unit scaling (µm → mm)
+        return {k: v * self.coordinate_system.unit.value for k, v in result.items()}
+
+    def LINEAR(self, X=None, Y=None, Z=None, A=None, B=None, E=None, F=None):
+        coordinate = {"X": X, "Y": Y, "Z": Z, "A": A, "B": B}
+        coordinate = {k: v for k, v in coordinate.items() if v is not None}
+        converted = self._apply_ifov_conversion(coordinate)
+        return super().LINEAR(**converted, F=None, E=None)
+
+    def RAPID(self, X=None, Y=None, Z=None, A=None, B=None, E=None, F=None):
+        coordinate = {"X": X, "Y": Y, "Z": Z, "A": A, "B": B}
+        coordinate = {k: v for k, v in coordinate.items() if v is not None}
+        converted = self._apply_ifov_conversion(coordinate)
+        return super().RAPID(**converted, F=None, E=None)
+
+    def RESET_GALVO(self):
+        galvo_reset_coordinates = {"A": 0,
+                                   "B": 0}
+        return super().RAPID(**galvo_reset_coordinates, F=None, E=None)
+
+    def COMPENSATE_GALVO_ROTATION(self,
+                                  axis: SingleAxis):
+        if axis == SingleAxis.A:
+            rotation = self.ROTATION_A
+        elif axis == SingleAxis.B:
+            rotation = self.ROTATION_B
+        else:
+            raise SyntaxError(f"No compensation possible for {axis.name}")
+
+        return super().GALVO_ROTATION(axis, rotation)
+
+    def SET_SPEED(self,
+                  F: float=None):
+        """ default speed is 10 mm/s"""
+        if F is not None and F >= 30:  # todo(HR) find a good and relatable value
+            raise ValueError(f"Speed has to be in mm(!) per seconds. {F} mm/s is too high.")
+        return super().CONNECTED_SPEED(speed_in_mm_per_sec=F)
+
+    def SET_POWER(self,
+                  power:float):
+        """Power needs to be between 0 and 10.
+        It is dependent on the calibration file."""
+        return super().POWER(power)
+
+    def START_IFOV(self):
+        return super().IFOV(IFOV_Mode.ON)
+
+    def END_IFOV(self):
+        return super().IFOV(IFOV_Mode.OFF)
+
+    # OLD
+    '''
     def LINEAR(self,
                X: Optional[float] = None,
                Y: Optional[float] = None,
@@ -48,43 +150,7 @@ class IFOV_AeroBasicProgram(AeroBasicProgram):
         coordinate = {k: v for k, v in coordinate.items() if v is not None}
 
         return super().RAPID(**coordinate, F=None, E=None)
-
-    def RESET_GALVO(self):
-        galvo_reset_coordinates = {"A": 0,
-                                   "B": 0}
-        return super().RAPID(**galvo_reset_coordinates, F=None, E=None)
-
-    def COMPENSATE_GALVO_ROTATION(self,
-                                  axis: SingleAxis):
-        rotation_a = -0.6      # experimental validated values for Zeiss 20x Objective
-        rotation_b = -1.1      # experimental validated values for Zeiss 20x Objective
-        if axis == SingleAxis.A:
-            rotation = rotation_a
-        elif axis == SingleAxis.B:
-            rotation = rotation_b
-        else:
-            raise SyntaxError(f"No compensation possible for {axis.name}")
-
-        return super().GALVO_ROTATION(axis, rotation)
-
-    def SET_SPEED(self,
-                  F: float=None):
-        """ default speed is 10 mm/s"""
-        if F is not None and F >= 30:  # todo(HR) find a good and relatable value
-            raise ValueError(f"Speed has to be in mm(!) per seconds. {F} mm/s is too high.")
-        return super().CONNECTED_SPEED(speed_in_mm_per_sec=F)
-
-    def SET_POWER(self,
-                  power:float):
-        """Power needs to be between 0 and 10.
-        It is dependent on the calibration file."""
-        return super().POWER(power)
-
-    def START_IFOV(self):
-        return super().IFOV(IFOV_Mode.ON)
-
-    def END_IFOV(self):
-        return super().IFOV(IFOV_Mode.ON)
+    '''
 
 
 class DrawableAeroBasicProgram(AeroBasicProgram):

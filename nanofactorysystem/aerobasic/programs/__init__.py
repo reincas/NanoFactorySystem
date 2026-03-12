@@ -87,6 +87,7 @@ class AeroBasicProgram(AeroBasicAPI):
         return command
 
     def add_programm(self, program: "AeroBasicProgram"):
+        # print(f"{len(program.lines)} lines \t{program.__str__()}")
         self.lines += program.lines
 
     def to_text(self, *, with_variables=True, with_ending=True, compact=False, add_timestamp=True) -> str:

@@ -19,6 +19,7 @@ Author: PhoenixD / Hannes Robben
 # =============================================================================
 from .base import (
     DrawableAeroBasicProgram,
+    IFOV_AeroBasicProgram,
     DrawableObject,
     DrawablePoint,
     VoidStructure,
@@ -28,6 +29,7 @@ from .base import (
 # LINE PRIMITIVES AND BASIC STRUCTURES
 # =============================================================================
 from .lines import (
+    IFOV_Lines,
     XLines,
     YLines,
     ZLines,
@@ -88,6 +90,16 @@ from .height_function_structures import (
     TileSliceResult,
 )
 
+
+# =============================================================================
+# IFOV Structures
+# =============================================================================
+from .ifov_gratings import (
+    Rectangle2D_IFOV,
+    Rectangle3D_IFOV,
+    BinaryGrating_IFOV)
+
+
 # =============================================================================
 # PUBLIC API
 # =============================================================================
@@ -97,11 +109,13 @@ __all__ = [
     "DrawableObject",
     "DrawablePoint",
     "VoidStructure",
+    "IFOV_AeroBasicProgram",
 
     # Lines
     "XLines",
     "YLines",
     "ZLines",
+    "IFOV_Lines",
     "PolyLine",
     "PolyLines",
     "Rectangle2D",
@@ -139,4 +153,8 @@ __all__ = [
     "SlicerConfig",
     "SliceResult",
     "TileSliceResult",
+
+    # IFOV Structures
+    "BinaryGrating_IFOV",
+    "Rectangle3D_IFOV"
 ]

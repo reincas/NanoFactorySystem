@@ -24,7 +24,7 @@ from nanofactorysystem.aerobasic.programs import AeroBasicProgram
 from nanofactorysystem.aerobasic.programs.drawings import DrawableObject, DrawableAeroBasicProgram
 from nanofactorysystem.aerobasic.programs.drawings.lines import Corner
 from nanofactorysystem.aerobasic.programs.drawings.qr_code import QRCode, QrErrorCorrection
-from nanofactorysystem.aerobasic.programs.setups import DefaultSetup
+from nanofactorysystem.aerobasic.programs.setups import DefaultSetup, SetupIFOV
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, PlaneFit, DropDirection, Unit, \
     Point2D, Point3D, Coordinate
 from nanofactorysystem.dhm.optimage import optImageMedian
@@ -46,7 +46,8 @@ class StructureType(Enum):
     CORNER = 2
     QRCODE = 3
     STITCHING = 4
-    REPEAT = 5
+    IFOV = 5
+    REPEAT = 6
 
 
 class Experiment(object):
@@ -78,7 +79,8 @@ class Experiment(object):
                  *,
                  skip_corner: bool = False,
                  plane_fit_mode: int = 0,
-                 setup: Literal["IFOV_off", "IFOV_on"] = "IFOV_off"):
+                 setup: Literal["IFOV_off", "IFOV_on"] = "IFOV_off",
+                 substrate_information: dict=None):
 
         self.path = path
         self.user = str(user)
@@ -135,8 +137,9 @@ class Experiment(object):
         if setup == "IFOV_off":
             self.a3200.api(DefaultSetup())
         elif setup == "IFOV_on":
-            raise NotImplementedError(
-                "Es muss nochmal das IFOV Setup angepasst werden")  # todo hier schon mal begonnen für IFOV (HR - 26.2.26)
+            self.a3200.api(SetupIFOV(objective=self.objective))
+            # raise NotImplementedError(
+            #     "Es muss nochmal das IFOV Setup angepasst werden")
         else:
             raise NotImplementedError("Please use an existing setup!")
 
@@ -161,6 +164,10 @@ class Experiment(object):
         # No programs yet
         self.structure_programs = None
         self.structure_configs = None
+        # create dictionary for restart purpose
+        self._create_experiment_dictionary(skip_corner=skip_corner, setup=setup)
+        calibration_file = self.system.controller.attenuator.data
+        self._save_experimental_data(calibration_file=calibration_file, substrate=substrate_information)
 
     def __enter__(self):
         return self
@@ -168,6 +175,80 @@ class Experiment(object):
     def __exit__(self, type, value, traceback):
         self.system.close()
         return
+
+    def _save_experimental_data(self, calibration_file, substrate):
+        # path has to be changed accordingly
+        #   - substrate information is not only for one experiment!
+        #   - calibration file is needed in each experiment and changes only during setup/ changing of system
+        #   - experiment dictionary is only for 1 experiment
+
+        self._save_exp_dict(path=self.path)
+        # Calibration file first column are attenuator values, second column is laser power in mW.
+        self._save_calibration(path=self.path, file=calibration_file)
+        path = self.path.parent
+        self._save_substrate_information(path=path, file = substrate)
+
+    def _save_calibration(self, path, file):
+        file_path = os.path.join(path, "calibration_file.npy")
+        np.save(file_path, file)
+
+    def _save_exp_dict(self, path):
+        if self.exp_dict is None:
+            self._create_experiment_dictionary(skip_corner=None, setup=None)
+            raise Warning("No experiment dictionary. Created one with incomplete information!")
+        file_path = path / "experiment_dictionary.json"
+        file_path.write_text(json.dumps(self.exp_dict, indent=4))
+
+    def _save_substrate_information(self, path, file):
+        if file is None:
+            # todo - maybe create empty file?
+            #   at least information about corner of experiment are important
+            #   as well as whole substrate drop boundaries
+            return
+        assert isinstance(file, dict), "Substrate information must be a dictionary!"
+        file_path = Path(os.path.join(path, "substrate_information.json"))
+
+        # if a file is already existing, then we have to update the file
+        if file_path.exists():
+            # read the file
+            data = json.loads(file_path.read_text())
+            # update information
+            #todo something something data+file bla
+        else:
+            data = file
+
+        file_path.write_text(json.dumps(data, indent=4))
+
+    def _create_experiment_dictionary(self, *, skip_corner, setup):
+        self.exp_dict = {"path": str(self.path),
+                         "user": self.user,
+                         "objective": "Zeiss 20x",
+                         "logger": self.log.handlers[1].baseFilename,
+                         "sys_args": self.sys_args,
+                         "default_power": self.default_power,
+                         "low_speed_um": self.low_speed_um,
+                         "high_speed_um": self.high_speed_um,
+                         "resin_corner_tr": str(self.resin_corner_tr),
+                         "resin_corner_bl": str(self.resin_corner_bl),
+                         "structure_size": self.structure_size,
+                         "margin": self.margin,
+                         "padding": self.padding,
+                         "absolute_grid_center": str(self.absolute_grid_center),
+                         "grid_size": str(self.grid),
+                         "n_mid_points": self.n_mid_points,
+                         "drop_direction": self.drop_direction.value,
+                         "drop_direction_information": self.drop_direction.name,
+                         "corner_z": self.corner_z,
+                         "corner_width": self.corner_width,
+                         "corner_length": self.corner_length,
+                         "corner_height": self.corner_height,
+                         "corner_hatch": self.corner_hatch,
+                         "corner_slice": self.corner_slice,
+                         "fov_dim": str(self.fov_dimensions),
+                         "skip_corner": skip_corner,
+                         "plane_fit_mode": self.plane_fit_mode,
+                         "setup": setup
+                         }
 
     def iter_experiment_locations(self) -> Iterator[tuple[float, float]]:
         """ Return experiment locations in um """
@@ -535,7 +616,8 @@ class Experiment(object):
             assert structure is not None
             n_structures = sum(
                 [s["structure_type"] in (
-                    StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING) for s in
+                    StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING,
+                    StructureType.IFOV) for s in
                  self.structures])
             if n_structures >= self.grid[0] * self.grid[1]:
                 raise ValueError(f"Too many structures for structure {name}!")
@@ -560,10 +642,21 @@ class Experiment(object):
             # strategy is then only tile wise
             pass
 
+        elif structure_type == StructureType.IFOV:
+            assert structure is not None
+            n_structures = sum(
+                [s["structure_type"] in (
+                    StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING,
+                    StructureType.IFOV) for s in
+                 self.structures])
+            if n_structures >= self.grid[0] * self.grid[1]:
+                raise ValueError(f"Too many structures for structure {name}!")
+
         elif structure_type == StructureType.REPEAT:
             n_structures = sum(
                 [s["structure_type"] in (
-                    StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING) for s in
+                    StructureType.NORMAL, StructureType.DUMMY, StructureType.REPEAT, StructureType.STITCHING,
+                    StructureType.IFOV) for s in
                  self.structures])
             assert n_structures >= 1, "At least one structure has to be defined prior to repeat."
 
@@ -612,8 +705,8 @@ class Experiment(object):
                           n_dhm_img: int = 0,
                           stitching: bool = False):
         plotting_structure = False
-        if not stitching:
-            plotting_structure = True
+        # if not stitching:  # todo doesnt work with ifov !
+        #     plotting_structure = True
         self.log.info(f"Creating layer programs for {name}: {structure}")
         assert isinstance(structure, DrawableObject)
 
@@ -625,6 +718,7 @@ class Experiment(object):
         # Make sure that power is not None
         power = float(power)
 
+        # todo check for big structures maximal deviation between corners z should be on the lowest/ highest z value depending on drop orientation
         # Absolute center coordinates
         offset_x = structure.center_point.X
         offset_y = structure.center_point.Y
@@ -761,6 +855,12 @@ class Experiment(object):
                 structure_id += 1
                 stitching = True
 
+            elif structure_dict["structure_type"] == StructureType.IFOV:
+                x, y = self.structure_location(structure_id).as_tuple()
+                n_dhm_img = 10
+                structure_id += 1
+                stitching = False
+
             elif structure_dict["structure_type"] == StructureType.REPEAT:
                 x, y = self.structure_location(structure_id).as_tuple()
                 n_dhm_img = 10
@@ -773,6 +873,7 @@ class Experiment(object):
                 x, y = self.corner_location(corner_pos).as_tuple()
                 n_dhm_img = 1
                 stitching = False
+                dhm_stitching = True  # to be done in the future
 
             # Reference point of qrcode
             elif structure_dict["structure_type"] == StructureType.QRCODE:
@@ -813,7 +914,7 @@ class Experiment(object):
                         name: str,
                         power: float,
                         dhm_image_count: int = 0,
-                        restart: bool=False):
+                        restart: bool = False):
 
         structure_path = self.path / "structures" / name
         camera_path = structure_path / "camera"
@@ -987,15 +1088,15 @@ class Experiment(object):
                     f"Resuming structure '{name}' at layer {resume_layer_id}"
                 )
 
-            # OLD--------------------------------------------------------------
-            #     if resume_order == 1:
-            #         layer_files = layer_files[resume_layer + 1:]
-            #     elif resume_order == -1:
-            #         layer_files = layer_files[:resume_layer]
-            #         layer_files = layer_files[::-1]  # reverse order
-            #     else:
-            #         raise ValueError("Invalid resume order")
-            # NEW--------------------------------------------------------------
+                # OLD--------------------------------------------------------------
+                #     if resume_order == 1:
+                #         layer_files = layer_files[resume_layer + 1:]
+                #     elif resume_order == -1:
+                #         layer_files = layer_files[:resume_layer]
+                #         layer_files = layer_files[::-1]  # reverse order
+                #     else:
+                #         raise ValueError("Invalid resume order")
+                # NEW--------------------------------------------------------------
                 # lange version für den kurzen for block unten
                 # for f in layer_files:
                 #     layer_id = extract_layer_id(f)
@@ -1011,7 +1112,7 @@ class Experiment(object):
                 #     else:
                 #         raise ValueError("Invalid resume order")
 
-            # helper function to extract layer id from filename
+                # helper function to extract layer id from filename
                 def extract_layer_id(path):
                     return int(str(path).split('.')[-2])
 
