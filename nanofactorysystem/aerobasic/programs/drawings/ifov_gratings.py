@@ -106,6 +106,7 @@ class BinaryGrating_IFOV(DrawableObject):
 
     @property
     def centers_of_duty_cycles(self, force=False):
+        angle_rad = np.deg2rad(self.grating_angle_deg)
         if self._center_points_duty_cycle is None or force:
             center_points = []
             whole_period_end = self.n_periods == int(self.n_periods)
@@ -116,8 +117,8 @@ class BinaryGrating_IFOV(DrawableObject):
                     if not whole_period_end:
                         # last period and is not an entire period, so k has to be re-calculated
                         k = -self.y_dim / 2 + round(self.n_periods % 1, 5) / 2 * self.period
-                x_coord = self.center.X - k * np.sin(self.grating_angle_deg)
-                y_coord = self.center.Y - k * np.cos(self.grating_angle_deg)
+                x_coord = self.center.X - k * np.sin(angle_rad)
+                y_coord = self.center.Y - k * np.cos(angle_rad)
                 center = Point3D(X=x_coord, Y=y_coord, Z=0)
                 center_points.append(center)
             self._center_points_duty_cycle = center_points
@@ -236,22 +237,22 @@ class Rectangle2D_IFOV(DrawableObject):
 
         order = 1
         lines = []
-        # ausrechnen aller Start und Endpunkte des Rechtecks
+        angle_rad = np.deg2rad(angle)
+
         for j in range(n_hatch):
+            x_j = -hatching_length / 2 + j * hatch_size_opt  # Hatch-Position
+
             lines.append(
                 [
-                    Point2D(X=-length / 2 * np.cos(angle) + j * hatch_size_opt * np.sin(angle),
-                            Y=-hatching_length / 2 * np.sin(angle) + j * hatch_size_opt * np.cos(angle)),
-                    Point2D(X=length / 2 * np.cos(angle) + j * hatch_size_opt * np.sin(angle),
-                            Y=-hatching_length / 2 * np.sin(angle) + j * hatch_size_opt * np.cos(angle))
+                    Point2D(
+                        X=x_j * np.cos(angle_rad) + length / 2 * np.sin(angle_rad),
+                        Y=x_j * np.sin(angle_rad) - length / 2 * np.cos(angle_rad)
+                    ),
+                    Point2D(
+                        X=x_j * np.cos(angle_rad) - length / 2 * np.sin(angle_rad),
+                        Y=x_j * np.sin(angle_rad) + length / 2 * np.cos(angle_rad)
+                    )
                 ][::order]
-
-                # Note i think without center point because of ifov + relative/absolute relationship
-                # [self.center+Point2D(X=-length/2 * np.cos(angle) + j * hatch_size_opt *np.sin(angle),
-                #                      Y=-hatching_length/2 * np.sin(angle) + j * hatch_size_opt *np.cos(angle)),
-                # self.center + Point2D(X=length / 2 * np.cos(angle) + j * hatch_size_opt * np.sin(angle),
-                #                Y=-hatching_length / 2 * np.sin(angle) + j * hatch_size_opt * np.cos(angle))
-                # ][::order]
             )
             order *= -1
 
