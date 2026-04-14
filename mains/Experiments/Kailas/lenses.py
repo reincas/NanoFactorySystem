@@ -11,8 +11,9 @@ from tkinter import messagebox
 import numpy as np
 
 from nanofactorysystem import mkdir, getLogger
-from nanofactorysystem.aerobasic.programs.drawings import BinaryGrating_IFOV
-from nanofactorysystem.aerobasic.programs.drawings.lines import HatchingDirection
+from nanofactorysystem.aerobasic.programs.drawings.DOE import DOEstep
+from nanofactorysystem.aerobasic.programs.drawings.lines import Stair, Rectangle3D
+from nanofactorysystem.aerobasic.programs.drawings.lens import AsphericalLens
 from nanofactorysystem.devices.coordinate_system import DropDirection, Point2D, Point3D
 from nanofactorysystem.experiment import Experiment, StructureType
 
@@ -21,31 +22,30 @@ sys_args = {
         "fitKind": "quadratic",
     },
     "sample": {
-        "name": "#1",
-        "orientation": "top",
-        "substrate": "boro-silicate glass, aber das dicke glass, ISO 8037/1",
-        "substrateThickness": 1000,
+        "name": "DHM Print",
+        "orientation": "down",
+        "substrate": "boro-silicate glass",
+        "substrateThickness": 700.0,
         "material": "SZ2080",
-        "materialThickness": 175.0,
+        "materialThickness": 75.0,
     },
     "focus": {
         "OffsetFocusDetection": [130, -15],
-        # "OffsetFocusDetection": [120, -80],
-        "minCircularity": 0.8,
+        "minCircularity": 0.6,
         "exposureValue": 120
     },
     "layer": {
-        # "beta": 0.7,
-        "dzFineDefault": 25.0,
+        "beta": 0.7,
+        "dzCoarseDefault": 50.0,
+        "dzFineDefault": 50.0,
         "laserPower": 0.7,
     },
     "plane": {},
 }
 
 
-# ToDo(HR): how do i transfer a dict or other system arguments to this function?
 def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-                     objective="Zeiss 20x", user="Hannes", dhm_usage=False, substrate=None, setup="IFOV_off"):
+               objective="Zeiss 20x", user="Hannes", repeat=12, dhm_usage=False, substrate=None, setup="IFOV_off"):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -63,12 +63,18 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     # deleting all the different data of previous prints
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
-        path = Path(mkdir(f".output/ifov/binary_grating1{datetime.datetime.now():%Y%m%d}", clean=False))
+        path = Path(mkdir(f".output/dhm_paper/DHM_Justage_{datetime.datetime.now():%Y%m%d}_{objective}", clean=False))
     else:
-        # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "grating_nach_debuggen"), clean=False))
+        path = Path(mkdir(os.path.join(path, f"lenses_test_{datetime.datetime.now():%Y%m%d}1234"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
+
+    rand_mat = np.asarray([[2, 1, 4, 2, 1],
+                           [3, 0, 2, 3, 0],
+                           [0, 2, 4, 3, 0],
+                           [3, 4, 0, 1, 1],
+                           [4, 2, 4, 1, 1]])
+    doe_height_profile = rand_mat * 0.6  # height of one step of the staircase - to be able to compare both
 
     # Size of (oval) resin drop in micrometres
     edges = np.asarray(resin_dimension)
@@ -77,7 +83,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     absolute_grid_center = absolute_center
 
     if objective == "Zeiss 20x":
-        drop_direction =DropDirection.UP
+        drop_direction = DropDirection.UP
         fov = 500
         zmax = 24550.0
         # Corner settings
@@ -88,7 +94,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         c_slice = 0.75
         # printing area settings
         margin = 300
-        padding = 100
+        padding = 50
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
@@ -99,7 +105,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         }
 
     elif objective == "Zeiss 63x":
-        drop_direction =DropDirection.DOWN
+        drop_direction = DropDirection.DOWN
         fov = 150
         zmax = 25480.0  # could possibly be up to 25550 µm
         # Corner settings
@@ -109,7 +115,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         c_hatch = 0.3
         c_slice = 0.75
         # printing area settings
-        margin = 50
+        margin = 250
         padding = 100
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
@@ -123,6 +129,9 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     else:
         raise Exception(f"No implemented objective {objective}! Possible objectives are 'Zeiss 20x' and 'Zeiss 63x'.")
 
+    logger.info(f"Print for DHM paper. Structures are stair, aspherical lens, and 5x5 quadratic DOE with"
+                f"feature sizes of 10x10 µm. DOE height array is as follows: {rand_mat}."
+                f"Lens has 1/2 of sphere radius ion comparison to wegener group to make curvature more prominent.")
     sys_args.update({"controller": {
         "zMax": zmax, }
     })
@@ -132,8 +141,8 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
-    structure_size = 2000.0
-    # grid_size = (2, 2)
+    structure_size = fov
+    grid_size = (5, 5)  # number of repetitions
     with Experiment(
             path=path,
             user=user,
@@ -146,10 +155,10 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
             structure_size=structure_size,  # ToDo change fov to structure size and add fov to real
-            margin=margin*2,  # note extra big margin and padding
-            padding=padding*2,
+            margin=margin * 2,  # note extra big margin and padding
+            padding=padding * 2,
             absolute_grid_center=absolute_grid_center,
-            grid=(1,1),
+            grid=grid_size,
             # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
             n_mid_points=0,  # ToDo changing depending on experiment
             drop_direction=drop_direction,
@@ -160,12 +169,12 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
             corner_hatch=c_hatch,
             corner_slice=c_slice,
             fov_dim=(fov, fov),
-            plane_fit_mode=1,
-            skip_corner=True,
+            plane_fit_mode=0,
+            skip_corner=False,
             setup=setup) as experiment:
 
         # Visualize experiment
-        experiment.plot_experiment(show=True)
+        experiment.plot_experiment(show=False)
 
         # Get substrate surface plane
         if ask_continue_box and not messagebox.askyesno(message="Run plane fitting?"): return
@@ -182,31 +191,26 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
 
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
-        # Add structures
-        # experiment.skip_structure()
+        # Adding Stair Structure
+        for i in range(grid_size[0] * grid_size[1]):
+            # Adding aspherical lens structure
+            experiment.add_structure(
+                structure_type=StructureType.NORMAL,
+                name=f"lens{i + 1}_{movement_axis[0]}_{objective}",
+                axes=movement_axis[0],
+                power=parameterset["power"],
+                structure=AsphericalLens(
+                    Point3D(0, 0, -2),
+                    height=6,
+                    length=80,
+                    width=80,
+                    sphere_radius=515,
+                    conic_constant=-2.3,
+                    hatch_size=parameterset["hatch size"],
+                    slice_size=parameterset["slice size"],
+                    velocity=parameterset["velocity"],
+                    acceleration=experiment.accel_a_um))
 
-        experiment.add_structure(
-            structure_type=StructureType.IFOV,
-            name=f"binaryIFOV_s{parameterset["slice size"]}_h_{parameterset["hatch size"]}_p_{parameterset["power"]}_v_{parameterset["velocity"]}_Obj_{objective}",
-            axes="XYZ",
-            power=parameterset["power"],
-            structure=BinaryGrating_IFOV(
-                center=Point3D(0, 0, -1),
-                x_dim=structure_size,  # µm
-                y_dim=structure_size,  # µm
-                period=20,  # µm
-                height=3,  # µm
-                duty_cycle=0.5,  # ratio
-                grating_angle_deg=0.0,
-                base_height=4.0,  # µm
-                hatch_size=parameterset["hatch size"],
-                slice_size=parameterset["slice size"],
-                velocity=parameterset["velocity"],
-                power=None,
-                start_hatching_direction=HatchingDirection.X,
-                alternating_hatch=True,
-            )
-        )
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
 

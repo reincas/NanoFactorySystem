@@ -29,8 +29,9 @@ sys_args = {
         "materialThickness": 75.0,
     },
     "focus": {
-        "OffsetFocusDetection": [120, -80],
-        "minCircularity": 0.6,
+        "OffsetFocusDetection": [130, -15],
+        # "OffsetFocusDetection": [120, -80],
+        "minCircularity": 0.55,
         "exposureValue": 120
     },
     "layer": {
@@ -44,8 +45,8 @@ sys_args = {
 
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
-def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=True, path=None,
-                  objective="Zeiss 20x", user="Hannes", dhm_usage=True):
+def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
+               objective="Zeiss 20x", user="Hannes", dhm_usage=False, substrate=None, setup="IFOV_off"):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -67,7 +68,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     else:
         # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "testprint_dhm"), clean=False))
+        path = Path(mkdir(os.path.join(path, "y_axis_line_resolution_63x"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -77,8 +78,9 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     absolute_grid_center = absolute_center
 
     if objective == "Zeiss 20x":
+        drop_direction = DropDirection.UP
         fov = 500
-        zmax = 25700.0
+        zmax = 24550.0
         # Corner settings
         c_width = 50
         c_length = 300
@@ -99,6 +101,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
 
     elif objective == "Zeiss 63x":
         fov = 150
+        drop_direction = DropDirection.DOWN
         zmax = 25480.0  # could possibly be up to 25550 µm
         # Corner settings
         c_width = 30
@@ -107,17 +110,15 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         c_hatch = 0.3
         c_slice = 0.75
         # printing area settings
-        margin = 50
-        padding = 100
+        margin = 150  # außen
+        padding = 50  # innen
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": 0.1,  # hatch size
-            "slice size": 0.1,  # slice size/ layer height
-            "power": [0.3, 0.4],  # 2
-            "velocity": [4_000, 5_000],  # 7
-            # "power": [0.15, 0.2, 0.25, 0.3, 0.4, 0.5, 0.6, 0.7],  # 8
-            # "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 7_500, 10_000],  # 7
+            "hatch size": 0.2,  # hatch size
+            "slice size": 0.2,  # slice size/ layer height
+            "power": [0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7],
+            "velocity": [1_000, 2_000, 3_000, 4_000, 5_000, 6_000, 7_000, 8_000, 9_000, 10_000]
         }
 
     else:
@@ -132,6 +133,8 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
+    structure_size = fov  # because structure is smaller than fov
+    grid_size = (len(parameterset['power']), len(parameterset['velocity']))
     with Experiment(
             path=path,
             user=user,
@@ -143,20 +146,25 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            structure_size=fov,
+            structure_size=structure_size,
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=(2, 3),  # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
-            n_mid_points=0,  # ToDo changing depending on experiment
-            drop_direction=DropDirection.DOWN,
+            grid=grid_size,
+            # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
+            n_mid_points=4,  # ToDo changing depending on experiment
+            drop_direction=drop_direction,
             corner_z=-2,
             corner_width=c_width,
             corner_length=c_length,
             corner_height=c_height,
             corner_hatch=c_hatch,
             corner_slice=c_slice,
-            plane_fit_mode=1) as experiment:
+            fov_dim=(fov, fov),
+            plane_fit_mode=1,
+            skip_corner=False,
+            setup=setup) as experiment:
+
 
         # Visualize experiment
         experiment.plot_experiment(show=True)
@@ -189,13 +197,13 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
                     power=parameterset["power"][j],
                     structure=Distance_Test(
                         center=Point3D(0, 0, -2),
-                        fov=[100, 100],  # field of view range -> minimal 100µm x 100µm (63x Objective)
+                        fov=[150, 150],  # field of view range -> minimal 100µm x 100µm (63x Objective)
                         min_dist=0.050,  # 50 nm
                         max_dist=5,  # maximal distance between lines -> 5 µm
                         n_lines=20,
                         length=50.0,  # 50 µm
                         height=3.0,  # 3 µm
-                        draw_axis='x',
+                        draw_axis='y',
                         slice_size=parameterset["slice size"],
                         velocity=parameterset["velocity"][i],
                         acceleration=experiment.accel_a_um))

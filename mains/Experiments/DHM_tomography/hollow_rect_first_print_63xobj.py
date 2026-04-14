@@ -11,8 +11,7 @@ from tkinter import messagebox
 import numpy as np
 
 from nanofactorysystem import mkdir, getLogger
-from nanofactorysystem.aerobasic.programs.drawings import BinaryGrating_IFOV
-from nanofactorysystem.aerobasic.programs.drawings.lines import HatchingDirection
+from nanofactorysystem.aerobasic.programs.drawings.hollow_structure import HollowRectangle
 from nanofactorysystem.devices.coordinate_system import DropDirection, Point2D, Point3D
 from nanofactorysystem.experiment import Experiment, StructureType
 
@@ -23,21 +22,22 @@ sys_args = {
     "sample": {
         "name": "#1",
         "orientation": "top",
-        "substrate": "boro-silicate glass, aber das dicke glass, ISO 8037/1",
-        "substrateThickness": 1000,
+        "substrate": "boro-silicate glass",
+        "substrateThickness": 700.0,
         "material": "SZ2080",
-        "materialThickness": 175.0,
+        "materialThickness": 75.0,
     },
     "focus": {
         "OffsetFocusDetection": [130, -15],
         # "OffsetFocusDetection": [120, -80],
-        "minCircularity": 0.8,
+        "minCircularity": 0.7,
         "exposureValue": 120
     },
     "layer": {
         # "beta": 0.7,
+        # "dzCoarseDefault": 50.0,
         "dzFineDefault": 25.0,
-        "laserPower": 0.7,
+        "laserPower": 0.7
     },
     "plane": {},
 }
@@ -45,7 +45,7 @@ sys_args = {
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
 def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-                     objective="Zeiss 20x", user="Hannes", dhm_usage=False, substrate=None, setup="IFOV_off"):
+               objective="Zeiss 20x", user="Hannes", dhm_usage=False, substrate=None, setup="IFOV_off"):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -63,11 +63,11 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     # deleting all the different data of previous prints
     if path is None:
         # ToDo(HR) Adjust referencing to another more suitable path
-        path = Path(mkdir(f".output/ifov/binary_grating1{datetime.datetime.now():%Y%m%d}", clean=False))
+        path = Path(mkdir(f".output/tomography/testprint{datetime.datetime.now():%Y%m%d}", clean=False))
     else:
         # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "grating_nach_debuggen"), clean=False))
+        path = Path(mkdir(os.path.join(path, "hollow_rect_first_print_9x_NEW_position"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -77,7 +77,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     absolute_grid_center = absolute_center
 
     if objective == "Zeiss 20x":
-        drop_direction =DropDirection.UP
+        drop_direction = DropDirection.UP
         fov = 500
         zmax = 24550.0
         # Corner settings
@@ -87,20 +87,20 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         c_hatch = 0.5
         c_slice = 0.75
         # printing area settings
-        margin = 300
+        margin = 200
         padding = 100
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": 0.2,  # hatch size
-            "slice size": 0.2,  # slice size/ layer height
+            "hatch size": [0.125],  # hatch size
+            "slice size": [0.15],  # slice size/ layer height
             "power": 0.7,
             "velocity": 10_000
         }
 
     elif objective == "Zeiss 63x":
-        drop_direction =DropDirection.DOWN
         fov = 150
+        drop_direction = DropDirection.DOWN
         zmax = 25480.0  # could possibly be up to 25550 µm
         # Corner settings
         c_width = 30
@@ -114,9 +114,9 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
-            "hatch size": 0.2,  # [0.1, 0.2, 0.5],  # hatch size
-            "slice size": 0.2,  # [0.1, 0.2, 0.5],  # slice size/ layer height
-            "power": 0.5,
+            "hatch size": 0.2,  # hatch size
+            "slice size": 0.2,  # slice size/ layer height
+            "power": 0.2,
             "velocity": 5_000
         }
 
@@ -132,8 +132,8 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
-    structure_size = 2000.0
-    # grid_size = (2, 2)
+    structure_size = fov  # because structure is smaller than fov
+    grid_size = (3, 3)
     with Experiment(
             path=path,
             user=user,
@@ -142,14 +142,14 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
             sys_args=sys_args,
             default_power=0.7,
             low_speed_um=1000,
-            high_speed_um=10_000,
+            high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            structure_size=structure_size,  # ToDo change fov to structure size and add fov to real
-            margin=margin*2,  # note extra big margin and padding
-            padding=padding*2,
+            structure_size=structure_size,
+            margin=margin,
+            padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=(1,1),
+            grid=grid_size,
             # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
             n_mid_points=0,  # ToDo changing depending on experiment
             drop_direction=drop_direction,
@@ -161,7 +161,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
             corner_slice=c_slice,
             fov_dim=(fov, fov),
             plane_fit_mode=1,
-            skip_corner=True,
+            skip_corner=False,
             setup=setup) as experiment:
 
         # Visualize experiment
@@ -171,7 +171,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         if ask_continue_box and not messagebox.askyesno(message="Run plane fitting?"): return
         experiment.plane_fit(force=False)
 
-        # Optical path max_length for DHM
+        # Optical path length for DHM
         if dhm_usage:
             if ask_continue_box and not messagebox.askyesno(message="Run OPL motor scan?"): return
             experiment.opl_scan(m0=350.0, force=False)
@@ -184,29 +184,24 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         # ----------------------------------------------------------------------------------------------------------------------
         # Add structures
         # experiment.skip_structure()
-
-        experiment.add_structure(
-            structure_type=StructureType.IFOV,
-            name=f"binaryIFOV_s{parameterset["slice size"]}_h_{parameterset["hatch size"]}_p_{parameterset["power"]}_v_{parameterset["velocity"]}_Obj_{objective}",
-            axes="XYZ",
-            power=parameterset["power"],
-            structure=BinaryGrating_IFOV(
-                center=Point3D(0, 0, -1),
-                x_dim=structure_size,  # µm
-                y_dim=structure_size,  # µm
-                period=20,  # µm
-                height=3,  # µm
-                duty_cycle=0.5,  # ratio
-                grating_angle_deg=0.0,
-                base_height=4.0,  # µm
-                hatch_size=parameterset["hatch size"],
-                slice_size=parameterset["slice size"],
-                velocity=parameterset["velocity"],
-                power=None,
-                start_hatching_direction=HatchingDirection.X,
-                alternating_hatch=True,
-            )
-        )
+        for i in range(grid_size[0] * grid_size[1]):
+            experiment.add_structure(
+                structure_type=StructureType.NORMAL,
+                name=f"Hollow_rectangle_{i}",
+                axes="ABZ",
+                power=parameterset['power'],
+                structure=HollowRectangle(
+                    center=Point3D(0, 0, -2),
+                    width=75,
+                    length=75,
+                    base_height=3,
+                    hollow_height=3,
+                    top_height=3,
+                    min_opening=25,
+                    hatch_size=parameterset['hatch size'],
+                    slice_size=parameterset['slice size'],
+                    velocity=parameterset['velocity'],
+                    acceleration=experiment.accel_a_um))
         # ----------------------------------------------------------------------------------------------------------------------
         # ----------------------------------------------------------------------------------------------------------------------
 

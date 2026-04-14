@@ -68,7 +68,7 @@ if __name__ == "__main__":
     objective = "Zeiss 63x"
     objective = sysConfig.objective(objective)
     # path = mkdir(".test/tilt")
-    opt = True
+    opt = False
     scan = False
     spectrum = False
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     with Dhm(user, objective, logger, **args) as dhm:
 
         dhm.device.MotorPos = 3900.0  # 20x objective circa
-        dhm.device.MotorPos = 325.0  # 63x objective
+        dhm.device.MotorPos = 780.0  # 63x objective
         if opt:
             # dhm.device.MotorPos = 390.3  # 63x objective
             dhm.device.MotorPos = 200  # 63x objective

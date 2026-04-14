@@ -1,6 +1,4 @@
-from idlelib.colorizer import matched_named_groups
 from typing import Iterator
-
 import numpy as np
 
 from nanofactorysystem.aerobasic import SingleAxis
@@ -104,29 +102,60 @@ class BinaryGrating_IFOV(DrawableObject):
     def n_periods(self) -> float:
         return self.y_dim / self.period
 
+    # def centers_of_duty_cycles(self):
+    #     angle_rad = np.deg2rad(self.grating_angle_deg)
+    #     if self._center_points_duty_cycle is None or force:
+    #         center_points = []
+    #         whole_period_end = self.n_periods == int(self.n_periods)
+    #
+    #         for i in range(int(self.n_periods)):
+    #             k = self.y_dim / 2 - self.duty_width / 2 - i * self.period
+    #             if i == int(self.n_periods - 1):
+    #                 if not whole_period_end:
+    #                     # last period and is not an entire period, so k has to be re-calculated
+    #                     k = -self.y_dim / 2 + round(self.n_periods % 1, 5) / 2 * self.period
+    #             x_coord = self.center.X - k * np.sin(angle_rad)
+    #             y_coord = self.center.Y - k * np.cos(angle_rad)
+    #             center = Point3D(X=x_coord, Y=y_coord, Z=0)
+    #             center_points.append(center)
+    #         self._center_points_duty_cycle = center_points
+    #
+    #     return self._center_points_duty_cycle
+
     @property
-    def centers_of_duty_cycles(self, force=False):
+    def centers_of_duty_cycles(self) -> list[Point3D]:
+        if self._center_points_duty_cycle is not None:
+            return self._center_points_duty_cycle
+
         angle_rad = np.deg2rad(self.grating_angle_deg)
-        if self._center_points_duty_cycle is None or force:
-            center_points = []
-            whole_period_end = self.n_periods == int(self.n_periods)
+        phase_offset = (self.phase_deg / 360.0) * self.period
+        center_points = []
 
-            for i in range(int(self.n_periods)):
-                k = self.y_dim / 2 - self.duty_width / 2 - i * self.period
-                if i == int(self.n_periods - 1):
-                    if not whole_period_end:
-                        # last period and is not an entire period, so k has to be re-calculated
-                        k = -self.y_dim / 2 + round(self.n_periods % 1, 5) / 2 * self.period
-                x_coord = self.center.X - k * np.sin(angle_rad)
-                y_coord = self.center.Y - k * np.cos(angle_rad)
-                center = Point3D(X=x_coord, Y=y_coord, Z=0)
-                center_points.append(center)
-            self._center_points_duty_cycle = center_points
+        n_full = int(self.n_periods)
+        has_partial = not np.isclose(self.n_periods, n_full)
+        total_iterations = n_full + (1 if has_partial else 0)
 
+        for i in range(total_iterations):
+            if i < n_full:
+                # Vollständige Periode: Mittelpunkt liegt bei regulärem k
+                k = self.y_dim / 2 - self.duty_width / 2 - i * self.period - phase_offset
+            else:
+                # Partielle Periode am Ende: verfügbare Breite bestimmt den Mittelpunkt
+                frac_length = (self.n_periods % 1) * self.period
+                partial_top = -self.y_dim / 2 + frac_length - phase_offset
+                # k = -self.y_dim / 2 + min(self.duty_width, frac_length) / 2
+                # fix
+                k = partial_top - min(self.duty_width, frac_length) / 2
+
+            x_coord = self.center.X - k * np.sin(angle_rad)
+            y_coord = self.center.Y + k * np.cos(angle_rad)
+            center_points.append(Point3D(X=x_coord, Y=y_coord, Z=0))
+
+        self._center_points_duty_cycle = center_points
         return self._center_points_duty_cycle
 
     def iterate_layers(self, coordinate_system: CoordinateSystem,
-                       full_layer_yield=False
+                       full_layer_yield=False, plot_progress=None
                        ) -> Iterator[IFOV_AeroBasicProgram|DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         if self.base_height > 0:
@@ -143,7 +172,7 @@ class BinaryGrating_IFOV(DrawableObject):
                 alternate_hatching=self.alternating_hatch,
                 hatching_direction=self.start_hatching_direction
             )
-            yield from base.iterate_layers(coordinate_system)
+            yield from base.iterate_layers(coordinate_system, plot_progress=plot_progress)
 
         n_layer = abs(round(self.height / self.slice_size)) + 1
         slice_size_opt = self.height / (n_layer - 1)
@@ -153,37 +182,69 @@ class BinaryGrating_IFOV(DrawableObject):
         else:
             start_z = self.base_height + self.center.Z
 
-        for z_height in np.arange(start_z + slice_size_opt, self.structure_height + slice_size_opt,
-                                  slice_size_opt):
-            # +slize weil arange sonst die letzte zahl verschluckt und die base_height wahrscheinlich doppelt gedruckt wird?
-            # todo untersuchen ob ich bei dem Ende noch (z_ende +slice) machen muss, oder ob das ohne dessen besser funktioiert in bezug darauf die bessere/ genauere höhe zu bekommen
-            # todo überprüfen ob die base_height layer doppelt gedruckt werden würde
-
+        hatching_direction = self.start_hatching_direction
+        for z_idx, z_height in enumerate(
+                np.arange(start_z, self.structure_height + slice_size_opt / 2, slice_size_opt)):
             layer_program = DrawableAeroBasicProgram(coordinate_system)
-            # z-coordinate movement in rect2d
-            for center_point_duty_cycle in self.centers_of_duty_cycles:
+
+            for dc_idx, center_point_duty_cycle in enumerate(self.centers_of_duty_cycles):
                 center_point = Point3D(X=center_point_duty_cycle.X, Y=center_point_duty_cycle.Y, Z=z_height)
                 rectangle = Rectangle2D_IFOV(
                     center=center_point,
                     x_length=self.x_dim,
-                    y_length=self.period,
+                    y_length=self.duty_width,
                     hatch_size=self.hatch_size,
                     velocity=self.velocity,
                     power=self.power,
-                    hatching_direction=self.start_hatching_direction,
+                    hatching_direction=hatching_direction,
                     angle=self.grating_angle_deg
                 )
+
+                # unique name per rectangle: "<prefix>_z<layer>_dc<duty_cycle_index>"
+                # plot_name = f"Grating_z{z_idx}_dc{dc_idx}"
+                plot_name = None
                 if full_layer_yield:
                     layer_program.add_programm(rectangle.draw_on(coordinate_system))
                 else:
-                    yield from rectangle.iterate_layers(coordinate_system)
-                # program.add_programm(rectangle.draw_on(coordinate_system))
-                # this will be added to only one file
+                    yield from rectangle.iterate_layers(coordinate_system, plot_name=plot_name)
+
+            if self.alternating_hatch:
+                hatching_direction = hatching_direction.flip()
 
             if full_layer_yield:
                 program.add_programm(layer_program)
                 # yielding full layer program with every 2D rectangle
                 yield layer_program
+        # program ohne plotting
+        # for z_height in np.arange(start_z, self.structure_height + slice_size_opt/2, slice_size_opt):
+        #     layer_program = DrawableAeroBasicProgram(coordinate_system)
+        #     # z-coordinate movement in rect2d
+        #     for center_point_duty_cycle in self.centers_of_duty_cycles:
+        #         center_point = Point3D(X=center_point_duty_cycle.X, Y=center_point_duty_cycle.Y, Z=z_height)
+        #         rectangle = Rectangle2D_IFOV(
+        #             center=center_point,
+        #             x_length=self.x_dim,
+        #             y_length=self.duty_width,
+        #             hatch_size=self.hatch_size,
+        #             velocity=self.velocity,
+        #             power=self.power,
+        #             hatching_direction=hatching_direction,
+        #             angle=self.grating_angle_deg
+        #         )
+        #         if full_layer_yield:
+        #             layer_program.add_programm(rectangle.draw_on(coordinate_system))
+        #         else:
+        #             yield from rectangle.iterate_layers(coordinate_system, plot_name=)
+        #         # program.add_programm(rectangle.draw_on(coordinate_system))
+        #         # this will be added to only one file
+        #
+        #     if self.alternating_hatch:
+        #         hatching_direction = hatching_direction.flip()
+        #
+        #     if full_layer_yield:
+        #         program.add_programm(layer_program)
+        #         # yielding full layer program with every 2D rectangle
+        #         yield layer_program
 
         return program
 
@@ -217,7 +278,53 @@ class Rectangle2D_IFOV(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[IFOV_AeroBasicProgram]:
+    @property
+    def boundary_box(self):
+        """
+        Returns four 2D Points representing the (rotated) corners of the structure.
+        Rotation by phi (degree) around self.center_point.
+        """
+        phi = np.deg2rad(self.phi)
+        cos_phi = np.cos(phi)
+        sin_phi = np.sin(phi)
+
+        # Half-extents
+        dx = self.x_length / 2
+        dy = self.y_length / 2
+
+        # Unrotated corner offsets (relative to center)
+        offsets = [
+            (-dx, -dy),  # bottom_left
+            (+dx, -dy),  # bottom_right
+            (+dx, +dy),  # top_right
+            (-dx, +dy),  # top_left
+        ]
+
+        cx, cy = self.center_point.X, self.center_point.Y
+
+        return [
+            Point2D(
+                X=cx + ox * cos_phi - oy * sin_phi,
+                Y=cy + ox * sin_phi + oy * cos_phi,
+            )
+            for ox, oy in offsets
+        ]
+
+    def iterate_layers(self, coordinate_system: CoordinateSystem,  mode="normal", plot_name=None):
+        if mode.lower() == "normal":
+            # hatching line by line - snake pattern von unten nach oben
+            yield from self.iterate_layers_line_hatching(coordinate_system, plot_name=plot_name)
+        elif mode.lower() == "contur":
+            yield from self.iterate_layer_contur(coordinate_system)
+        else:
+            raise NotImplementedError(f"mode: {mode} not implemented")
+
+    def iterate_layer_contur(self, coordinate_system: CoordinateSystem):
+        raise NotImplementedError("iterate_layer_contur not yet implemented")
+        # todo - mit polyline auf ifov umschreiben und dann neue berechnung der punkte wie bei hollow structure
+        #   dient dazu eine andere hatching taktik auszuprobieren-vielleicht möglich die Sachen an den Seiten umzustellen
+
+    def iterate_layers_line_hatching(self, coordinate_system: CoordinateSystem, plot_name=None) -> Iterator[IFOV_AeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         # top_left = self.center + Point2D(X=-self.x_length/2*np.cos(self.phi), Y=self.y_length/2*np.sin(self.phi))
 
@@ -255,6 +362,33 @@ class Rectangle2D_IFOV(DrawableObject):
                 ][::order]
             )
             order *= -1
+
+        if plot_name is not None:
+            import matplotlib.pyplot as plt
+
+            fig, ax = plt.subplots()
+
+            ax.plot(self.center.X, self.center.Y, 'ro', markersize=6, label='center', zorder=5)
+
+            for line in lines:
+                x_start = self.center.X + line[0].X
+                y_start = self.center.Y + line[0].Y
+                x_end = self.center.X + line[1].X
+                y_end = self.center.Y + line[1].Y
+
+                # Draw the actual line segment
+                ax.plot(x_start, y_start, 'o', color='green', markersize=3)  # scan start
+                ax.plot(x_end, y_end, 'x', color='red', markersize=3)  # scan end
+
+            # ax.set_aspect('equal')
+            ax.set_title(
+                f"{plot_name} | dir={self.hatching_direction.name} "
+                f"angle={self.phi}° n_hatch={n_hatch}"
+            )
+            ax.legend(loc='upper right', fontsize=7)
+            plt.tight_layout()
+            plt.savefig(f"ifov_gratings_{plot_name}.png", dpi=150)
+            plt.close(fig)
 
         ifov_lines = IFOV_Lines(
             reference_point=self.center,
@@ -300,10 +434,11 @@ class Rectangle3D_IFOV(DrawableObject):
     def center_point(self) -> Point2D:
         return self.center
 
-    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:
+    def iterate_layers(self, coordinate_system: CoordinateSystem, plot_progress=False) -> Iterator[DrawableAeroBasicProgram]:
         program = DrawableAeroBasicProgram(coordinate_system)
         if self.height == 0:
             yield program
+            return
 
         n_layer = abs(round(self.height / self.slice_size)) + 1
         slice_size_opt = self.height / (n_layer - 1)
@@ -321,12 +456,14 @@ class Rectangle3D_IFOV(DrawableObject):
                 angle=self.angle
             )
             program = DrawableAeroBasicProgram(coordinate_system)  # todo ist das notwendig
-            
+
             # FEEEEEHLLLLLEEEERRRR  -- das ist nicht die korrekt z-ccord - sie ist RELATIV und NICHT absolut
             # program.RAPID(Z=z_offset + self.center.Z)
             # todo (HR) check if it has an influence if LINEAR is used - out of the scope of IFOV should be working
-
-            program.add_programm(rectangle.draw_on(coordinate_system))
+            if plot_progress:
+                program.add_programm(rectangle.draw_on(coordinate_system, plot_name=f"3D_layer_{i}_"))
+            else:
+                program.add_programm(rectangle.draw_on(coordinate_system))
             yield program
             if self.alternate_hatching:
                 self.hatching_direction = self.hatching_direction.flip()

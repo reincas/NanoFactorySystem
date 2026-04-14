@@ -21,7 +21,7 @@ class IFOV_AeroBasicProgram(AeroBasicProgram):
         super().__init__()
         self.coordinate_system = coordinate_system
 
-    def initialise_IFOV_configuration(self, objective="Zeiss 20x"):
+    def initialise_IFOV_configuration(self, objective="Zeiss 63x"):
         if objective == "Zeiss 20x":
             ifov_size = self.IFOV_SIZE_20x
         else:
@@ -308,11 +308,16 @@ class DrawableObject(abc.ABC):
     def center_point(self) -> Point2D:
         pass
 
-    def draw_on(self, coordinate_system: CoordinateSystem) -> DrawableAeroBasicProgram:
+    def draw_on(self, coordinate_system: CoordinateSystem, plot_name=None) -> DrawableAeroBasicProgram:
         program = DrawableAeroBasicProgram(coordinate_system)
-        for layer in self.iterate_layers(coordinate_system):
-            program.add_programm(layer)
-        return program
+        if plot_name is None:
+            for layer in self.iterate_layers(coordinate_system):
+                program.add_programm(layer)
+            return program
+        else:
+            for layer in self.iterate_layers(coordinate_system, plot_name=plot_name):
+                program.add_programm(layer)
+            return program
 
     @abc.abstractmethod
     def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[DrawableAeroBasicProgram]:

@@ -43,9 +43,10 @@ sys_args = {
 }
 
 
+
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
-def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-                  objective="Zeiss 20x", user="Hannes", dhm_usage=True):
+def binary_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
+                     objective="Zeiss 20x", user="Hannes", dhm_usage=False, substrate=None, setup="IFOV_off"):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -77,8 +78,9 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     absolute_grid_center = absolute_center
 
     if objective == "Zeiss 20x":
+        drop_direction =DropDirection.UP
         fov = 500
-        zmax = 25700.0
+        zmax = 24550.0
         # Corner settings
         c_width = 50
         c_length = 300
@@ -86,8 +88,8 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
         c_hatch = 0.5
         c_slice = 0.75
         # printing area settings
-        margin = 200
-        padding = 100
+        margin = 200  # outside
+        padding = 100  # inside
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
@@ -99,6 +101,7 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
 
     elif objective == "Zeiss 63x":
         fov = 150
+        drop_direction = DropDirection.DOWN
         zmax = 25480.0  # could possibly be up to 25550 µm
         # Corner settings
         c_width = 30
@@ -130,6 +133,8 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
+    structure_size = fov,  # because structure is smaller than fov
+    grid=(2, 3)
     with Experiment(
             path=path,
             user=user,
@@ -141,21 +146,23 @@ def dhm_testprint(absolute_center: Point2D, resin_dimension: list, ask_continue_
             high_speed_um=5000,
             resin_corner_tr=resin_corner_tr,
             resin_corner_bl=resin_corner_bl,
-            structure_size=fov,
+            structure_size=structure_size,
             margin=margin,
             padding=padding,
             absolute_grid_center=absolute_grid_center,
-            grid=(2, 3),  # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
+            grid=grid,  # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
             n_mid_points=0,  # ToDo changing depending on experiment
-            drop_direction=DropDirection.DOWN,
+            drop_direction=drop_direction,
             corner_z=-2,
             corner_width=c_width,
             corner_length=c_length,
             corner_height=c_height,
             corner_hatch=c_hatch,
             corner_slice=c_slice,
+            fov_dim = (fov, fov),
             plane_fit_mode=1,
-            skip_corner=False) as experiment:
+            skip_corner=False,
+            setup = setup) as experiment:
 
         # Visualize experiment
         experiment.plot_experiment(show=True)

@@ -131,7 +131,7 @@ def dhm_paper(absolute_center: Point2D, resin_dimension: list, ask_continue_box=
     sys_args.update({"controller": {
         "zMax": zmax, }
     })
-    grid_size = (repeat, 4)  # number of repetitions, number of structures
+    grid_size = (3, 3)  # number of repetitions, number of structures
 
     with Experiment(
             path=path,
