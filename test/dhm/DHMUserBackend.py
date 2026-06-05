@@ -40,8 +40,9 @@ class DHMBackend:
         # standard initialisation optical path length motor position
         if objective == "Zeiss 63x":
             if motor_pos is None:
-                # self.motor_pos = 190.0  # old
-                self.motor_pos = 790.0
+                # self.motor_pos = 190.0  # even older
+                # self.motor_pos = 790.0  # old
+                self.motor_pos = 1800.0
             else:
                 self.motor_pos = motor_pos
         elif objective == "Zeiss 20x":
@@ -143,8 +144,8 @@ class DHMBackend:
 if __name__ == "__main__":
     objective_selected = "Zeiss 63x"
     desktop = os.path.join(os.path.join(os.environ['USERPROFILE']), 'Desktop')
-    path = os.path.join(desktop, "Refractive index")
-    path_2 = os.path.join(path, "hollowStructure_3rd_Measurement"
+    path = os.path.join(desktop, "publication_ifov")
+    path_2 = os.path.join(path, "lens"
                                 "")
     img_getter = DHMBackend(save_path=path_2, objective=objective_selected, motor_pos=190)
 

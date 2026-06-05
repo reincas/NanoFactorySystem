@@ -31,7 +31,7 @@ sys_args = {
     "focus": {
         "OffsetFocusDetection": [130, -15],
         # "OffsetFocusDetection": [120, -80],
-        "minCircularity": 0.8,
+        "minCircularity": 0.55,
         "exposureValue": 120
     },
     "layer": {
@@ -45,7 +45,7 @@ sys_args = {
 
 # ToDo(HR): how do i transfer a dict or other system arguments to this function?
 def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box=False, path=None,
-                     objective="Zeiss 20x", user="Hannes", dhm_usage=False, substrate=None, setup="IFOV_off"):
+                     objective="Zeiss 63x", user="Hannes", dhm_usage=False, substrate=None, setup="IFOV_on"):
     """
         absolute_center: Point2D with x- and y-coordinate of the center of this experiment
         resin_dimension: list of the coordinates of the edges of the resin
@@ -67,7 +67,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     else:
         # ToDo(HR) make ist more controllable
         assert (path, Path)
-        path = Path(mkdir(os.path.join(path, "Grating_different_size"), clean=False))
+        path = Path(mkdir(os.path.join(path, "NEW_ifov_63x_test_after_femtika_support"), clean=False))
     logger = getLogger(logfile=f"{path}/console.log")
 
     # Size of (oval) resin drop in micrometres
@@ -109,14 +109,14 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
         c_hatch = 0.3
         c_slice = 0.75
         # printing area settings
-        margin = 50
+        margin = 200
         padding = 100
         # printing settings
         movement_axis = ["ABZ", "XYZ"]
         parameterset = {
             "hatch size": 0.2,  # [0.1, 0.2, 0.5],  # hatch size
             "slice size": 0.2,  # [0.1, 0.2, 0.5],  # slice size/ layer height
-            "power": 0.4,
+            "power": 0.5,
             "velocity": 5_000
         }
 
@@ -132,7 +132,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
     else:
         sys_args.update({"dhm": {"usage": dhm_usage}})
 
-    structure_size = 2000.0
+    structure_size = 500.0
     # grid_size = (2, 2)
     with Experiment(
             path=path,
@@ -147,7 +147,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
             resin_corner_bl=resin_corner_bl,
             structure_size=structure_size,  # ToDo change fov to structure size and add fov to real
             margin=margin*2,  # note extra big margin and padding
-            padding=padding*2,
+            padding=padding,
             absolute_grid_center=absolute_grid_center,
             grid=(1,1),
             # ToDo: changing depending on experiment - e.g. (number of repetitions, number of structures)
@@ -160,7 +160,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
             corner_hatch=c_hatch,
             corner_slice=c_slice,
             fov_dim=(fov, fov),
-            plane_fit_mode=1,
+            plane_fit_mode=0,
             skip_corner=True,
             setup=setup) as experiment:
 
@@ -187,7 +187,7 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
 
         experiment.add_structure(
             structure_type=StructureType.IFOV,
-            name=f"binaryIFOV_s{parameterset["slice size"]}_h_{parameterset["hatch size"]}_p_{parameterset["power"]}_v_{parameterset["velocity"]}_Obj_{objective}",
+            name=f"binaryIFOV_Obj_{objective}",
             axes="XYZ",
             power=parameterset["power"],
             structure=BinaryGrating_IFOV(
@@ -195,10 +195,10 @@ def print_file(absolute_center: Point2D, resin_dimension: list, ask_continue_box
                 x_dim=structure_size,  # µm
                 y_dim=structure_size,  # µm
                 period=20,  # µm
-                height=3,  # µm
+                height=2,  # µm
                 duty_cycle=0.5,  # ratio
                 grating_angle_deg=0.0,
-                base_height=4.0,  # µm
+                base_height=2.0,  # µm
                 hatch_size=parameterset["hatch size"],
                 slice_size=parameterset["slice size"],
                 velocity=parameterset["velocity"],

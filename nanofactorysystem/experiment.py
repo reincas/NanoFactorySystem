@@ -146,8 +146,9 @@ class Experiment(object):
         # Acceleration rates of stages and galvanometer
         self.accel_x_mm = float(
             self.a3200.api.AXISSTATUS(SingleAxis.X, AxisStatusDataItem.AccelerationRate).replace(",", "."))
+        # note 07.05.2026 - change acceleration to x accel in ifov because of an error
         self.accel_a_mm = float(
-            self.a3200.api.AXISSTATUS(SingleAxis.A, AxisStatusDataItem.AccelerationRate).replace(",", "."))
+            self.a3200.api.AXISSTATUS(SingleAxis.A, AxisStatusDataItem.AccelerationRate).replace(",", ".")) if setup == "IFOV_off" else self.accel_x_mm/2
         self.accel_z_mm = float(
             self.a3200.api.AXISSTATUS(SingleAxis.Z, AxisStatusDataItem.AccelerationRate).replace(",", "."))
         self.accel_x_um = self.accel_x_mm / Unit.um.value

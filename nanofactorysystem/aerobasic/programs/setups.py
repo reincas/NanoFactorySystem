@@ -22,17 +22,17 @@ class SetupIFOV(AeroBasicProgram):
             self,
             objective,
             time=200,
-            tracking_speed=10, # 5 or 10 -- mm/s, # 5000, # 10000,# max =100*self.ifov_size
-            tracking_acceleration=1000,  # 20000, # not higher than 1000 - better 600 for good results - mm/s²
+            tracking_speed=7.5, # 5 or 10 -- mm/s, # 5000, # 10000,# max =100*self.ifov_size
+            tracking_acceleration=600,  # 20000, # not higher than 1000 - better 600 for good results - mm/s²
             velocity_mode: VelocityMode = VelocityMode.ON,
     ):
         super().__init__()
         if objective=="Zeiss 20x":
-            self.ifov_size = 500/2  # half FOV -CHANGE 0.5
+            self.ifov_size = 0.500/2  # half FOV -CHANGE 0.5
         if objective=="Zeiss 63x":
-            self.ifov_size = 150/2  # half FOV - CHANGE 0.15
+            self.ifov_size = 0.150/2  # half FOV - CHANGE 0.15
         self.ifov_time = time
-        self.ifov_tracking_speed = tracking_speed # max =100*self.ifov_size
+        self.ifov_tracking_speed = tracking_speed  # max =100*self.ifov_size
         self.ifov_tracking_acceleration = tracking_acceleration
 
         self.send("SECONDS")
@@ -48,7 +48,7 @@ class SetupIFOV(AeroBasicProgram):
 
         # IFOV Settings
         self.comment("\nIFOV Settings")
-        self.send("IFOV ON")
+        self.send("IFOV OFF")
         self.send(f"IFOV TIME {self.ifov_time:f}")
         self.send(f"IFOV SIZE {self.ifov_size:f}")
         self.send(f"IFOV TRACKINGSPEED {tracking_speed:f}")

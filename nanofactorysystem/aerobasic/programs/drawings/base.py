@@ -1,5 +1,5 @@
 import abc
-from typing import Optional, Any, Iterator
+from typing import Optional, Any, Iterator, Literal
 
 from nanofactorysystem.aerobasic import SingleAxis, BezierMode, Axis, GalvoLaserOverrideMode, IFOV_Mode, VelocityMode
 from nanofactorysystem.aerobasic.programs import AeroBasicProgram
@@ -7,12 +7,19 @@ from nanofactorysystem.aerobasic.programs.setups import SetupIFOV
 from nanofactorysystem.devices.coordinate_system import CoordinateSystem, Point2D, Point3D
 
 class IFOV_AeroBasicProgram(AeroBasicProgram):
-    TRACKING_SPEED = 10000
-    TRACKING_ACCELERATION = 20000
     IFOV_TIME = 200
-    IFOV_SIZE_20x = 500/2  # half FOV of Objective
-    IFOV_SIZE_63x = 150/2  # half FOV of Objective
+    # IFOV Size should be half of Objective FOV BUT Femtika does full FOV
+    IFOV_SIZE_20x = 0.50  # 0.500/2
+    IFOV_SIZE_63x = 0.15  # 0.150/2
+
+    # Writing speed is at maximum 100*ifov_size
+    # Tracking speed should be a little higher than the actual writing speed (-> * 1.1 takes care of that)
+    TRACKING_SPEED_63x = (IFOV_SIZE_63x*100)*1.1
+    TRACKING_SPEED_20x = (IFOV_SIZE_20x*100)*1.1
+    TRACKING_ACCELERATION = 600  # 1000 is possible - better results with 600
     VELOCITY_MODE = VelocityMode.ON
+
+    RAMP_TYPE = ""
 
     ROTATION_A = -0.6  # experimental validated values for Zeiss 20x Objective
     ROTATION_B = -1.1  # experimental validated values for Zeiss 20x Objective
@@ -24,30 +31,61 @@ class IFOV_AeroBasicProgram(AeroBasicProgram):
     def initialise_IFOV_configuration(self, objective="Zeiss 63x"):
         if objective == "Zeiss 20x":
             ifov_size = self.IFOV_SIZE_20x
-        else:
+        elif objective == "Zeiss 63x":
             ifov_size = self.IFOV_SIZE_63x
+        else:
+            raise NotImplementedError(f"Objective {objective} not implemented")
 
+        self.comment("\nBasic configuration")
+        self.send("LOOKAHEAD FAST")
+        self.send("CRITICAL START")
+        self.send("METRIC")
         self.send("SECONDS")
         self.send("ABSOLUTE")  # ABSOLUTE has to be set for IFOV
         self.VELOCITY(self.VELOCITY_MODE)
         self.send("WAIT MODE AUTO")
-        self.send("GALVO LASEROVERRIDE A AUTO")
+        self.END_IFOV()
+        self.send("GALVO LASEROVERRIDE A AUTO")  # NOTE differs from Femtika original Setup
+
+        # RAMP Rates
+        self.comment("\nSetting Ramp rates and Type")
+        self.send("RAMP MODE RATE")  # todo investigate ramp types --- available LINEAR SINE SCURVE
+        self.send("RAMP RATE 0")    # either 0 or high value between 40000 and 50000
+        self.send("RAMP RATE A 0")
+        self.send("RAMP RATE B 0")
 
         # Synchronize axes
         self.comment("\nSynchronize axes")
         self.send("IFOV AXISPAIR 0, A, X")
         self.send("IFOV AXISPAIR 1, B, Y")
 
+        # ENCODING
+        self.comment("\nEncoding Output")
+        self.send("ENCODER OUT X ON 0,0")
+        self.send("ENCODER OUT Y ON 0,0")
+
         # IFOV Settings
         self.comment("\nIFOV Settings")
+        self.send(f"IFOV SYNCAXES Z")
         self.send(f"IFOV TIME {self.IFOV_TIME:f}")
         self.send(f"IFOV SIZE {ifov_size:f}")
-        self.send(f"IFOV TRACKINGSPEED {self.TRACKING_SPEED:f}")
+        if objective == "Zeiss 63x":
+            self.send(f"IFOV TRACKINGSPEED {self.TRACKING_SPEED_63x:f}")
+        elif objective == "Zeiss 20x":
+            self.send(f"IFOV TRACKINGSPEED {self.TRACKING_SPEED_20x:f}")
         self.send(f"IFOV TRACKINGACCEL {self.TRACKING_ACCELERATION:f}")
-
-        # # Compensation of tilted GALVO Axis
-        # self.send("GALVO ROTATION A {self.ROTATION_A}")
+        # Compensation of tilted GALVO Axis
+        # self.send(f"GALVO ROTATION A {self.ROTATION_A}")
         # self.send("GALVO ROTATION B {self.ROTATION_B}")
+
+    def end_ifov_program(self):
+        self.send("CRITICAL END")
+        self.END_IFOV()
+        self.send("ENCODER OUT X OFF")
+        self.send("ENCODER OUT Y OFF")
+
+    def start_buffered_run(self):
+        self.send("WAIT (TASKSTATUS(1, DATAITEM_QueueLineCount) >=900 ) 1 1:")
 
     def _apply_ifov_conversion(self, coordinate: dict) -> dict:
         result = {}
@@ -93,11 +131,12 @@ class IFOV_AeroBasicProgram(AeroBasicProgram):
         return super().GALVO_ROTATION(axis, rotation)
 
     def SET_SPEED(self,
-                  F: float=None):
+                  F: float=None,
+                  ax: Literal["A","B"]=None):
         """ default speed is 10 mm/s"""
-        if F is not None and F >= 30:  # todo(HR) find a good and relatable value
+        if F is not None and F >= 15:  # todo(HR) find a good and relatable value
             raise ValueError(f"Speed has to be in mm(!) per seconds. {F} mm/s is too high.")
-        return super().CONNECTED_SPEED(speed_in_mm_per_sec=F)
+        return super().CONNECTED_SPEED(speed_in_mm_per_sec=F, axis=ax)
 
     def SET_POWER(self,
                   power:float):

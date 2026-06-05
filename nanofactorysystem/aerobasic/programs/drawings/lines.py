@@ -12,6 +12,9 @@ from nanofactorysystem.devices.coordinate_system import CoordinateSystem, Coordi
 
 
 class IFOV_Lines(DrawableObject):
+    calibrationFile = "C:/Software/3DPoli Fabrication/Calibration/Calibration.dat"
+    # also saved in the experiment folder as "calibration_file.npy"
+    fitKind = "polynomial"  # "polynomial" and "spline" possible
     def __init__(
             self,
             reference_point: Point2D | Point3D,
@@ -33,17 +36,27 @@ class IFOV_Lines(DrawableObject):
         super().__init__()
         self.reference_point = reference_point
         self.lines = lines
-        if 500 <= velocity <= 25000:
+        # todo
+        #   - velocity muss in mm/s sein
+        #   - muss übergeben werden können!
+        #   - kontrolle
+        #   - maximum speed 100*ifov size - das dann als default
+        #   - dynamic control of power - in the next class!
+        if 500 <= velocity <= 25000:  # komplett überarbeiten!
             self.velocity = velocity / 1000
         elif 50 <= velocity < 500:
-            self.velocity = 25
-            raise Warning(f"Velocity v={velocity} is too high. Velocity was set to 25mm/s!")
+            self.velocity = 5
+            raise Warning(f"Velocity v={velocity} is too high. Velocity was set to 5mm/s!")
         elif velocity>25000:
             raise ValueError(f"Velocity value {velocity} exceeds 25 mm/s.")
         else:
             self.velocity = velocity
 
+        # todo change power to the corresponding value based on the calibration file - how to do it?
         self.power = power
+
+        self.atop = None
+        self.ptoa = None
 
     @property
     def center_point(self) -> Point3D:
@@ -51,26 +64,78 @@ class IFOV_Lines(DrawableObject):
                                                                                               Y=self.reference_point.Y,
                                                                                               Z=0)
 
-    def iterate_layers(self, coordinate_system: CoordinateSystem) -> Iterator[IFOV_AeroBasicProgram]:
+    def _load_calibration_file(self):
+        import struct
+        from scipy.interpolate import interp1d
+        # Read content of the binary calibration file
+        with open(self.calibrationFile, "rb") as fp:
+            raw = fp.read()
+        if len(raw) % 16:
+            raise RuntimeError("File size must be a multiple of 16!")
+
+        # Convert calibration data to numpy array. First column are
+        # attenuator values, second column is laser power in mW.
+        num = len(raw) // 16
+        fmt = "<" + 2 * num * "d"
+        data = struct.unpack(fmt, raw)
+        data = np.array(data)
+        data.shape = (num, 2)
+
+        # Either spline or polynomial interpolation.
+        # Warning: Polynomial interpolation (in contrast to spline
+        # interpolation) does not necessarily contain the original data
+        # points!
+        a = data[:, 0]
+        p = data[:, 1]
+        if self.fitKind == "polynomial":
+            order = 2
+            self.atop = np.poly1d(np.polyfit(a, p, order))
+            self.ptoa = np.poly1d(np.polyfit(p, a, order))
+        elif self.fitKind == "spline":
+            self.atop = interp1d(a, p, kind="quadratic")
+            self.ptoa = interp1d(p, a, kind="quadratic")
+        else:
+            raise NotImplementedError(f"Fit kind {self.fitKind} is not implemented.")
+
+    def _get_power_val(self, power_mW):
+        if self.ptoa is None or self.atop is None:
+            self._load_calibration_file()
+        return self.ptoa(power_mW)
+
+    def iterate_layers(self, coordinate_system: CoordinateSystem,
+                       objective="Zeiss 63x") -> Iterator[IFOV_AeroBasicProgram]:
         program = IFOV_AeroBasicProgram(coordinate_system)
-        program.initialise_IFOV_configuration(objective="Zeiss 20x")
+        program.initialise_IFOV_configuration(objective=objective)
         # set power
         if self.power is not None:
-            program.SET_POWER(power=self.power)
-        # set velocity
-        if self.velocity is not None:
-            # Velocity very important for good functionality of IFOV - will be automatically added (F10) if not specified (None)
-            program.SET_SPEED(self.velocity)
+            power_val = self._get_power_val(self.power)
+            program.comment(f"Power set to {self.power} mW")
+            program.SET_POWER(power=float(power_val))
+        # set velocity - standard value ifov_size*100 -- has to be near maximum or low - bad results at middle values
+        # if self.velocity is None: # dann die normalen sachen hier:
+        #     pass
+        if objective == "Zeiss 63x":
+            program.SET_SPEED(F=5) # todo oben hier
+            program.SET_SPEED(F=5, ax="A")
+            program.SET_SPEED(F=5, ax="B")
+            program.SET_SPEED(F=1, ax="Z")
+        elif objective == "Zeiss 20x":
+            program.SET_SPEED(F=10)
+            program.SET_SPEED(F=10, ax="A")
+            program.SET_SPEED(F=10, ax="B")
+            program.SET_SPEED(F=1, ax="Z")
+        else:
+            raise ValueError(f"Objective {objective} is not supported.")
 
         # Initialize Galvo - not necessary needed?! Already in IFOV Setup done
         program.COMPENSATE_GALVO_ROTATION(axis=SingleAxis.A)
-        program.COMPENSATE_GALVO_ROTATION(axis=SingleAxis.B)
+        # program.COMPENSATE_GALVO_ROTATION(axis=SingleAxis.B)  # only one Compensation axis should be addressed
 
         # IFOV only works with absolute system
         program.ABSOLUTE()
 
         # go to reference and reset
-        if isinstance(self.reference_point, Point3D):  # NOTE PROBLEM HUSTON WE HAVE A PROBLEM!!!!
+        if isinstance(self.reference_point, Point3D):
             program.RAPID(X=self.reference_point.X, Y=self.reference_point.Y, Z=self.reference_point.Z)
         elif isinstance(self.reference_point, Point2D):
             program.RAPID(X=self.reference_point.X, Y=self.reference_point.Y)
@@ -88,7 +153,7 @@ class IFOV_Lines(DrawableObject):
             program.RAPID(A=start.X, B=start.Y)
             program.LINEAR(A=end.X, B=end.Y)
 
-        program.END_IFOV()
+        program.end_ifov_program()
 
         yield program
 

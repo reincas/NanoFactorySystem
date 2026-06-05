@@ -410,10 +410,21 @@ class AeroBasicAPI(abc.ABC):
         return self.send(f"IFOV {mode.value}")
 
     def CONNECTED_SPEED(self,
-                        speed_in_mm_per_sec: float = None):
+                        speed_in_mm_per_sec: float = None,
+                        axis=None):
         if speed_in_mm_per_sec is None:
-            speed_in_mm_per_sec = 10
-        return self.send(f"F{speed_in_mm_per_sec}")
+            speed_in_mm_per_sec = 10  # max speed is ifov_size*100
+        if axis is None:
+            return self.send(f"F{speed_in_mm_per_sec}")
+        elif axis.lower() == "a":
+            return self.send(f"AF{speed_in_mm_per_sec}")
+        elif axis.lower() == "b":
+            return self.send(f"BF{speed_in_mm_per_sec}")
+        elif axis.lower() == "z":
+            return self.send(f"ZF{speed_in_mm_per_sec}")
+        else:
+            return
+
 
     def POWER(self,
               power: float):
@@ -423,7 +434,7 @@ class AeroBasicAPI(abc.ABC):
             raise ValueError(
                 f"Power needs to be >= 10. Unit is NOT mW or µW. It has to interpolated from the calibration file and "
                 f"therefore has a value between 0 and 10 to attenuate the attenuator!")
-        return self.send(f"$A0[0].A={power}")
+        return self.send(f"$AO[0].A={power}")
 
     def IFOV_TIME(self, search_time: int = 200):
         """

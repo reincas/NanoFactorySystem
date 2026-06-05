@@ -2,6 +2,7 @@ import math
 from typing import Type, Iterator
 
 import numpy as np
+import matplotlib.pyplot as plt
 
 from nanofactorysystem.aerobasic.programs.drawings import DrawableObject, DrawableAeroBasicProgram
 from nanofactorysystem.aerobasic.programs.drawings.circle import DrawableCircle, FilledCircle2D, FilledCircleFactory
@@ -166,6 +167,68 @@ class AsphericalLens(DrawableObject):
             yield self.layer_program(coordinate_system, layer_id)
 
         return program
+
+    def plot_surface(self, resolution: int = 300):
+        """
+        Plot the aspherical lens surface.
+        """
+
+        # Coordinate grid
+        x = np.linspace(-self.length / 2, self.length / 2, resolution)
+        y = np.linspace(-self.width / 2, self.width / 2, resolution)
+
+        X, Y = np.meshgrid(x, y)
+
+        # Radial coordinate
+        r2 = X ** 2 + Y ** 2
+
+        R = self.sphere_radius
+        k = self.conic_constant
+
+        # Aspheric sag equation
+        denominator = 1 + np.sqrt(1 - (1 + k) * r2 / R ** 2)
+
+        Z = r2 / (R * denominator)
+
+        # Normalize to desired height
+        Zmax = np.nanmax(Z)
+        if Zmax > 0:
+            Z = Z / Zmax * self.height
+
+        # Clip outside aperture
+        aperture_mask = (
+                (np.abs(X) <= self.length / 2)
+                & (np.abs(Y) <= self.width / 2)
+        )
+
+        Z[~aperture_mask] = np.nan
+
+        # Plot
+        fig = plt.figure(figsize=(8, 8))
+        ax = fig.add_subplot(111, projection='3d')
+
+        surf = ax.plot_surface(
+            X,
+            Y,
+            Z,
+            linewidth=0,
+            antialiased=True,
+        )
+
+        ax.set_xlabel("X [µm]")
+        ax.set_ylabel("Y [µm]")
+        ax.set_zlabel("Z [µm]")
+
+        ax.set_title(
+            f"Aspherical Lens\n"
+            f"R={R:.2f} µm, k={k:.2f}, h={self.height:.2f} µm"
+        )
+
+        ax.set_box_aspect((1, 1, 0.3))
+
+        plt.tight_layout()
+        # todo save this
+        plt.show()
 
 
 class Cylinder(DrawableObject):
